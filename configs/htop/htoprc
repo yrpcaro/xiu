@@ -1,0 +1,4 @@
+# Seed htoprc so the config dir exists for the palette pipeline;
+# wallcolors.py rewrites this file completely on every palette change.
+color_scheme=6
+hide_kernel_threads=1

@@ -330,6 +330,282 @@ def render_foot(b):
     (foot / "colors.ini").write_text("\n".join(lines) + "\n")
 
 
+def _tool_dir(name):
+    """Config dir of an optional tool, or None when it is not in play; every
+    TUI render is gated on it so the pipeline never litters configs for apps
+    that were never installed."""
+    path = Path.home() / ".config" / name
+    return path if path.is_dir() else None
+
+
+def _reload(binary):
+    subprocess.run(["killall", "-USR2", binary], stderr=subprocess.DEVNULL)
+
+
+def render_btop(pill, b):
+    d = _tool_dir("btop")
+    if d is None:
+        return
+    (d / "themes").mkdir(exist_ok=True)
+    keys = {
+        "main_bg": "",
+        "main_fg": pill["cream"],
+        "title": pill["bright"],
+        "hi_fg": pill["primary"],
+        "selected_bg": pill["surface_container_high"],
+        "selected_fg": pill["bright"],
+        "inactive_fg": pill["faint"],
+        "graph_text": pill["subtle"],
+        "meter_bg": pill["outline_variant"],
+        "proc_misc": pill["subtle"],
+        "cpu_box": b["base0c"],
+        "mem_box": b["base0b"],
+        "net_box": b["base0d"],
+        "proc_box": b["base0e"],
+        "div_line": pill["outline_variant"],
+        "temp_start": b["base0b"], "temp_mid": b["base0a"], "temp_end": b["base08"],
+        "cpu_start": b["base0e"], "cpu_mid": b["base0c"], "cpu_end": pill["primary"],
+        "free_start": b["base0d"], "free_mid": b["base0e"], "free_end": pill["primary"],
+        "cached_start": b["base0c"], "cached_mid": b["base0e"], "cached_end": b["base0d"],
+        "available_start": b["base0a"], "available_mid": b["base09"], "available_end": b["base08"],
+        "used_start": b["base0b"], "used_mid": b["base0e"], "used_end": b["base0c"],
+        "download_start": b["base0a"], "download_mid": b["base09"], "download_end": b["base08"],
+        "upload_start": b["base0b"], "upload_mid": b["base0e"], "upload_end": b["base0c"],
+        "process_start": b["base0c"], "process_mid": b["base0d"], "process_end": pill["primary"],
+    }
+    lines = ["# Written by wallcolors.py on every palette change."]
+    for key, value in keys.items():
+        lines.append('theme[%s]="%s"' % (key, value))
+    (d / "themes" / "xiu.theme").write_text("\n".join(lines) + "\n")
+    _reload("btop")
+
+
+def render_htop(pill, b):
+    d = _tool_dir("htop")
+    if d is None:
+        return
+    lines = [
+        "fields=0 48 17 18 38 39 40 2 46 47 49 1",
+        "sort_key=46",
+        "sort_direction=-1",
+        "tree_sort_key=0",
+        "tree_sort_direction=1",
+        "hide_kernel_threads=1",
+        "hide_userland_threads=0",
+        "shadow_other_users=0",
+        "show_thread_names=0",
+        "show_program_path=1",
+        "highlight_base_name=0",
+        "highlight_deleted_exe=1",
+        "highlight_megabytes=1",
+        "highlight_threads=1",
+        "highlight_changes=0",
+        "highlight_changes_delay_secs=5",
+        "find_comm_in_cmdline=1",
+        "strip_exe_from_cmdline=1",
+        "show_merged_command=0",
+        "tree_view=0",
+        "tree_view_always_by_pid=0",
+        "all_branches_collapsed=0",
+        "header_margin=1",
+        "detailed_cpu_time=0",
+        "cpu_count_from_one=0",
+        "show_cpu_usage=1",
+        "show_cpu_frequency=0",
+        "show_cpu_temperature=0",
+        "degree_fahrenheit=0",
+        "update_process_names=0",
+        "account_guest_in_cpu_meter=0",
+        "color_scheme=6",
+        "color_background=%s" % pill["surface"],
+        "color_text=%s" % pill["cream"],
+        "color_highlight=%s" % pill["primary"],
+        "color_selected=%s" % pill["surface_container_high"],
+        "color_cpu_low=%s" % b["base0b"],
+        "color_cpu_med=%s" % b["base0a"],
+        "color_cpu_high=%s" % b["base08"],
+        "color_mem_used=%s" % b["base0c"],
+        "color_mem_buffers=%s" % b["base0e"],
+        "color_mem_cache=%s" % b["base0d"],
+        "color_mem_available=%s" % b["base0b"],
+        "color_process_normal=%s" % pill["cream"],
+        "color_process_running=%s" % b["base0b"],
+        "color_process_sleeping=%s" % pill["dim"],
+    ]
+    (d / "htoprc").write_text("\n".join(lines) + "\n")
+    _reload("htop")
+
+
+def render_nvtop(pill, b):
+    d = _tool_dir("nvtop")
+    if d is None:
+        return
+    keys = {
+        "background": pill["surface"],
+        "selected_bg": pill["surface_container_high"],
+        "header_bg": pill["surface_container_highest"],
+        "text": pill["cream"],
+        "selected_text": pill["primary"],
+        "header_text": pill["bright"],
+        "inactive_text": pill["faint"],
+        "gpu_util_low": b["base0b"], "gpu_util_med": b["base0a"], "gpu_util_high": b["base08"],
+        "memory_low": b["base0b"], "memory_med": b["base0e"], "memory_high": b["base0c"],
+        "temp_cool": b["base0b"], "temp_warm": b["base0a"], "temp_hot": b["base08"],
+        "power_low": b["base0b"], "power_med": b["base0a"], "power_high": b["base08"],
+        "process_normal": pill["cream"],
+        "process_highlight": pill["primary"],
+        "process_killed": b["base08"],
+        "border": pill["outline_variant"],
+        "separator": pill["outline_variant"],
+        "chart_line": pill["subtle"],
+        "chart_fill": pill["surface_container"],
+        "status_ok": b["base0b"], "status_warning": b["base0a"],
+        "status_error": b["base08"], "status_info": b["base0c"],
+    }
+    lines = ["# Written by wallcolors.py on every palette change."]
+    for key, value in keys.items():
+        lines.append("%s = %s" % (key, value.lstrip("#")))
+    (d / "nvtop.colors").write_text("\n".join(lines) + "\n")
+
+
+def render_cava(pill, b):
+    d = _tool_dir("cava")
+    if d is None:
+        return
+    gradient = [b["base0b"], b["base0e"], b["base0c"], pill["primary"],
+                b["base0d"], b["base0a"], b["base09"], b["base08"]]
+    lines = [
+        "# Written by wallcolors.py on every palette change.",
+        "[general]",
+        "framerate = 60",
+        "",
+        "[input]",
+        "method = pulse",
+        "source = auto",
+        "",
+        "[output]",
+        "method = ncurses",
+        "style = stereo",
+        "",
+        "[color]",
+        "background = default",
+        "foreground = %s" % pill["primary"],
+        "gradient = 1",
+        "gradient_count = 8",
+    ]
+    for i, color in enumerate(gradient, 1):
+        lines.append("gradient_color_%d = '%s'" % (i, color))
+    lines += [
+        "",
+        "[smoothing]",
+        "noise_reduction = 85",
+        "monstercat = 1",
+    ]
+    (d / "config").write_text("\n".join(lines) + "\n")
+    _reload("cava")
+
+
+def render_micro(pill, b):
+    d = _tool_dir("micro")
+    if d is None:
+        return
+    (d / "colorschemes").mkdir(exist_ok=True)
+    links = [
+        ("default", pill["cream"], None),
+        ("cursor", pill["primary"], None),
+        ("line-number", pill["faint"], None),
+        ("current-line-number", pill["subtle"], None),
+        ("statusline", pill["cream"], pill["surface_container_high"]),
+        ("statusline.active", pill["bright"], pill["surface_container_high"]),
+        ("comment", pill["dim"], None),
+        ("identifier", pill["cream"], None),
+        ("identifier.variable", pill["bright"], None),
+        ("identifier.function", pill["primary"], None),
+        ("constant", b["base0a"], None),
+        ("constant.string", b["base0b"], None),
+        ("constant.number", b["base0a"], None),
+        ("keyword", pill["primary"], None),
+        ("keyword.operator", pill["subtle"], None),
+        ("type", b["base0c"], None),
+        ("variable", pill["cream"], None),
+        ("symbol", pill["subtle"], None),
+        ("error", b["base08"], None),
+        ("warning", b["base0a"], None),
+        ("diff Added", b["base0b"], None),
+        ("diff Removed", b["base08"], None),
+    ]
+    lines = ["# Written by wallcolors.py on every palette change."]
+    for group, fg, bg in links:
+        lines.append('color-link %s "%s%s"' % (group, fg, ("," + bg) if bg else ""))
+    (d / "colorschemes" / "xiu.micro").write_text("\n".join(lines) + "\n")
+
+
+def render_helix(pill, b):
+    d = _tool_dir("helix")
+    if d is None:
+        return
+    (d / "themes").mkdir(exist_ok=True)
+    def fg(color):
+        return '"%s"' % color
+    p = pill
+    lines = [
+        "# Written by wallcolors.py on every palette change.",
+        "# ui.background stays empty so the terminal's transparency shows through.",
+        '"ui.background" = {}',
+        '"ui.text" = %s' % fg(p["cream"]),
+        '"ui.text.info" = %s' % fg(p["subtle"]),
+        '"ui.selection" = { bg = "%s" }' % p["surface_container_high"],
+        '"ui.selection.primary" = { bg = "%s" }' % p["surface_container"],
+        '"ui.cursorline" = { bg = "%s" }' % p["surface_container_low"],
+        '"ui.cursorline.primary" = { bg = "%s" }' % p["surface_container"],
+        '"ui.linenr" = %s' % fg(p["faint"]),
+        '"ui.linenr.selected" = %s' % fg(p["subtle"]),
+        '"ui.statusline" = { fg = "%s", bg = "%s" }' % (p["cream"], p["surface_container_high"]),
+        '"ui.statusline.inactive" = { fg = "%s", bg = "%s" }' % (p["dim"], p["surface_container_low"]),
+        '"ui.statusline.normal" = { fg = "%s", bg = "%s" }' % (p["on_primary_container"], p["primary_container"]),
+        '"ui.statusline.insert" = { fg = "%s", bg = "%s" }' % (p["bright"], p["primary"]),
+        '"ui.statusline.select" = { fg = "%s", bg = "%s" }' % (p["bright"], p["primary_container"]),
+        '"ui.popup" = { bg = "%s" }' % p["surface_container"],
+        '"ui.popup.info" = { bg = "%s" }' % p["surface_container_high"],
+        '"ui.menu" = { bg = "%s" }' % p["surface_container"],
+        '"ui.menu.selected" = { fg = "%s", bg = "%s" }' % (p["bright"], p["surface_container_high"]),
+        '"ui.virtual" = %s' % fg(p["outline_variant"]),
+        '"ui.virtual.whitespace" = %s' % fg(p["outline_variant"]),
+        '"ui.virtual.indent" = { fg = "%s" }' % p["surface_container_high"],
+        '"ui.bufferline" = { fg = "%s", bg = "%s" }' % (p["dim"], p["surface_container_low"]),
+        '"ui.bufferline.active" = { fg = "%s", bg = "%s" }' % (p["cream"], p["surface_container"]),
+        '"comment" = %s' % fg(p["dim"]),
+        '"comment.block" = %s' % fg(p["dim"]),
+        '"keyword" = %s' % fg(p["primary"]),
+        '"keyword.function" = %s' % fg(p["primary"]),
+        '"function" = %s' % fg(b["base0c"]),
+        '"function.builtin" = %s' % fg(b["base0c"]),
+        '"string" = %s' % fg(b["base0b"]),
+        '"constant" = %s' % fg(b["base0a"]),
+        '"constant.numeric" = %s' % fg(b["base0a"]),
+        '"constant.character" = %s' % fg(b["base0e"]),
+        '"type" = %s' % fg(b["base0c"]),
+        '"type.builtin" = %s' % fg(b["base0c"]),
+        '"variable" = %s' % fg(p["cream"]),
+        '"variable.other.member" = %s' % fg(p["bright"]),
+        '"variable.parameter" = %s' % fg(p["subtle"]),
+        '"label" = %s' % fg(p["primary"]),
+        '"operator" = %s' % fg(p["subtle"]),
+        '"punctuation" = %s' % fg(p["subtle"]),
+        '"punctuation.bracket" = %s' % fg(p["faint"]),
+        '"attribute" = %s' % fg(b["base0d"]),
+        '"tag" = %s' % fg(b["base0d"]),
+        '"error" = %s' % fg(b["base08"]),
+        '"warning" = %s' % fg(b["base0a"]),
+        '"info" = %s' % fg(b["base0c"]),
+        '"hint" = %s' % fg(p["subtle"]),
+        '"diff.plus" = %s' % fg(b["base0b"]),
+        '"diff.minus" = %s' % fg(b["base08"]),
+        '"diff.delta" = %s' % fg(b["base0c"]),
+    ]
+    (d / "themes" / "xiu.toml").write_text("\n".join(lines) + "\n")
+
+
 def fan_out(pill, seed, variant):
     """Write the pill JSON, recolour fastfetch, and build the terminal/border
     base16 through matugen with the resolved scheme type."""
@@ -358,6 +634,12 @@ def fan_out(pill, seed, variant):
         lines.append(f'palette = {i}={b["base%02x" % i]}')
     (CACHE / "ghostty-colors").write_text("\n".join(lines) + "\n")
     render_foot(b)
+    render_btop(pill, b)
+    render_htop(pill, b)
+    render_nvtop(pill, b)
+    render_cava(pill, b)
+    render_micro(pill, b)
+    render_helix(pill, b)
     return 0
 
 

@@ -1,0 +1,31 @@
+# Xiu cava base. wallcolors.py rewrites this file with the palette's
+# gradient on every change, so the general settings here are the seed.
+
+[general]
+framerate = 60
+
+[input]
+method = pulse
+source = auto
+
+[output]
+method = ncurses
+style = stereo
+
+[color]
+background = default
+foreground = #e0563b
+gradient = 1
+gradient_count = 8
+gradient_color_1 = '#8a9a5b'
+gradient_color_2 = '#7fa89a'
+gradient_color_3 = '#6f8da0'
+gradient_color_4 = '#e0563b'
+gradient_color_5 = '#b06a78'
+gradient_color_6 = '#d89a5b'
+gradient_color_7 = '#f0b85e'
+gradient_color_8 = '#e0533f'
+
+[smoothing]
+noise_reduction = 85
+monstercat = 1
