@@ -616,6 +616,107 @@ def render_browser(pill):
         json.dumps({"BrowserThemeColor": pill["surface"]}, indent=2) + "\n")
 
 
+def _rgb(hex_str):
+    """KDE color schemes want "r,g,b" decimal tuples."""
+    return ",".join(str(int(hex_str[i:i + 2], 16)) for i in (1, 3, 5))
+
+
+def render_gtk(pill):
+    """GTK named colors: the adw-gtk3 theme (set through gsettings below)
+    picks these up, so GTK apps follow the palette. Only existing gtk-3.0/
+    gtk-4.0 dirs are touched."""
+    css = "\n".join([
+        "/* Written by wallcolors.py on every palette change. */",
+        "@define-color accent_color %s;" % pill["primary"],
+        "@define-color accent_bg_color %s;" % pill["primary"],
+        "@define-color accent_fg_color %s;" % pill["on_primary_container"],
+        "@define-color window_bg_color %s;" % pill["surface"],
+        "@define-color window_fg_color %s;" % pill["cream"],
+        "@define-color headerbar_bg_color %s;" % pill["surface_container"],
+        "@define-color headerbar_fg_color %s;" % pill["cream"],
+        "@define-color popover_bg_color %s;" % pill["surface_container_high"],
+        "@define-color popover_fg_color %s;" % pill["cream"],
+        "@define-color view_bg_color %s;" % pill["surface_container"],
+        "@define-color view_fg_color %s;" % pill["cream"],
+        "@define-color card_bg_color %s;" % pill["surface_container"],
+        "@define-color card_fg_color %s;" % pill["cream"],
+        "@define-color sidebar_bg_color @window_bg_color;",
+        "@define-color sidebar_fg_color @window_fg_color;",
+        "@define-color sidebar_border_color @window_bg_color;",
+        "@define-color theme_selected_bg_color alpha(@accent_color, 0.15);",
+        "@define-color theme_selected_fg_color %s;" % pill["primary"],
+    ]) + "\n"
+    for ver in ("gtk-3.0", "gtk-4.0"):
+        d = Path.home() / ".config" / ver
+        if d.is_dir():
+            (d / "gtk.css").write_text(css)
+
+    # The theme itself and the icon set live in dconf; idempotent and quiet.
+    for key, value in (("color-scheme", "prefer-dark"),
+                       ("gtk-theme", "adw-gtk3-dark"),
+                       ("icon-theme", "Papirus-Dark")):
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", key, value],
+                       stderr=subprocess.DEVNULL)
+
+
+def render_qt(pill):
+    """Qt via qtengine + Darkly: a palette-derived KDE color scheme plus the
+    qtengine config that selects it. Seeded only when qtengine is installed
+    (its config dir exists) and the config is only written when absent, so
+    font and misc choices stay the user's."""
+    d = Path.home() / ".config" / "qtengine"
+    if not d.is_dir():
+        return
+    p = pill
+    sections = [
+        ("[Colors:View]", {
+            "BackgroundNormal": p["surface_container"], "ForegroundNormal": p["cream"],
+            "BackgroundAlternate": p["surface_container_low"],
+            "DecorationFocus": p["primary"], "DecorationHover": p["primary"],
+        }),
+        ("[Colors:Window]", {
+            "BackgroundNormal": p["surface"], "ForegroundNormal": p["cream"],
+            "BackgroundAlternate": p["surface_container"],
+        }),
+        ("[Colors:Button]", {
+            "BackgroundNormal": p["surface_container_high"], "ForegroundNormal": p["cream"],
+            "BackgroundAlternate": p["surface_container_highest"],
+            "DecorationFocus": p["primary"], "DecorationHover": p["primary"],
+        }),
+        ("[Colors:Selection]", {
+            "BackgroundNormal": p["primary_container"], "ForegroundNormal": p["on_primary_container"],
+        }),
+        ("[Colors:Tooltip]", {
+            "BackgroundNormal": p["surface_container_highest"], "ForegroundNormal": p["cream"],
+        }),
+        ("[Colors:Header]", {
+            "BackgroundNormal": p["surface_container"], "ForegroundNormal": p["cream"],
+        }),
+        ("[General]", {"ColorScheme": "Xiu"}),
+    ]
+    lines = ["# Written by wallcolors.py on every palette change."]
+    for header, fields in sections:
+        lines.append("")
+        lines.append(header)
+        for key, value in fields.items():
+            lines.append("%s=%s" % (key, _rgb(value) if value.startswith("#") else value))
+    (d / "xiu.colors").write_text("\n".join(lines) + "\n")
+
+    config = d / "config.json"
+    if not config.is_file():
+        config.write_text(json.dumps({
+            "theme": {
+                "colorScheme": str(d / "xiu.colors"),
+                "iconTheme": "Papirus-Dark",
+                "style": "Darkly",
+            },
+            "misc": {
+                "menusHaveIcons": True,
+                "singleClickActivate": False,
+            },
+        }, indent=4) + "\n")
+
+
 def fan_out(pill, seed, variant):
     """Write the pill JSON, recolour fastfetch, and build the terminal/border
     base16 through matugen with the resolved scheme type."""
@@ -651,6 +752,8 @@ def fan_out(pill, seed, variant):
     render_micro(pill, b)
     render_helix(pill, b)
     render_browser(pill)
+    render_gtk(pill)
+    render_qt(pill)
     return 0
 
 
