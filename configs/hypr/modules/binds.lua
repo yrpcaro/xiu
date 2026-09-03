@@ -101,7 +101,7 @@ hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), mouse) -- resize window
 hl.bind(mod .. " + code:33", hl.dsp.window.pin()) -- pin window
 hl.bind("CTRL + SUPER + code:51", hl.dsp.window.center()) -- center window
 hl.bind("CTRL + SUPER + ALT + code:51", normalize_window()) -- normalize window
-hl.bind(mod .. " + ALT + code:51", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/xiu-resizer active pip")) -- picture-in-picture
+hl.bind(mod .. " + ALT + code:51", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/xiu-resizer pip")) -- picture-in-picture
 
 -- Focus and move by direction
 hl.bind(mod .. " + code:113", hl.dsp.focus({ direction = "left" })) -- focus left
