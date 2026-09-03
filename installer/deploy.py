@@ -28,15 +28,31 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIGS = REPO_ROOT / "configs"
 CONFIG_ROOT = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
 
-# The deploy set: (name, source under configs/, dest under ~/.config). The first
-# five land as whole dirs; kdeglobals and the session target are single files
-# that sit at a different path than their source in the clone.
+# The deploy set: (name, source under configs/, dest under ~/.config). Most
+# land as whole dirs; kdeglobals and the session target are single files that
+# sit at a different path than their source in the clone, the portal config
+# targets xdg-desktop-portal's dir, and the browser integration files park
+# under xiu's own config dir where the native host and profiles pick them up.
 DEPLOY_SET = [
     ("hypr",       "hypr",                                  "hypr"),
     ("quickshell", "quickshell",                            "quickshell"),
     ("ghostty",    "ghostty",                               "ghostty"),
+    ("foot",       "foot",                                  "foot"),
     ("fish",       "fish",                                  "fish"),
     ("fastfetch",  "fastfetch",                             "fastfetch"),
+    ("btop",       "btop",                                  "btop"),
+    ("cava",       "cava",                                  "cava"),
+    ("micro",      "micro",                                 "micro"),
+    ("htop",       "htop",                                  "htop"),
+    ("nvtop",      "nvtop",                                 "nvtop"),
+    ("nvim",       "nvim",                                  "nvim"),
+    ("helix",      "helix",                                 "helix"),
+    ("bottom",     "bottom",                                "bottom"),
+    ("yazi",       "yazi",                                  "yazi"),
+    ("spicetify",  "spicetify",                             "spicetify"),
+    ("portals",    "portals",                               "xdg-desktop-portal"),
+    ("uwsm",       "uwsm",                                  "uwsm"),
+    ("browser",    "browser-integration",                   "xiu/browser-integration"),
     ("kdeglobals", "kde/kdeglobals",                        "kdeglobals"),
     ("session",    "systemd/user/hyprland-session.target",  "systemd/user/hyprland-session.target"),
 ]
@@ -592,9 +608,12 @@ def _selftest():
         idletxt = (root / "hypr" / "hypridle.conf").read_text()
         check(str(Path.home()) + "/.config/hypr/scripts/lock.sh" in idletxt,
               "hypridle lock_cmd points at the real home")
-        ghttxt = (root / "hypr" / "ghosttype.lua").read_text()
-        check(str(Path.home()) + "/Applications/GhostType.AppImage" in ghttxt,
-              "ghosttype.lua AppImage path points at the real home")
+        # ghosttype.lua ships in some upstream trees and not others; the
+        # neutralize step is gated the same way, so only check when present.
+        ght = root / "hypr" / "ghosttype.lua"
+        if ght.is_file():
+            check(str(Path.home()) + "/Applications/GhostType.AppImage" in ght.read_text(),
+                  "ghosttype.lua AppImage path points at the real home")
         fishtxt = (root / "fish" / "config.fish").read_text()
         check("cachyos-fish-config" not in fishtxt and "grok" not in fishtxt
               and "torii-greeting" in fishtxt,
