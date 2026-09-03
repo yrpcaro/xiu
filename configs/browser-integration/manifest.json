@@ -1,0 +1,15 @@
+{
+    "manifest_version": 2,
+    "name": "xiu theme",
+    "version": "1.0.0",
+    "description": "Live Firefox/Zen theme fed by the xiu shell's palette.",
+    "permissions": ["nativeMessaging", "theme"],
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "xiu-theme@yrpcaro"
+        }
+    }
+}

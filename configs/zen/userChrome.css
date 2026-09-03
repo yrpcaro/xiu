@@ -1,0 +1,33 @@
+/* Xiu Firefox: rounded window, quiet URL bar, no window buttons. Needs
+   toolkit.legacyUserProfileCustomizations.stylesheets (see user.js). */
+
+:root {
+    --xiu-radius: 12px;
+}
+
+/* Round the whole window against the compositor's transparent background */
+#main-window {
+    border-radius: var(--xiu-radius) !important;
+    overflow: hidden;
+}
+
+/* Decorations come from the compositor; the in-content buttons go away */
+.titlebar-buttonbox-container {
+    display: none !important;
+}
+
+/* Unfocused: centered, low-key URL text; focused: normal left-aligned */
+#urlbar:not([focused]) #urlbar-input {
+    text-align: center !important;
+}
+#urlbar[focused] #urlbar-input {
+    text-align: left !important;
+}
+
+/* Softer rounding on the URL bar and menus to match the pill */
+#urlbar {
+    border-radius: 8px !important;
+}
+panel {
+    --panel-border-radius: 10px !important;
+}
