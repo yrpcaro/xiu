@@ -10,4 +10,8 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user restart hypridle")
     -- warm the page cache so a user's first fastfetch run doesn't stall on cold pacman db reads
     hl.exec_cmd("fastfetch")
+
+    -- Monthly trash cleanup (trash-cli). Off by default: uncomment to have
+    -- the trash emptied of anything older than 30 days at every login.
+    -- hl.exec_cmd("trash-empty 30")
 end)
