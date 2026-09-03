@@ -375,6 +375,19 @@ Item {
     }
 
     /**
+     * us <-> ir(winkeys): one hyprctl round trip; the Keymap singleton picks
+     * the change back up from the activelayout event, chip included.
+     */
+    function toggleLayout() {
+        layoutProc.running = true
+    }
+
+    Process {
+        id: layoutProc
+        command: ["hyprctl", "switchxkblayout", "current", "next"]
+    }
+
+    /**
      * Step the open surface back one level when its header bar is clicked: a
      * settings sub-surface returns to the index, the font picker to appearance,
      * a keybinds form to its list, and any other surface dismisses to the hover
@@ -728,6 +741,8 @@ Item {
         void pill.width;
         void pill.height;
         const drop = 12 * pill.s;
+        if (soulTarget === "layout")
+            return layoutChip.mapToItem(pill, layoutChip.width / 2, layoutChip.height + drop * 0.55);
         if (soulTarget === "wifi")
             return wifiIcon.mapToItem(pill, wifiIcon.width / 2, wifiIcon.height + drop * 0.55);
         if (soulTarget === "bt")
@@ -1384,6 +1399,43 @@ Item {
                 id: statusRow
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 12 * pill.s
+
+                Item {
+                    id: layoutChip
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: Keymap.code.length > 0
+                    width: layoutLbl.implicitWidth + 10 * pill.s
+                    height: 17 * pill.s
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: height / 2
+                        color: layoutArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.16) : Theme.tileBg
+                        border.width: 1
+                        border.color: layoutArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.5) : Theme.border
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    }
+
+                    Text {
+                        id: layoutLbl
+                        anchors.centerIn: parent
+                        text: Keymap.code
+                        color: layoutArea.containsMouse ? Theme.cream : Theme.subtle
+                        font.family: Theme.font
+                        font.pixelSize: 9 * pill.s
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 1.2 * pill.s
+                    }
+
+                    MouseArea {
+                        id: layoutArea
+                        anchors.fill: parent
+                        enabled: hover.live
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: pill.toggleLayout()
+                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "layout"
+                    }
+                }
 
                 Row {
                     id: weatherGlance
