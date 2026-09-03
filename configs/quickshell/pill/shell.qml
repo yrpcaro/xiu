@@ -20,7 +20,7 @@ import "Singletons"
  *
  * Input is routed by the window mask. While the pill is collapsed the mask is
  * the pill rect only, so the rest of the screen clicks through to windows.
- * While the pill is expanded (hovered/pinned) or a surface is open the mask is
+ * While the pill is expanded (pinned) or a surface is open the mask is
  * cleared so the whole layer catches clicks. A backdrop press dismisses, and
  * keyboard focus is taken on demand so Escape closes the open surface.
  */
