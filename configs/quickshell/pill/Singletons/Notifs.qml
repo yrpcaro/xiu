@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Notifications
 
 Singleton {
@@ -275,5 +276,12 @@ Singleton {
             if (!Flags.dnd || critical)
                 root.popups = root.popups.concat([n]).slice(-3);
         }
+    }
+
+    /** Command surface for scripts and the future xiu CLI. */
+    IpcHandler {
+        target: "notifs"
+        function clear(): void { root.clearAll(); }
+        function seen(): void { root.markAllSeen(); }
     }
 }

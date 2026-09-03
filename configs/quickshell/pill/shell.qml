@@ -147,6 +147,8 @@ ShellRoot {
     }
 
     function peek(mon) {
+        if (!mon || mon.length === 0)
+            mon = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
         root.peekMon = root.peekMon === mon ? "" : mon;
     }
 
