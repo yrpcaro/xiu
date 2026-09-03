@@ -4,7 +4,7 @@ import QtQuick
 import "Singletons"
 
 /**
- * Clipboard surface: search field over the cliphist history, drawn as one of
+ * Clipboard surface: search field over the clipboard history, drawn as one of
  * the pill's surfaces. Entries come from the Cliphist singleton snapshot so the
  * list is populated as soon as the pill finishes morphing. Typing filters by
  * substring, Return copies the selected entry and closes, hovering a row
