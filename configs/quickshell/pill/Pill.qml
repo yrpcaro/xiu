@@ -15,11 +15,10 @@ import "Singletons"
  * (rest, hover/pinned, mixer, calendar) with a no-overshoot easing so surfaces
  * grow out of the pill in place. Surfaces are stacked absolutely and cross-fade.
  *
- * Pin comes from a passive TapHandler, so it never swallows pointer events from
- * the surfaces stacked above: workspace dots, the clock target, tray icons and
- * the mixer faders get their own clicks and drags. Mere hover never morphs the
- * pill; only an explicit pin, peek, surface open or event mode (OSD, toast,
- * recorder) changes its geometry.
+ * Hover comes from a passive HoverHandler, pin from a passive TapHandler, so
+ * neither swallows pointer events from the surfaces stacked above: workspace
+ * dots, the clock target, tray icons and the mixer faders get their own clicks
+ * and drags.
  */
 Item {
     id: pill
@@ -29,6 +28,7 @@ Item {
     property var barWindow
     property string surface: ""
 
+    property bool hovered: false
     property bool pinned: false
     property bool forcePinned: false
 
@@ -72,8 +72,24 @@ Item {
     readonly property var btAdapter: (typeof Bluetooth !== "undefined" && Bluetooth) ? Bluetooth.defaultAdapter : null
     readonly property bool btOn: btAdapter ? btAdapter.enabled === true : false
     readonly property bool surfaceOpen: surface.length > 0
+    property bool hoverLatch: false
 
-    readonly property bool expanded: surfaceOpen || held
+    /**
+     * False for the first seconds after the shell maps. Hyprland hands pointer
+     * focus to a freshly mapped layer surface at the cursor's position, which
+     * the window-level HoverHandler reads as a pill hover and latches the pill
+     * open (issue #20). Latching only after boot settles filters that spurious
+     * enter; a real hover during the window just expands late, harmlessly.
+     */
+    property bool bootSettled: false
+
+    Timer {
+        interval: 3000
+        running: true
+        onTriggered: pill.bootSettled = true
+    }
+
+    readonly property bool expanded: surfaceOpen || held || hoverLatch
 
     /**
      * True while the open surface is waiting on an external auth dialog (the
@@ -731,11 +747,11 @@ Item {
     }
 
     /**
-     * Bead target while the expanded face is live. soulTarget is a sticky key
-     * written by the hover sources: the bead parks on the last focused dot or
-     * icon and glides to the next, so crossing a gap between targets doesn't
-     * snap it back to the active workspace. Pill geometry is voided so the
-     * anchor follows the morph, the point stays live.
+     * Bead target while hovered. soulTarget is a sticky key written by the hover
+     * sources: the bead parks on the last focused dot or icon and glides to the
+     * next, so crossing a gap between targets doesn't snap it back to the active
+     * workspace. Pill geometry is voided so the anchor follows the hover morph,
+     * the point stays live.
      */
     readonly property point soulPoint: {
         void pill.width;
@@ -796,11 +812,35 @@ Item {
 
     /**
      * Extra input width past the pill's right edge while the media bud sticks
-     * out there, so the window mask covers the bud's outer half: pointer events
-     * only exist inside the input mask, so the bud needs mask coverage to stay
-     * clickable.
+     * out there, so the window mask covers the bud's outer half. pill.hovered is
+     * fed by a window-level HoverHandler in shell.qml: pointer events only exist
+     * inside the input mask, so "window hovered" means "pointer over the pill (or
+     * bud)". That sidesteps the per-item hover flicker the child MouseAreas and
+     * the centred width morph would otherwise cause.
      */
     readonly property real inputPadRight: bud.shown ? bud.budR + 2 * s : 0
+
+    onHoveredChanged: {
+        if (hovered) {
+            if (bootSettled)
+                hoverLatch = true;
+            graceTimer.stop();
+        } else {
+            graceTimer.restart();
+        }
+    }
+
+    Timer {
+        id: graceTimer
+        interval: 300
+        onTriggered: {
+            if (pill.morphCloseness < 0.95) {
+                graceTimer.restart();
+                return;
+            }
+            pill.hoverLatch = false;
+        }
+    }
 
     TapHandler {
         enabled: !pill.surfaceOpen
@@ -1226,11 +1266,6 @@ Item {
         opacity: (pill.expanded || pill.dragActive || pill.mode === "game" || pill.mode === "toast" || pill.mode === "osd" || pill.mode === "quickChoose" || pill.mode === "quickCount") ? 0 : Math.pow(pill.morphCloseness, 1.5)
         visible: opacity > 0.01
         Behavior on opacity { NumberAnimation { duration: pill.mode === "rest" ? Motion.fast : Math.round(260 * Motion.mult) } }
-
-        /** Click affordance on the resting pill: the expanded face opens on click, never on hover. */
-        HoverHandler {
-            cursorShape: Qt.PointingHandCursor
-        }
 
         Row {
             id: restRow
