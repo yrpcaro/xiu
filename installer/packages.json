@@ -57,7 +57,10 @@
     { "id": "cava", "group": "core", "required": true, "desc": "Audio spectrum for the pill music visualizer", "aur": false,
       "names": { "arch": "cava", "debian": "cava", "fedora": "cava", "suse": "cava" }, "fallback": null },
 
-    { "id": "ghostty", "group": "core", "required": true, "desc": "The terminal", "aur": false,
+    { "id": "foot", "group": "core", "required": true, "desc": "The terminal", "aur": false,
+      "names": { "arch": "foot", "debian": "foot", "fedora": "foot", "suse": "foot" }, "fallback": null },
+
+    { "id": "ghostty", "group": "core", "required": false, "desc": "Alternative terminal (foot is the default)", "aur": false,
       "names": { "arch": "ghostty", "debian": null, "fedora": null, "suse": "ghostty" },
       "fallback": "ghostty" },
 
@@ -67,7 +70,40 @@
     { "id": "zoxide", "group": "core", "required": true, "desc": "Directory jumper the fish config initialises on startup", "aur": false,
       "names": { "arch": "zoxide", "debian": "zoxide", "fedora": "zoxide", "suse": "zoxide" }, "fallback": null },
 
-    { "id": "cliphist", "group": "core", "required": true, "desc": "Clipboard history behind the pill surface", "aur": false,
+    { "id": "eza", "group": "core", "required": true, "desc": "ls replacement behind the fish aliases", "aur": false,
+      "names": { "arch": "eza", "debian": "eza", "fedora": "eza", "suse": "eza" }, "fallback": "cargo" },
+
+    { "id": "bat", "group": "core", "required": true, "desc": "cat replacement behind the fish alias", "aur": false,
+      "names": { "arch": "bat", "debian": "bat", "fedora": "bat", "suse": "bat" }, "fallback": "cargo" },
+
+    { "id": "fd", "group": "core", "required": true, "desc": "find replacement behind the fish alias", "aur": false,
+      "names": { "arch": "fd", "debian": "fd-find", "fedora": "fd-find", "suse": "fd" }, "fallback": "cargo" },
+
+    { "id": "ripgrep", "group": "core", "required": true, "desc": "grep replacement behind the fish alias", "aur": false,
+      "names": { "arch": "ripgrep", "debian": "ripgrep", "fedora": "ripgrep", "suse": "ripgrep" }, "fallback": "cargo" },
+
+    { "id": "gitui", "group": "core", "required": true, "desc": "Git TUI behind the lg abbreviation", "aur": false,
+      "names": { "arch": "gitui", "debian": null, "fedora": null, "suse": null }, "fallback": "cargo" },
+
+    { "id": "dust", "group": "core", "required": true, "desc": "Disk usage treemap (du-dust)", "aur": false,
+      "names": { "arch": "dust", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "starship", "group": "core", "required": true, "desc": "The fish prompt", "aur": false,
+      "names": { "arch": "starship", "debian": "starship", "fedora": "starship", "suse": "starship" }, "fallback": "cargo" },
+
+    { "id": "direnv", "group": "core", "required": true, "desc": "Per-directory environment loading hooked into fish", "aur": false,
+      "names": { "arch": "direnv", "debian": "direnv", "fedora": "direnv", "suse": "direnv" }, "fallback": null },
+
+    { "id": "helix", "group": "core", "required": true, "desc": "The editor behind SUPER+C, themed with a transparent background", "aur": false,
+      "names": { "arch": "helix", "debian": "helix", "fedora": "helix", "suse": null }, "fallback": null },
+
+    { "id": "btop", "group": "core", "required": true, "desc": "System monitor on the CTRL+SHIFT+Escape workspace", "aur": false,
+      "names": { "arch": "btop", "debian": "btop", "fedora": "btop", "suse": "btop" }, "fallback": null },
+
+    { "id": "clipvault", "group": "core", "required": true, "desc": "Clipboard history behind the pill surface", "aur": true,
+      "names": { "arch": "clipvault", "debian": null, "fedora": null, "suse": null }, "fallback": "cargo" },
+
+    { "id": "cliphist", "group": "core", "required": false, "desc": "Alternative clipboard history (clipvault is the default)", "aur": false,
       "names": { "arch": "cliphist", "debian": "cliphist", "fedora": "cliphist", "suse": "cliphist" }, "fallback": null },
 
     { "id": "wl-clipboard", "group": "core", "required": true, "desc": "Wayland clipboard plumbing", "aur": false,
@@ -154,6 +190,48 @@
 
     { "id": "dolphin", "group": "full", "required": false, "desc": "KDE file manager", "aur": false,
       "names": { "arch": "dolphin", "debian": "dolphin", "fedora": "dolphin", "suse": "dolphin" }, "fallback": null },
+
+    { "id": "yazi", "group": "full", "required": false, "desc": "TUI file manager (keyboard-driven, image previews)", "aur": false,
+      "names": { "arch": "yazi", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "thunar", "group": "full", "required": false, "desc": "Xfce file manager (themed through the palette pipeline)", "aur": false,
+      "names": { "arch": "thunar", "debian": "thunar", "fedora": "thunar", "suse": "thunar" }, "fallback": null },
+
+    { "id": "htop", "group": "full", "required": false, "desc": "Process viewer, themed through the palette pipeline", "aur": false,
+      "names": { "arch": "htop", "debian": "htop", "fedora": "htop", "suse": "htop" }, "fallback": null },
+
+    { "id": "nvtop", "group": "full", "required": false, "desc": "GPU monitor, themed through the palette pipeline", "aur": false,
+      "names": { "arch": "nvtop", "debian": "nvtop", "fedora": "nvtop", "suse": "nvtop" }, "fallback": null },
+
+    { "id": "micro", "group": "full", "required": false, "desc": "Terminal editor, themed through the palette pipeline", "aur": false,
+      "names": { "arch": "micro", "debian": "micro", "fedora": "micro", "suse": "micro" }, "fallback": null },
+
+    { "id": "trash-cli", "group": "full", "required": false, "desc": "Freedesktop trash (the monthly auto-empty is off by default)", "aur": false,
+      "names": { "arch": "trash-cli", "debian": "trash-cli", "fedora": "trash-cli", "suse": null }, "fallback": null },
+
+    { "id": "uwsm", "group": "full", "required": false, "desc": "Universal Wayland Session Manager (env files ship in configs/uwsm)", "aur": false,
+      "names": { "arch": "uwsm", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "adw-gtk-theme", "group": "full", "required": false, "desc": "GTK theme the palette pipeline recolors", "aur": false,
+      "names": { "arch": "adw-gtk-theme", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "qtengine", "group": "full", "required": false, "desc": "Qt theming engine the palette pipeline feeds (activates Qt theming)", "aur": true,
+      "names": { "arch": "qtengine", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "darkly", "group": "full", "required": false, "desc": "Qt style paired with qtengine", "aur": true,
+      "names": { "arch": "darkly", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "papirus-folders", "group": "full", "required": false, "desc": "Color-matched Papirus folder icons", "aur": true,
+      "names": { "arch": "papirus-folders", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "sddm", "group": "full", "required": false, "desc": "Display manager option (torii theme ships in the repo)", "aur": false,
+      "names": { "arch": "sddm", "debian": "sddm", "fedora": "sddm", "suse": "sddm" }, "fallback": null },
+
+    { "id": "greetd", "group": "full", "required": false, "desc": "Minimal greeter option", "aur": false,
+      "names": { "arch": "greetd", "debian": "greetd", "fedora": "greetd", "suse": "greetd" }, "fallback": null },
+
+    { "id": "greetd-tuigreet", "group": "full", "required": false, "desc": "TUI greeter frontend for greetd", "aur": false,
+      "names": { "arch": "greetd-tuigreet", "debian": "greetd-tuigreet", "fedora": null, "suse": null }, "fallback": null },
 
     { "id": "keepassxc", "group": "full", "required": false, "desc": "Password manager", "aur": false,
       "names": { "arch": "keepassxc", "debian": "keepassxc", "fedora": "keepassxc", "suse": "keepassxc" }, "fallback": null },
