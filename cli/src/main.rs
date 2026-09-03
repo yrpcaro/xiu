@@ -34,6 +34,7 @@ fn run(args: &[String]) -> i32 {
         Some("clipboard") => ipc_call("pill", &["clipboard", ""]),
         Some("notifs") => notifs(&args[1..]),
         Some("gamemode") => gamemode(&args[1..]),
+        Some("scheme") => scheme(&args[1..]),
         Some("emoji") => emoji(&args[1..]),
         Some(other) => {
             eprintln!("xiu: unknown command '{other}' (see `xiu help`)");
@@ -59,6 +60,8 @@ COMMANDS:
     clipboard                     open the pill's clipboard surface
     notifs [clear|seen]           clear (default) or mark notifications seen
     gamemode [ACTION]             status (default), on, off, toggle
+    scheme [ACTION]               list, get, set <preset|dynamic> [-v VARIANT],
+                                  preview <wallpaper> (engine: wallcolors.py)
     emoji [-p] [-l] [QUERY...]    copy the matching emoji (-p: ask, -l: list)
     version                       print the version"
     );
@@ -190,6 +193,69 @@ fn gamemode(args: &[String]) -> i32 {
         "toggle" => ipc_call("gamemode", &["toggle"]),
         other => {
             eprintln!("xiu gamemode: unknown action '{other}'");
+            2
+        }
+    }
+}
+
+/// The palette engine is wallcolors.py; the CLI is its front door. Scheme
+/// state survives wallpaper changes in its own state file, and an explicit
+/// change flips the pill's paletteMode so the shell actually listens.
+fn scheme(args: &[String]) -> i32 {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let script = format!("{home}/.config/hypr/scripts/wallcolors.py");
+    let run = |flags: Vec<&str>| run_status(Command::new("python3").arg(&script).args(&flags));
+
+    match args.first().map(String::as_str) {
+        Some("list") => run(vec!["--list-presets"]),
+        Some("get") | None => run(vec!["--state"]),
+        Some("preview") => {
+            if args.len() < 2 {
+                eprintln!("xiu scheme preview: needs a wallpaper path");
+                return 2;
+            }
+            run(vec!["--preview", &args[1]])
+        }
+        Some("set") => {
+            let rest = &args[1..];
+            if rest.is_empty() {
+                eprintln!("xiu scheme set: needs a preset name, `dynamic`, -v VARIANT, --smart or --no-smart");
+                return 2;
+            }
+            let mut flags: Vec<String> = Vec::new();
+            let mut i = 0;
+            while i < rest.len() {
+                match rest[i].as_str() {
+                    "-v" | "--variant" => {
+                        i += 1;
+                        match rest.get(i) {
+                            Some(v) => {
+                                flags.push("--variant".into());
+                                flags.push(v.clone());
+                            }
+                            None => {
+                                eprintln!("xiu scheme set: -v needs a variant");
+                                return 2;
+                            }
+                        }
+                    }
+                    "--smart" | "--no-smart" => flags.push(rest[i].clone()),
+                    other if !other.starts_with('-') => {
+                        flags.push("--preset".into());
+                        flags.push(other.into());
+                    }
+                    other => {
+                        eprintln!("xiu scheme set: unexpected '{other}'");
+                        return 2;
+                    }
+                }
+                i += 1;
+            }
+            let refs: Vec<&str> = flags.iter().map(String::as_str).collect();
+            run(refs)
+        }
+        Some(other) => {
+            eprintln!("xiu scheme: unknown action '{other}' (list, get, set, preview)");
             2
         }
     }
