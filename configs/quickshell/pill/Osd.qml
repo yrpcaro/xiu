@@ -57,7 +57,7 @@ Item {
      * Super+wheel, clicking a dot) changes it, so flashing the workspace OSD
      * here briefly morphs the pill open to show where you landed. The arm timer
      * swallows the initial populate, so login doesn't flash. Skipped while the
-     * pill is expanded: the hover/surface pill already shows the live dots with
+     * pill is expanded: the pinned/surface pill already shows the live dots with
      * the active one marked, so the OSD would only be a redundant morph.
      */
     readonly property string activeWsName: {
