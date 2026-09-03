@@ -606,6 +606,16 @@ def render_helix(pill, b):
     (d / "themes" / "xiu.toml").write_text("\n".join(lines) + "\n")
 
 
+def render_browser(pill):
+    """Brave/Chromium pick their toolbar color up from a managed policy.
+    The payload lands in xiu's own config dir; `xiu browser` (or the
+    installer) copies it into /etc, which needs root."""
+    d = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "xiu"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "browser-theme.json").write_text(
+        json.dumps({"BrowserThemeColor": pill["surface"]}, indent=2) + "\n")
+
+
 def fan_out(pill, seed, variant):
     """Write the pill JSON, recolour fastfetch, and build the terminal/border
     base16 through matugen with the resolved scheme type."""
@@ -640,6 +650,7 @@ def fan_out(pill, seed, variant):
     render_cava(pill, b)
     render_micro(pill, b)
     render_helix(pill, b)
+    render_browser(pill)
     return 0
 
 

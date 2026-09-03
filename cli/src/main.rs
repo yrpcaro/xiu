@@ -35,6 +35,7 @@ fn run(args: &[String]) -> i32 {
         Some("notifs") => notifs(&args[1..]),
         Some("gamemode") => gamemode(&args[1..]),
         Some("scheme") => scheme(&args[1..]),
+        Some("browser") => browser(&args[1..]),
         Some("emoji") => emoji(&args[1..]),
         Some(other) => {
             eprintln!("xiu: unknown command '{other}' (see `xiu help`)");
@@ -62,6 +63,7 @@ COMMANDS:
     gamemode [ACTION]             status (default), on, off, toggle
     scheme [ACTION]               list, get, set <preset|dynamic> [-v VARIANT],
                                   preview <wallpaper> (engine: wallcolors.py)
+    browser                       apply the palette policy to Brave/Chromium
     emoji [-p] [-l] [QUERY...]    copy the matching emoji (-p: ask, -l: list)
     version                       print the version"
     );
@@ -195,6 +197,39 @@ fn gamemode(args: &[String]) -> i32 {
             eprintln!("xiu gamemode: unknown action '{other}'");
             2
         }
+    }
+}
+
+/// Brave and Chromium read their toolbar color from a managed policy under
+/// /etc, which needs root. The palette pipeline keeps the payload fresh in
+/// ~/.config/xiu/browser-theme.json; this copies it out with a
+/// non-interactive sudo when possible and prints the commands otherwise.
+fn browser(_args: &[String]) -> i32 {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let payload = format!("{home}/.config/xiu/browser-theme.json");
+    if !std::path::Path::new(&payload).is_file() {
+        eprintln!("xiu browser: no palette payload yet (run a wallpaper change or `xiu scheme set` first)");
+        return 1;
+    }
+    let targets = ["/etc/brave/policies/managed/xiu.json", "/etc/chromium/policies/managed/xiu.json"];
+    let mut failed = false;
+    for target in targets {
+        let status = Command::new("sudo")
+            .args(["-n", "install", "-m", "644", "-D", &payload, target])
+            .status();
+        match status {
+            Ok(s) if s.success() => println!("applied → {target}"),
+            _ => {
+                failed = true;
+                eprintln!("needs root; run: sudo install -m 644 -D {payload} {target}");
+            }
+        }
+    }
+    if failed {
+        1
+    } else {
+        println!("restart the browser to pick the new color up");
+        0
     }
 }
 

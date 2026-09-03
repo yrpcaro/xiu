@@ -1,0 +1,7 @@
+{
+    "name": "io.github.yrpcaro.xiu",
+    "description": "Xiu live theme host",
+    "path": "__HOME__/.config/xiu/xiufox-host.py",
+    "type": "stdio",
+    "allowed_extensions": ["xiu-theme@yrpcaro"]
+}
