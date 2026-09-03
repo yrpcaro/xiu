@@ -6,7 +6,7 @@
 # text as a `type` command with a Return between lines, not after the last.
 
 sleep 0.3
-entry=$(cliphist list | head -1 | cliphist decode)
+entry=$(clipvault get --index 0)
 [ -n "$entry" ] || exit 0
 
 printf '%s' "$entry" | wl-copy

@@ -1,3 +1,5 @@
 #!/bin/sh
-pgrep -f "wl-paste --type text --watch cliphist" >/dev/null || wl-paste --type text --watch cliphist store &
-pgrep -f "wl-paste --type image --watch cliphist" >/dev/null || wl-paste --type image --watch cliphist store &
+# clipvault keeps one watcher for every type: text, images and other binary
+# data are all stored byte-for-byte, so a single wl-paste watch covers what
+# cliphist needed two of.
+pgrep -f "wl-paste --watch clipvault" >/dev/null || wl-paste --watch clipvault store &
