@@ -1,0 +1,14 @@
+[package]
+name = "xiu"
+version = "0.1.0"
+edition = "2021"
+description = "xiu shell CLI: drive the pill, its scripts and the update flow from the terminal"
+license = "MIT"
+
+[[bin]]
+name = "xiu"
+path = "src/main.rs"
+
+[profile.release]
+strip = true
+lto = true
