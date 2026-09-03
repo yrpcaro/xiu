@@ -58,4 +58,13 @@ Singleton {
             proc.running = true;
         }
     }
+
+    /** Command surface for scripts and the xiu CLI. */
+    IpcHandler {
+        target: "gamemode"
+        function status(): string { return Flags.gameMode ? "on" : "off"; }
+        function toggle(): void { Flags.gameMode = !Flags.gameMode; }
+        function on(): void { Flags.gameMode = true; }
+        function off(): void { Flags.gameMode = false; }
+    }
 }

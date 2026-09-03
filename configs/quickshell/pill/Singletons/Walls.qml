@@ -86,6 +86,7 @@ Singleton {
      */
     property string queuedApply: ""
     property string queuedOutput: ""
+    property bool queuedRandom: false
 
     function apply(path, output) {
         var out = output === undefined ? "" : output;
@@ -97,6 +98,16 @@ Singleton {
         applyProc.command = out.length > 0
             ? ["bash", root.setScript, "set", path, out]
             : ["bash", root.setScript, "set", path];
+        applyProc.running = true;
+    }
+
+    /** Random pick, sharing the apply queue so it can't race a running transition. */
+    function random() {
+        if (applyProc.running) {
+            queuedRandom = true;
+            return;
+        }
+        applyProc.command = ["bash", root.setScript];
         applyProc.running = true;
     }
 
@@ -167,6 +178,12 @@ Singleton {
     Process {
         id: applyProc
         onExited: {
+            if (root.queuedRandom) {
+                root.queuedRandom = false;
+                applyProc.command = ["bash", root.setScript];
+                applyProc.running = true;
+                return;
+            }
             if (root.queuedApply.length) {
                 var next = root.queuedApply;
                 var nextOut = root.queuedOutput;
@@ -183,4 +200,20 @@ Singleton {
     }
 
     Component.onCompleted: refresh()
+
+    /** Command surface for scripts and the xiu CLI. */
+    IpcHandler {
+        target: "wallpaper"
+        function get(): string { return root.current; }
+        function dir(): string { return root.wpDir; }
+        function list(): string {
+            var out = [];
+            for (var i = 0; i < root.entries.length; i++)
+                out.push(root.entries[i].path);
+            return out.join("\n");
+        }
+        function set(path: string): void { root.apply(path); }
+        function random(): void { root.random(); }
+        function refresh(): void { root.refresh(); }
+    }
 }

@@ -482,4 +482,12 @@ Singleton {
     }
 
     Component.onCompleted: refreshRecent()
+
+    /** Command surface for scripts and the xiu CLI. */
+    IpcHandler {
+        target: "recorder"
+        function status(): string { return root.recording ? "recording" : (root.counting ? "counting" : "idle"); }
+        function stop(): void { if (root.recording) root.stop(); }
+        function cancel(): void { if (root.counting) root.cancel(); }
+    }
 }
