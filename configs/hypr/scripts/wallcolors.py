@@ -9,15 +9,36 @@ text, so the surfaces and the text flip together for contrast across the full
 range. The dominant hue tints every tier in HSL. An achromatic wallpaper drops to
 a neutral grey ramp. matugen still builds the dark base16 the always-dark terminal
 reads; the pill JSON carries surfaces, accent and the contrast-matched text.
+
+On top of the wallpaper-driven mode sits the scheme layer:
+  wallcolors.py <wallpaper>            regenerate (respects the scheme state)
+  wallcolors.py --hue H [mode] [sat]   manual hue override (Look surface)
+  wallcolors.py --preset <name|dynamic>named scheme from ~/.config/hypr/schemes/
+  wallcolors.py --variant <name|auto>  matugen scheme type (tonal-spot, vibrant, ...)
+  wallcolors.py --smart | --no-smart   smartScheme: colourfulness picks the variant
+  wallcolors.py --list-presets         print the available preset names
+  wallcolors.py --state                print the current scheme state
+  wallcolors.py --preview <wallpaper>  print the dynamic JSON without writing
+
+The state lives in a two-line file next to the wallpaper state so a wallpaper
+change never clobbers a chosen preset; an explicit scheme change also flips the
+pill's paletteMode flag to dynamic so the shell actually listens.
 """
 import colorsys
 import json
+import math
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 CACHE = Path.home() / ".cache" / "ricelin"
+STATE_HOME = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local" / "state")))
+SCHEME_STATE = STATE_HOME / "ricelin" / "scheme"
+WALLPAPER_STATE = STATE_HOME / "ricelin-wallpaper"
+FLAGS_FILE = STATE_HOME / "ricelin" / "flags.json"
+SCHEMES_DIR = Path(__file__).resolve().parent.parent / "schemes"
 
 SURF_NAMES = ["surface", "surface_container_low", "surface_container",
               "surface_container_high", "surface_container_highest", "outline_variant"]
@@ -28,6 +49,17 @@ DARK_TEXT = [(0.90, 0.05), (0.97, 0.03), (0.73, 0.07), (0.54, 0.06),
              (0.44, 0.05), (0.81, 0.07), (0.75, 0.08)]
 LIGHT_TEXT = [(0.20, 0.18), (0.10, 0.20), (0.36, 0.14), (0.48, 0.10),
               (0.56, 0.08), (0.28, 0.12), (0.34, 0.12)]
+
+VARIANTS = ["auto", "content", "expressive", "fidelity", "fruit-salad", "monochrome",
+            "neutral", "rainbow", "tonal-spot", "vibrant"]
+
+# How far each matugen scheme type pushes the pill's own accent saturation:
+# the quiet types mute the ramp so they read calm, the loud ones let it sing.
+ACCENT_MULT = {
+    "monochrome": 0.45, "neutral": 0.55, "content": 0.85, "fidelity": 0.90,
+    "tonal-spot": 1.0, "vibrant": 1.25, "expressive": 1.30, "rainbow": 1.35,
+    "fruit-salad": 1.30,
+}
 
 
 def analyze(wallpaper):
@@ -60,11 +92,55 @@ def analyze(wallpaper):
     return win["best"][1], win["best"][2], mean_l
 
 
-def matugen(source_hex):
-    out = subprocess.run(
-        ["matugen", "color", "hex", source_hex, "-m", "dark", "-j", "hex"],
-        capture_output=True, text=True, check=True,
-    )
+def colourfulness(wallpaper):
+    """Hasler–Süsstrunk colourfulness on a 64x64 thumbnail: the spread of the
+    red-green and yellow-blue opponent channels plus a weighted mean term,
+    normalised to roughly 0..1. None on any failure so the caller falls back
+    to the default variant."""
+    try:
+        out = subprocess.run(
+            ["magick", wallpaper, "-alpha", "off", "-resize", "64x64", "-depth", "8", "txt:-"],
+            capture_output=True, text=True, check=True).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    rg, yb = [], []
+    for m in re.finditer(r"#([0-9A-Fa-f]{6})", out):
+        r = int(m.group(1)[0:2], 16) / 255
+        g = int(m.group(1)[2:4], 16) / 255
+        b = int(m.group(1)[4:6], 16) / 255
+        rg.append(r - g)
+        yb.append(0.5 * (r + g) - b)
+    if not rg:
+        return None
+
+    def stats(v):
+        mean = sum(v) / len(v)
+        var = sum((x - mean) ** 2 for x in v) / len(v)
+        return mean, var
+
+    mrg, vrg = stats(rg)
+    myb, vyb = stats(yb)
+    return math.sqrt(vrg + vyb) + 0.3 * math.sqrt(mrg ** 2 + myb ** 2)
+
+
+def smart_variant(score):
+    """Colourfulness picks the matugen scheme type: near-grey wallpapers get
+    the neutral ramp so they never turn to mud, busy ones the content scheme,
+    and everything in between the default tonal spot."""
+    if score is None:
+        return "tonal-spot"
+    if score < 0.06:
+        return "neutral"
+    if score < 0.13:
+        return "content"
+    return "tonal-spot"
+
+
+def matugen(source_hex, variant):
+    argv = ["matugen", "color", "hex", source_hex, "-m", "dark", "-j", "hex"]
+    if variant and variant not in ("", "auto"):
+        argv += ["--type", "scheme-" + variant]
+    out = subprocess.run(argv, capture_output=True, text=True, check=True)
     return json.loads(out.stdout)
 
 
@@ -112,29 +188,83 @@ def render_fastfetch(pill):
     (ff / "config.jsonc").write_text(out)
 
 
-def main():
-    if len(sys.argv) < 2:
-        return 1
-    if sys.argv[1] == "--hue":
-        hue = (float(sys.argv[2]) % 360) / 360.0
-        mode = sys.argv[3] if len(sys.argv) > 3 else "dark"
-        sat = float(sys.argv[4]) if len(sys.argv) > 4 else 0.5
-        sat = max(0.0, min(1.0, sat))
-        mean_l = 0.85 if mode == "light" else 0.12
-        chromatic = sat > 0.02
-    else:
-        wallpaper = sys.argv[1]
-        if not Path(wallpaper).is_file():
-            return 0
-        hue, sat, mean_l = analyze(wallpaper)
-        chromatic = hue is not None
-        if not chromatic:
-            hue, sat = 0.09, 0.0
-    CACHE.mkdir(parents=True, exist_ok=True)
+def load_scheme():
+    """The sticky scheme state: preset (or dynamic), matugen variant (or auto),
+    smartScheme on/off. Defaults keep the pre-scheme-layer behavior."""
+    preset, variant, smart = "dynamic", "auto", True
+    try:
+        for line in SCHEME_STATE.read_text().splitlines():
+            key, _, value = line.partition(" ")
+            if key == "preset":
+                preset = value.strip() or "dynamic"
+            elif key == "variant":
+                variant = value.strip() or "auto"
+            elif key == "smart":
+                smart = value.strip() != "off"
+    except OSError:
+        pass
+    return preset, variant, smart
+
+
+def save_scheme(preset, variant, smart):
+    SCHEME_STATE.parent.mkdir(parents=True, exist_ok=True)
+    SCHEME_STATE.write_text("preset %s\nvariant %s\nsmart %s\n"
+                            % (preset, variant, "on" if smart else "off"))
+
+
+def list_presets():
+    return sorted(p.stem for p in SCHEMES_DIR.glob("*.json"))
+
+
+def preset_tokens(name):
+    """The full pill token set for a named preset, or None when unknown."""
+    path = SCHEMES_DIR / ("%s.json" % name)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    if "primary" not in data or "cream" not in data or "surface" not in data:
+        return None
+    return data
+
+
+def set_palette_mode_dynamic():
+    """An explicit scheme change implies using it: flip the pill's palette mode
+    flag so Theme listens to the generated colors.json."""
+    try:
+        flags = json.loads(FLAGS_FILE.read_text()) if FLAGS_FILE.is_file() else {}
+    except (OSError, ValueError):
+        return
+    if flags.get("paletteMode") != "dynamic":
+        flags["paletteMode"] = "dynamic"
+        FLAGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        FLAGS_FILE.write_text(json.dumps(flags, indent=2) + "\n")
+
+
+def current_wallpaper():
+    try:
+        return WALLPAPER_STATE.read_text().strip()
+    except OSError:
+        return ""
+
+
+def generate_dynamic(wallpaper, variant, smart):
+    """The wallpaper-driven path: histogram analysis into the HSL pill palette,
+    with the resolved matugen variant riding along."""
+    hue, sat, mean_l = analyze(wallpaper)
+    chromatic = hue is not None
+    if not chromatic:
+        hue, sat = 0.09, 0.0
+
+    if variant == "auto":
+        variant = smart_variant(colourfulness(wallpaper)) if smart else "tonal-spot"
 
     light = mean_l >= 0.40
     surf_sat = min(sat, 0.26) if light else min(max(sat, 0.30 if chromatic else 0.0), 0.45)
     acc_sat = (min(sat + 0.18, 0.85) if light else min(max(sat, 0.30) + 0.12, 0.82)) if chromatic else 0.05
+    acc_sat = min(0.95, acc_sat * ACCENT_MULT.get(variant, 1.0))
     if light:
         base = lerp(mean_l, 0.40, 0.66, 0.80, 0.93)
         steps, text, acc_l, deep_l, glow_l = LIGHT_STEPS, LIGHT_TEXT, 0.42, 0.30, 0.55
@@ -149,12 +279,54 @@ def main():
     pill["outline"] = tint(hue, surf_sat, base + (-0.35 if light else 0.35))
     for key, (lit, st) in zip(TEXT_KEYS, text):
         pill[key] = tint(hue, st, lit)
+
+    seed = tint(hue, sat, 0.45) if chromatic else "#787878"
+    return pill, seed, variant
+
+
+def generate_manual(hue, mode, sat, variant):
+    """The Look surface's manual hue override: fixed tone, full ramp."""
+    sat = max(0.0, min(1.0, sat))
+    mean_l = 0.85 if mode == "light" else 0.12
+    chromatic = sat > 0.02
+    if not chromatic:
+        hue = 0.09
+    if variant == "auto":
+        variant = "tonal-spot"
+
+    light = mean_l >= 0.40
+    surf_sat = min(sat, 0.26) if light else min(max(sat, 0.30 if chromatic else 0.0), 0.45)
+    acc_sat = (min(sat + 0.18, 0.85) if light else min(max(sat, 0.30) + 0.12, 0.82)) if chromatic else 0.05
+    acc_sat = min(0.95, acc_sat * ACCENT_MULT.get(variant, 1.0))
+    if light:
+        base = lerp(mean_l, 0.40, 0.66, 0.80, 0.93)
+        steps, text, acc_l, deep_l, glow_l = LIGHT_STEPS, LIGHT_TEXT, 0.42, 0.30, 0.55
+    else:
+        base = lerp(mean_l, 0.0, 0.40, 0.045, 0.20)
+        steps, text, acc_l, deep_l, glow_l = DARK_STEPS, DARK_TEXT, 0.70, 0.34, 0.86
+
+    pill = {name: tint(hue, surf_sat, base + step) for name, step in zip(SURF_NAMES, steps)}
+    pill["primary"] = tint(hue, acc_sat, acc_l)
+    pill["primary_container"] = tint(hue, min(acc_sat + 0.08, 0.9), deep_l)
+    pill["on_primary_container"] = tint(hue, min(acc_sat, 0.45), glow_l)
+    pill["outline"] = tint(hue, surf_sat, base + (-0.35 if light else 0.35))
+    for key, (lit, st) in zip(TEXT_KEYS, text):
+        pill[key] = tint(hue, st, lit)
+
+    seed = tint(hue, sat, 0.45) if chromatic else "#787878"
+    return pill, seed, variant
+
+
+def fan_out(pill, seed, variant):
+    """Write the pill JSON, recolour fastfetch, and build the terminal/border
+    base16 through matugen with the resolved scheme type."""
+    CACHE.mkdir(parents=True, exist_ok=True)
     (CACHE / "colors.json").write_text(json.dumps(pill, indent=2) + "\n")
     render_fastfetch(pill)
 
     try:
         b = {k: v["dark"]["color"] for k, v in
-             matugen(tint(hue, sat, 0.45) if chromatic else "#787878")["base16"].items()}
+             matugen(seed, variant)["base16"].items()}
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         return 0
 
@@ -173,6 +345,95 @@ def main():
         lines.append(f'palette = {i}={b["base%02x" % i]}')
     (CACHE / "ghostty-colors").write_text("\n".join(lines) + "\n")
     return 0
+
+
+def main():
+    args = sys.argv[1:]
+    if len(args) == 0:
+        print("usage: wallcolors.py <wallpaper> | --hue H [mode] [sat] | --preset NAME | "
+              "--variant NAME | --smart | --no-smart | --list-presets | --state | "
+              "--preview <wallpaper>", file=sys.stderr)
+        return 1
+
+    if args[0] == "--list-presets":
+        print("\n".join(list_presets()))
+        return 0
+    if args[0] == "--state":
+        preset, variant, smart = load_scheme()
+        print("preset %s\nvariant %s\nsmart %s" % (preset, variant, "on" if smart else "off"))
+        return 0
+    if args[0] == "--preview":
+        if len(args) < 2:
+            print("wallcolors: --preview needs a wallpaper", file=sys.stderr)
+            return 1
+        pill, seed, variant = generate_dynamic(args[1], "auto", True)
+        pill["_variant"] = variant
+        pill["_seed"] = seed
+        print(json.dumps(pill, indent=2))
+        return 0
+
+    preset, variant, smart = load_scheme()
+    changed = False
+    wallpaper = None
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "--preset" and i + 1 < len(args):
+            i += 1
+            name = args[i]
+            if name != "dynamic" and preset_tokens(name) is None:
+                print("wallcolors: unknown preset '%s' (see --list-presets)" % name,
+                      file=sys.stderr)
+                return 1
+            preset = name
+            changed = True
+        elif a == "--variant" and i + 1 < len(args):
+            i += 1
+            if args[i] not in VARIANTS:
+                print("wallcolors: unknown variant '%s' (one of: %s)" % (args[i], ", ".join(VARIANTS)),
+                      file=sys.stderr)
+                return 1
+            variant = args[i]
+            changed = True
+        elif a == "--smart":
+            smart = True
+            changed = True
+        elif a == "--no-smart":
+            smart = False
+            changed = True
+        elif a == "--hue" and i + 1 < len(args):
+            # Manual override from the Look surface: fixed tone, state untouched.
+            hue = (float(args[i + 1]) % 360) / 360.0
+            mode = args[i + 2] if i + 2 < len(args) and args[i + 2] in ("dark", "light") else "dark"
+            sat = float(args[i + 3]) if i + 3 < len(args) and re.match(r"^\d+(\.\d+)?$", args[i + 3]) else 0.5
+            pill, seed, resolved = generate_manual(hue, mode, sat, variant)
+            return fan_out(pill, seed, resolved)
+        elif wallpaper is None:
+            wallpaper = a
+        else:
+            print("wallcolors: unexpected argument '%s'" % a, file=sys.stderr)
+            return 1
+        i += 1
+
+    if changed:
+        save_scheme(preset, variant, smart)
+        set_palette_mode_dynamic()
+
+    if preset != "dynamic":
+        tokens = preset_tokens(preset)
+        resolved = variant if variant != "auto" else "tonal-spot"
+        return fan_out(tokens, "#" + tokens["seed"], resolved)
+
+    if wallpaper is None:
+        wallpaper = current_wallpaper()
+        if not wallpaper or not Path(wallpaper).is_file():
+            print("wallcolors: no wallpaper to analyze (set one first)", file=sys.stderr)
+            return 1
+    elif not Path(wallpaper).is_file():
+        return 0
+
+    pill, seed, resolved = generate_dynamic(wallpaper, variant, smart)
+    return fan_out(pill, seed, resolved)
 
 
 if __name__ == "__main__":
