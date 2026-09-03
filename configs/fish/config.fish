@@ -52,6 +52,27 @@ end
 if type -q rg
     alias grep rg
 end
+if type -q dust
+    alias du dust
+end
+
+# nvim owns the vi/vim names when it is around
+if type -q nvim
+    alias vim nvim
+    alias vi nvim
+end
+
+# yazi closes into the directory you were in (the official shell wrapper)
+if type -q yazi
+    function y -w yazi -d 'file manager; quits back into the dir you were in'
+        set tmp (mktemp -t "yazi-cwd.XXXXXX")
+        command yazi $argv --cwd-file="$tmp"
+        if read -z cwd < "$tmp"; and [ "$cwd" != "$PWD" ]; and test -d "$cwd"
+            builtin cd -- "$cwd"
+        end
+        command rm -f -- "$tmp"
+    end
+end
 
 # Prompt marks (OSC 133) so the terminal can jump between prompts in scrollback
 function mark_prompt_start --on-event fish_prompt

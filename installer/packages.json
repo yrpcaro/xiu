@@ -248,6 +248,27 @@
     { "id": "rnote", "group": "full", "required": false, "desc": "Handwritten notes and sketches", "aur": false,
       "names": { "arch": "rnote", "debian": null, "fedora": null, "suse": "rnote" }, "fallback": "flatpak", "flatpak_id": "com.github.flxzt.rnote" },
 
+    { "id": "bottom", "group": "full", "required": false, "desc": "System monitor (btm), themed through the palette", "aur": false,
+      "names": { "arch": "bottom", "debian": null, "fedora": "bottom", "suse": "bottom" }, "fallback": null },
+
+    { "id": "neovim", "group": "full", "required": false, "desc": "Terminal editor; the xiu colorscheme follows the palette", "aur": false,
+      "names": { "arch": "neovim", "debian": "neovim", "fedora": "neovim", "suse": "neovim" }, "fallback": null },
+
+    { "id": "zed", "group": "full", "required": false, "desc": "GUI editor; the xiu theme follows the palette", "aur": false,
+      "names": { "arch": "zed", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "spotify", "group": "full", "required": false, "desc": "Spotify client (pairs with the spicetify theme)", "aur": true,
+      "names": { "arch": "spotify", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "spicetify-cli", "group": "full", "required": false, "desc": "Spotify theming; carries the xiu palette into the client", "aur": true,
+      "names": { "arch": "spicetify-cli", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "telegram-desktop", "group": "full", "required": false, "desc": "Telegram; import the generated xiu .attheme once", "aur": false,
+      "names": { "arch": "telegram-desktop", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "vesktop", "group": "full", "required": false, "desc": "Vencord Discord client; picks up the xiu CSS theme", "aur": true,
+      "names": { "arch": "vesktop", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
     { "id": "brave", "group": "extra", "required": false, "desc": "Brave browser with the matching Ricelin theme", "aur": true,
       "names": { "arch": "brave-bin", "debian": null, "fedora": null, "suse": null },
       "note": "extra group is never pulled by the core or full profiles; only installed when the Brave toggle is on. arch brave-bin is AUR; off arch use the Flathub build com.brave.Browser",

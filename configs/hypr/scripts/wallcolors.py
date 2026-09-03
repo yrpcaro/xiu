@@ -606,6 +606,439 @@ def render_helix(pill, b):
     (d / "themes" / "xiu.toml").write_text("\n".join(lines) + "\n")
 
 
+def render_bottom(pill, b):
+    """bottom (btm) has no theme-file indirection, so the [styles] sections of
+    bottom.toml are rewritten in place and every other section — layout, flags,
+    rate — is carried through untouched."""
+    d = _tool_dir("bottom")
+    if d is None:
+        return
+    p = pill
+    fresh = "\n".join([
+        "# [styles] kept fresh by wallcolors.py on every palette change.",
+        "[styles.cpu]",
+        'all_entry_colour = "%s"' % p["primary"],
+        'avg_entry_colour = "%s"' % p["on_primary_container"],
+        'cpu_core_colours = ["%s", "%s", "%s", "%s", "%s", "%s"]'
+        % (p["primary"], p["on_primary_container"], p["subtle"], p["bright"], p["dim"], p["faint"]),
+        "",
+        "[styles.temp_graph]",
+        'temp_graph_colour_styles = ["%s", "%s", "%s"]'
+        % (p["on_primary_container"], p["subtle"], p["primary"]),
+        "",
+        "[styles.memory]",
+        'ram_colour = "%s"' % b["base0d"],
+        'cache_colour = "%s"' % b["base0c"],
+        'swap_colour = "%s"' % b["base0e"],
+        'arc_colour = "%s"' % b["base0a"],
+        'gpu_colours = ["%s", "%s", "%s", "%s", "%s", "%s"]'
+        % (p["primary"], p["subtle"], b["base0c"], b["base0b"], p["dim"], b["base0e"]),
+        "",
+        "[styles.network]",
+        'rx_colour = "%s"' % b["base0d"],
+        'tx_colour = "%s"' % b["base0b"],
+        'rx_total_colour = "%s"' % b["base0c"],
+        'tx_total_colour = "%s"' % b["base0e"],
+        "",
+        "[styles.battery]",
+        'high_battery_colour = "%s"' % b["base0b"],
+        'medium_battery_colour = "%s"' % b["base0a"],
+        'low_battery_colour = "%s"' % b["base08"],
+        "",
+        "[styles.tables]",
+        'headers = {colour = "%s", bold = true}' % p["bright"],
+        "",
+        "[styles.graphs]",
+        'graph_colour = "%s"' % p["outline_variant"],
+        'legend_text = {colour = "%s"}' % p["dim"],
+        "",
+        "[styles.widgets]",
+        'border_colour = "%s"' % p["outline_variant"],
+        'selected_border_colour = "%s"' % p["primary"],
+        'widget_title = {colour = "%s"}' % p["subtle"],
+        'text = {colour = "%s"}' % p["cream"],
+        'selected_text = {colour = "%s", bg_colour = "%s"}'
+        % (p["bright"], p["surface_container_high"]),
+        'disabled_text = {colour = "%s"}' % p["faint"],
+    ]) + "\n"
+    cfg = d / "bottom.toml"
+    if cfg.is_file():
+        kept, inside = [], False
+        for line in cfg.read_text().splitlines():
+            if line.startswith("[styles"):
+                inside = True
+                continue
+            if inside and line.startswith("["):
+                inside = False
+            if not inside:
+                kept.append(line)
+        base = "\n".join(kept).rstrip("\n")
+        body = (base + "\n\n" if base else "") + fresh
+    else:
+        body = fresh
+    cfg.write_text(body)
+
+
+def render_yazi(pill, b):
+    """yazi: theme.toml is the palette surface (mgr, tabs, mode, filetype) and
+    is regenerated whole, like htoprc; yazi.toml (keys, openers) is the user's
+    and is never touched."""
+    d = _tool_dir("yazi")
+    if d is None:
+        return
+    p = pill
+    lines = [
+        "# Written by wallcolors.py on every palette change.",
+        "[mgr]",
+        'cwd = { fg = "%s" }' % p["cream"],
+        'border_style = { fg = "%s" }' % p["outline_variant"],
+        'find_keyword = { fg = "%s", bold = true }' % p["primary"],
+        'find_position = { fg = "%s", bg = "%s" }'
+        % (p["bright"], p["surface_container_high"]),
+        'marker_selected = { fg = "%s", bold = true }' % p["primary"],
+        'marker_copied = { fg = "%s" }' % b["base0b"],
+        'marker_cut = { fg = "%s" }' % b["base08"],
+        'marker_marked = { fg = "%s" }' % b["base0e"],
+        'symlink_target = { fg = "%s" }' % b["base0d"],
+        "",
+        "[tabs]",
+        'active = { fg = "%s", bg = "%s", bold = true }'
+        % (p["bright"], p["surface_container_high"]),
+        'inactive = { fg = "%s" }' % p["dim"],
+        'sep_inner = { fg = "%s" }' % p["outline_variant"],
+        'sep_outer = { fg = "%s" }' % p["outline_variant"],
+        "",
+        "[mode]",
+        'normal_main = { fg = "%s", bg = "%s", bold = true }'
+        % (p["on_primary_container"], p["primary"]),
+        'normal_alt = { fg = "%s", bg = "%s" }' % (p["cream"], p["surface_container"]),
+        'select_main = { fg = "%s", bg = "%s", bold = true }' % (p["bright"], b["base0d"]),
+        'select_alt = { fg = "%s", bg = "%s" }' % (p["cream"], p["surface_container_high"]),
+        'unset_main = { fg = "%s", bg = "%s", bold = true }' % (p["cream"], b["base08"]),
+        'unset_alt = { fg = "%s", bg = "%s" }' % (p["cream"], p["surface_container_high"]),
+        "",
+        "[filetype]",
+        "rules = [",
+        '  { mime = "image/*", fg = "%s" },' % b["base0a"],
+        '  { mime = "{audio,video}/*", fg = "%s" },' % b["base0d"],
+        '  { mime = "inode/empty", fg = "%s" },' % p["dim"],
+        '  { url = "*/", fg = "%s", bold = true },' % b["base0d"],
+        '  { url = "*", fg = "%s" },' % p["cream"],
+        "]",
+    ]
+    (d / "theme.toml").write_text("\n".join(lines) + "\n")
+
+
+def render_spicetify(pill, b):
+    """Spotify through spicetify: the xiu theme's color.ini is regenerated on
+    every palette change; `spicetify refresh` pushes it into the client, run
+    only when the theme is the configured current one (opt-in through the
+    installer) so a vanilla spicetify setup is never touched."""
+    d = _tool_dir("spicetify")
+    if d is None:
+        return
+    theme = d / "Themes" / "xiu"
+    if not theme.is_dir():
+        return
+    p = pill
+    h = lambda c: c.lstrip("#").upper()
+    lines = [
+        "; Xiu Spotify theme — colors kept fresh by wallcolors.py on every",
+        "; palette change. Selected with: spicetify config current_theme xiu",
+        "[xiu]",
+        "text               = %s" % h(p["bright"]),
+        "subtext            = %s" % h(p["subtle"]),
+        "main               = %s" % h(p["surface"]),
+        "main-elevated      = %s" % h(p["surface_container_high"]),
+        "highlight          = %s" % h(p["surface_container"]),
+        "highlight-elevated = %s" % h(p["surface_container_highest"]),
+        "sidebar            = %s" % h(p["surface_container"]),
+        "player             = %s" % h(p["surface_container"]),
+        "card               = %s" % h(p["primary_container"]),
+        "shadow             = %s" % h(p["surface_container"]),
+        "selected-row       = %s" % h(p["bright"]),
+        "button             = %s" % h(p["primary"]),
+        "button-active      = %s" % h(p["primary_container"]),
+        "button-disabled    = %s" % h(p["outline_variant"]),
+        "tab-active         = %s" % h(p["surface_container_high"]),
+        "notification       = %s" % h(p["primary"]),
+        "notification-error = %s" % h(b["base08"]),
+        "misc               = %s" % h(p["subtle"]),
+    ]
+    theme.mkdir(parents=True, exist_ok=True)
+    (theme / "color.ini").write_text("\n".join(lines) + "\n")
+    prefs = d / "config-xpui.ini"
+    if prefs.is_file() and "current_theme = xiu" in prefs.read_text():
+        subprocess.run(["spicetify", "refresh"], stderr=subprocess.DEVNULL)
+
+
+def render_discord(pill):
+    """The Vencord-family clients (vesktop, vencord, equicord) take plain CSS
+    theme files; xiu rides the pill through Discord's own CSS variables. Only
+    written where a client's themes dir already exists, so nothing is littered
+    for clients not in use. Applied on the client's next launch."""
+    p = pill
+    v = lambda c, a="ff": c + a
+    css = "\n".join([
+        "/**",
+        " * @name xiu",
+        " * @author yrpcaro",
+        " * @description The xiu palette, regenerated by wallcolors.py on every wallpaper change.",
+        " * @version 1.0.0",
+        " */",
+        ":root {",
+        "    --background-primary: %s;" % p["surface"],
+        "    --background-secondary: %s;" % p["surface_container"],
+        "    --background-secondary-alt: %s;" % p["surface_container_high"],
+        "    --background-tertiary: %s;" % p["surface_container_low"],
+        "    --background-floating: %s;" % p["surface_container_highest"],
+        "    --channeltextarea-background: %s;" % p["surface_container"],
+        "    --background-modifier-hover: %s;" % v(p["surface_container_high"], "26"),
+        "    --background-modifier-active: %s;" % v(p["surface_container_high"], "40"),
+        "    --background-modifier-selected: %s;" % v(p["primary"], "26"),
+        "    --background-modifier-accent: %s;" % p["outline_variant"],
+        "    --text-normal: %s;" % p["cream"],
+        "    --text-muted: %s;" % p["subtle"],
+        "    --text-link: %s;" % p["primary"],
+        "    --header-primary: %s;" % p["bright"],
+        "    --header-secondary: %s;" % p["subtle"],
+        "    --interactive-normal: %s;" % p["subtle"],
+        "    --interactive-hover: %s;" % p["cream"],
+        "    --interactive-active: %s;" % p["bright"],
+        "    --interactive-muted: %s;" % p["faint"],
+        "    --channels-default: %s;" % p["subtle"],
+        "    --brand-experiment: %s;" % p["primary"],
+        "    --brand-experiment-560: %s;" % p["primary_container"],
+        "    --button-secondary-background: %s;" % p["surface_container"],
+        "    --scrollbar-auto-thumb: %s;" % p["outline_variant"],
+        "    --scrollbar-auto-track: transparent;",
+        "}",
+    ]) + "\n"
+    for client in ("vesktop", "vencord", "equicord"):
+        tdir = Path.home() / ".config" / client / "themes"
+        if tdir.is_dir():
+            (tdir / "xiu.css").write_text(css)
+
+
+def render_telegram(pill):
+    """Telegram Desktop themes are .attheme files — one `key: #AARRGGBB` line
+    per palette slot. There is no live-reload hook, so the theme is kept fresh
+    at a stable path; import it once (Settings > Chat settings > ... > Import
+    custom theme) and re-import whenever you want to pull a new palette."""
+    d = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "xiu"
+    d.mkdir(parents=True, exist_ok=True)
+    p = pill
+
+    def argb(c, a="ff"):
+        return "#" + a + c.lstrip("#")
+
+    keys = [
+        ("windowBg", argb(p["surface"])),
+        ("windowFg", argb(p["cream"])),
+        ("windowBgOver", argb(p["surface_container"])),
+        ("windowBgRipple", argb(p["surface_container_high"])),
+        ("windowSubTextFg", argb(p["dim"])),
+        ("windowBoldFg", argb(p["bright"])),
+        ("windowActiveTextFg", argb(p["primary"])),
+        ("titleBg", argb(p["surface_container"])),
+        ("titleFg", argb(p["subtle"])),
+        ("dialogsBg", argb(p["surface"])),
+        ("dialogsBgOver", argb(p["surface_container"])),
+        ("dialogsBgActive", argb(p["surface_container_high"])),
+        ("dialogsNameFg", argb(p["cream"])),
+        ("dialogsDateFg", argb(p["dim"])),
+        ("dialogsTextFg", argb(p["subtle"])),
+        ("dialogsUnreadBg", argb(p["primary"])),
+        ("dialogsUnreadFg", argb(p["bright"])),
+        ("msgInBg", argb(p["surface_container"])),
+        ("msgInBgSelected", argb(p["surface_container_high"])),
+        ("msgOutBg", argb(p["surface_container_high"])),
+        ("msgOutBgSelected", argb(p["surface_container_highest"])),
+        ("historyTextInFg", argb(p["cream"])),
+        ("historyTextOutFg", argb(p["bright"])),
+        ("msgInServiceFg", argb(p["subtle"])),
+        ("msgOutServiceFg", argb(p["subtle"])),
+        ("msgInDateFg", argb(p["dim"])),
+        ("msgOutDateFg", argb(p["dim"])),
+        ("boxBg", argb(p["surface_container"])),
+        ("boxTitleFg", argb(p["bright"])),
+        ("boxTextFg", argb(p["cream"])),
+        ("menuBg", argb(p["surface_container"])),
+        ("menuBgOver", argb(p["surface_container_high"])),
+        ("menuIconFg", argb(p["subtle"])),
+        ("menuFgDisabled", argb(p["faint"])),
+        ("scrollBarBg", argb(p["outline_variant"])),
+        ("activeButtonBg", argb(p["primary"])),
+        ("activeButtonFg", argb(p["on_primary_container"])),
+        ("lightButtonBg", argb(p["surface_container"])),
+        ("lightButtonFg", argb(p["cream"])),
+        ("attentionButtonFg", argb(p["primary"])),
+        ("sliderBgActive", argb(p["primary"])),
+        ("sliderBgInactive", argb(p["surface_container_high"])),
+        ("placeholderFg", argb(p["faint"])),
+        ("inputBorderFg", argb(p["outline_variant"])),
+        ("tooltipBg", argb(p["surface_container_highest"])),
+        ("tooltipFg", argb(p["subtle"])),
+        ("radialFg", argb(p["primary"])),
+    ]
+    lines = [
+        "// xiu Telegram theme — written by wallcolors.py on every palette change.",
+        "// Import: Settings > Chat settings > (…) > Import custom theme,",
+        "// then pick this file. Re-import to pull a later palette.",
+        "",
+    ]
+    lines += ["%s: %s;" % (k, val) for k, val in keys]
+    (d / "telegram-xiu.attheme").write_text("\n".join(lines) + "\n")
+
+
+def render_vscode(pill):
+    """VSCode and VSCodium color the workbench natively through
+    workbench.colorCustomizations. The rest of settings.json is parsed and
+    written back untouched; a settings.json that is not plain JSON (user
+    comments) is left alone rather than mangled."""
+    p = pill
+    cc = {
+        "editor.background": p["surface"],
+        "editor.foreground": p["cream"],
+        "editorCursor.foreground": p["primary"],
+        "editor.lineHighlightBackground": p["surface_container"],
+        "editor.selectionBackground": p["primary_container"],
+        "editorGroup.border": p["outline_variant"],
+        "tab.activeBackground": p["surface"],
+        "tab.inactiveBackground": p["surface_container_low"],
+        "tab.activeBorderTop": p["primary"],
+        "sideBar.background": p["surface_container_low"],
+        "sideBar.foreground": p["subtle"],
+        "activityBar.background": p["surface"],
+        "activityBar.foreground": p["subtle"],
+        "activityBar.activeBorder": p["primary"],
+        "titleBar.activeBackground": p["surface"],
+        "titleBar.activeForeground": p["subtle"],
+        "statusBar.background": p["surface_container"],
+        "statusBar.foreground": p["subtle"],
+        "terminal.background": p["surface"],
+        "terminal.foreground": p["cream"],
+        "input.background": p["surface_container"],
+        "dropdown.background": p["surface_container"],
+        "list.activeSelectionBackground": p["surface_container_high"],
+        "list.hoverBackground": p["surface_container"],
+        "notifications.background": p["surface_container_high"],
+        "widget.border": p["outline_variant"],
+        "scrollbarSlider.background": p["outline_variant"],
+        "focusBorder": p["primary"],
+        "badge.background": p["primary"],
+        "badge.foreground": p["bright"],
+        "button.background": p["primary"],
+        "button.foreground": p["bright"],
+    }
+    for editor in ("Code", "VSCodium"):
+        sdir = Path.home() / ".config" / editor / "User"
+        if not sdir.is_dir():
+            continue
+        sfile = sdir / "settings.json"
+        try:
+            data = json.loads(sfile.read_text()) if sfile.is_file() else {}
+            if not isinstance(data, dict):
+                continue
+        except ValueError:
+            continue
+        data["workbench.colorCustomizations"] = cc
+        sfile.write_text(json.dumps(data, indent=4) + "\n")
+
+
+def render_zed(pill):
+    """Zed picks user themes out of ~/.config/zed/themes; the xiu one is kept
+    fresh. The active selection in settings.json is only set when the user
+    never chose a theme — their file is hand-written JSONC, so it is edited
+    textually (never re-serialized) and an existing choice is respected."""
+    z = _tool_dir("zed")
+    if z is None:
+        return
+    p = pill
+    lum = lambda c: 0.2126 * int(c[1:3], 16) + 0.7152 * int(c[3:5], 16) + 0.0722 * int(c[5:7], 16)
+    a = lambda c: c + "ff"
+
+    def syntax(c, italic=False):
+        entry = {"color": a(c)}
+        if italic:
+            entry["font_style"] = "italic"
+        return entry
+
+    theme = {
+        "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
+        "name": "xiu",
+        "author": "yrpcaro",
+        "themes": [{
+            "name": "xiu",
+            "appearance": "light" if lum(p["surface"]) > 128 else "dark",
+            "style": {
+                "background": a(p["surface"]),
+                "surface.background": a(p["surface_container"]),
+                "elevated_surface.background": a(p["surface_container_high"]),
+                "panel.background": a(p["surface_container"]),
+                "title_bar.background": a(p["surface"]),
+                "status_bar.background": a(p["surface_container"]),
+                "toolbar.background": a(p["surface"]),
+                "tab_bar.background": a(p["surface_container_low"]),
+                "tab.active_background": a(p["surface"]),
+                "tab.inactive_background": a(p["surface_container_low"]),
+                "border": a(p["outline_variant"]),
+                "border.variant": a(p["outline"]),
+                "border.focused": a(p["primary"]),
+                "editor.background": a(p["surface"]),
+                "editor.foreground": a(p["cream"]),
+                "editor.gutter.background": a(p["surface"]),
+                "editor.active_line.background": a(p["surface_container"]),
+                "editor.line_number": a(p["faint"]),
+                "editor.active_line_number": a(p["subtle"]),
+                "editor.document_highlight.read_background": a(p["surface_container"]),
+                "terminal.background": a(p["surface"]),
+                "terminal.foreground": a(p["cream"]),
+                "text": a(p["cream"]),
+                "text.muted": a(p["subtle"]),
+                "text.disabled": a(p["faint"]),
+                "text.accent": a(p["primary"]),
+                "element.hover": a(p["surface_container"]),
+                "element.active": a(p["surface_container_high"]),
+                "element.selected": a(p["surface_container_high"]),
+                "ghost_element.hover": a(p["surface_container"]),
+                "scrollbar.thumb.background": a(p["outline_variant"]),
+                "link_text.hover": a(p["primary"]),
+                "error": a(p["primary"]),
+                "warning": "#e0a03bff",
+                "info": a(p["subtle"]),
+                "predicted": a(p["dim"]),
+                "syntax": {
+                    "comment": syntax(p["faint"], italic=True),
+                    "string": syntax(p["on_primary_container"]),
+                    "constant": syntax(p["on_primary_container"]),
+                    "keyword": syntax(p["primary"]),
+                    "function": syntax(p["subtle"]),
+                    "variable": syntax(p["cream"]),
+                    "type": syntax(p["bright"]),
+                    "tag": syntax(p["primary"]),
+                    "property": syntax(p["subtle"]),
+                    "operator": syntax(p["dim"]),
+                    "punctuation": syntax(p["dim"]),
+                },
+            },
+        }],
+    }
+    (z / "themes").mkdir(exist_ok=True)
+    (z / "themes" / "xiu.json").write_text(json.dumps(theme, indent=2) + "\n")
+
+    settings = z / "settings.json"
+    if settings.is_file():
+        text = settings.read_text()
+        if '"theme"' not in text:
+            stripped = text.rstrip()
+            if stripped.endswith("}"):
+                head = stripped[:-1].rstrip()
+                joiner = "" if head.endswith(",") else ","
+                text = head + joiner + '\n  "theme": { "mode": "system", "dark": "xiu", "light": "xiu" }\n}\n'
+                settings.write_text(text)
+
+
 def render_browser(pill):
     """Brave/Chromium pick their toolbar color up from a managed policy.
     The payload lands in xiu's own config dir; `xiu browser` (or the
@@ -751,6 +1184,13 @@ def fan_out(pill, seed, variant):
     render_cava(pill, b)
     render_micro(pill, b)
     render_helix(pill, b)
+    render_bottom(pill, b)
+    render_yazi(pill, b)
+    render_spicetify(pill, b)
+    render_discord(pill)
+    render_telegram(pill)
+    render_vscode(pill)
+    render_zed(pill)
     render_browser(pill)
     render_gtk(pill)
     render_qt(pill)

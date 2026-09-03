@@ -136,7 +136,9 @@ def _default_choices(args, info, manifest):
         "profile": profile,
         "aur_choice": info["aur_helper"] or "yay",
         "optional_ids": set(full_ids) if profile == "full" else set(),
-        "sddm": args.sddm,
+        "file_manager": "dolphin",
+        "greeter": "sddm" if args.sddm else "none",
+        "browser_theme": True,
         "grub": False,
         "fish": True,
         "brave": args.brave,
@@ -166,6 +168,21 @@ def _wizard(args, info, manifest):
         ], default=0)
         aur_choice = ("yay", "paru", "none")[aidx]
 
+    fidx = tui.select_one("File manager", [
+        ("dolphin", "KDE file manager, native dialogs for the rice", True),
+        ("yazi", "TUI file manager, keyboard-driven with image previews", False),
+        ("thunar", "Xfce file manager, themed through the palette", False),
+        ("none", "Keep whatever I use today", False),
+    ], default=0)
+    file_manager = ("dolphin", "yazi", "thunar", "none")[fidx]
+
+    gidx = tui.select_one("Login screen", [
+        ("TTY", "No greeter; start Hyprland from a terminal login", True),
+        ("SDDM", "Graphical login with the torii theme", False),
+        ("greetd", "Minimal greeter with tuigreet", False),
+    ], default=0)
+    greeter = ("none", "sddm", "greetd")[gidx]
+
     full_pkgs = [p for p in manifest["packages"] if p.get("group") == "full"]
     optional_ids = set()
     if profile in ("full", "custom"):
@@ -174,12 +191,10 @@ def _wizard(args, info, manifest):
         chosen = tui.select_many("Optional apps", options, preselect=preselect)
         optional_ids = {full_pkgs[i]["id"] for i in chosen}
 
-    sddm = True if args.sddm else False
-    if not args.sddm and _has_display_manager():
-        sddm = tui.confirm("SDDM login theme", [
-            "Install the torii SDDM login theme. (Recommended)",
-            "A system change that needs sudo.",
-        ])
+    browser_theme = tui.confirm("Browser live theme", [
+        "Register the xiu native theme host and copy the Firefox/Zen",
+        "userChrome into your profiles, so browsers follow the palette.",
+    ])
 
     grub = False
     if info["bootloader"] == "grub":
@@ -200,8 +215,23 @@ def _wizard(args, info, manifest):
 
     return {
         "profile": profile, "aur_choice": aur_choice, "optional_ids": optional_ids,
-        "sddm": sddm, "grub": grub, "fish": fish, "brave": brave,
+        "file_manager": file_manager, "greeter": greeter,
+        "browser_theme": browser_theme, "grub": grub, "fish": fish, "brave": brave,
     }
+
+
+def _choice_ids(choices):
+    """The full-group package ids an explicit wizard/quickstart choice pulls in,
+    so a Quick install still gets the chosen file manager or greeter."""
+    ids = set()
+    fm = choices.get("file_manager")
+    if fm and fm != "none":
+        ids.add(fm)
+    if choices.get("greeter") == "sddm":
+        ids.add("sddm")
+    elif choices.get("greeter") == "greetd":
+        ids.update(("greetd", "greetd-tuigreet"))
+    return ids
 
 
 def _build_plan(manifest, info, choices):
@@ -213,11 +243,9 @@ def _build_plan(manifest, info, choices):
     family = info["family"]
     by_id = {p["id"]: p for p in manifest["packages"]}
     profile = choices["profile"]
-    groups = ("core",) if profile == "quick" else ("core", "full")
-    rows = distro.plan(manifest, family, groups, choices["aur_choice"])
-    if profile != "quick":
-        optional = choices["optional_ids"]
-        rows = [r for r in rows if r["group"] == "core" or r["id"] in optional]
+    rows = distro.plan(manifest, family, ("core", "full"), choices["aur_choice"])
+    keep = set(choices["optional_ids"]) | _choice_ids(choices)
+    rows = [r for r in rows if r["group"] == "core" or r["id"] in keep]
 
     repos, native, aur, fb, skipped = [], [], [], [], []
     optional_native = set()
