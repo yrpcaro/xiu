@@ -1,0 +1,29 @@
+# Xiu starship prompt: two lines, warm washi accents matched to the pill's
+# static palette, quiet when there is nothing to say.
+
+add_newline = true
+
+format = """
+$directory$git_branch$git_status$cmd_duration$line_break$character"""
+
+[character]
+success_symbol = "[❯](bold #e0563b)"
+error_symbol = "[❯](bold #e0533f)"
+
+[directory]
+style = "bold #e6d6cb"
+truncation_length = 3
+truncate_to_repo = true
+
+[git_branch]
+symbol = " "
+style = "bold #b9a99e"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "#8a7d74"
+
+[cmd_duration]
+min_time = 2000
+style = "#6f635b"
+format = "[$duration]($style) "

@@ -317,6 +317,19 @@ def generate_manual(hue, mode, sat, variant):
     return pill, seed, variant
 
 
+def render_foot(b):
+    """foot reads its palette from an include, so writing the file is enough:
+    every terminal opened afterwards opens in the current scheme."""
+    foot = Path.home() / ".config" / "foot"
+    foot.mkdir(parents=True, exist_ok=True)
+    lines = ["[colors]"]
+    for i in range(8):
+        lines.append("regular%d=%s" % (i, b["base%02x" % i].lstrip("#")))
+    for i in range(8):
+        lines.append("bright%d=%s" % (i, b["base%02x" % (i + 8)].lstrip("#")))
+    (foot / "colors.ini").write_text("\n".join(lines) + "\n")
+
+
 def fan_out(pill, seed, variant):
     """Write the pill JSON, recolour fastfetch, and build the terminal/border
     base16 through matugen with the resolved scheme type."""
@@ -344,6 +357,7 @@ def fan_out(pill, seed, variant):
     for i in range(16):
         lines.append(f'palette = {i}={b["base%02x" % i]}')
     (CACHE / "ghostty-colors").write_text("\n".join(lines) + "\n")
+    render_foot(b)
     return 0
 
 
