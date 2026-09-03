@@ -1,0 +1,24 @@
+# Xiu Helix. The theme file (themes/xiu.toml) is written by wallcolors.py on
+# every palette change; the editor picks it up on the next launch.
+theme = "xiu"
+
+[line-number]
+gutter = 2
+
+[editor]
+true-color = true
+cursorline = true
+bufferline = "multiple"
+rulers = [100]
+
+[editor.cursor-shape]
+insert = "bar"
+normal = "block"
+select = "underline"
+
+[editor.statusline]
+left = ["mode", "spinner", "file-name", "file-modification-indicator"]
+right = ["diagnostics", "selections", "position", "file-encoding", "file-line-ending", "file-type"]
+
+[editor.indent-guides]
+render = true

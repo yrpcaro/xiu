@@ -1,0 +1,4 @@
+# Seed nvtop colors so the config dir exists for the palette pipeline;
+# wallcolors.py rewrites this file completely on every palette change.
+background = #1c120c
+text = #e6d6cb
