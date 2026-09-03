@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Mpris
 import Quickshell.Hyprland
 
@@ -363,5 +364,23 @@ Singleton {
         name: "mediaPrev"
         description: "Skip to the previous track"
         onPressed: { var a = root.active; if (a && a.canGoPrevious) a.previous(); }
+    }
+
+    /** Command surface for scripts and the xiu CLI, mirroring the globals above. */
+    IpcHandler {
+        target: "mpris"
+        function active(): string {
+            return root.has ? root.title + (root.artist.length > 0 ? " — " + root.artist : "") : "";
+        }
+        function list(): string {
+            var out = [];
+            for (var i = 0; i < root.list.length; i++)
+                out.push(root.labelOf(root.list[i]));
+            return out.join("\n");
+        }
+        function playPause(): void { var a = root.active; if (a && a.canTogglePlaying) a.togglePlaying(); }
+        function next(): void { var a = root.active; if (a && a.canGoNext) a.next(); }
+        function previous(): void { var a = root.active; if (a && a.canGoPrevious) a.previous(); }
+        function stop(): void { var a = root.active; if (a) a.stop(); }
     }
 }
