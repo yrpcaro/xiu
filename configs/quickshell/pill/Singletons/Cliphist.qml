@@ -34,6 +34,14 @@ Singleton {
      */
     property bool loaded: false
 
+    /**
+     * True when the clipvault binary is not on PATH, so the surface can say
+     * that instead of a silent, forever-empty list. Probed once at startup:
+     * a missing backend explains both a failed read and a watcher that
+     * stores nothing.
+     */
+    property bool backendMissing: false
+
     readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/clipvault-thumbs/"
     readonly property string thumbScript: Quickshell.env("HOME") + "/.config/hypr/scripts/cliphist-thumbs.sh"
 
@@ -203,5 +211,14 @@ Singleton {
         }
     }
 
-    Component.onCompleted: refresh()
+    Process {
+        id: probeProc
+        command: ["sh", "-c", "command -v clipvault >/dev/null 2>&1"]
+        onExited: root.backendMissing = exitCode !== 0
+    }
+
+    Component.onCompleted: {
+        probeProc.running = true;
+        refresh();
+    }
 }

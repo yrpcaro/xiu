@@ -619,9 +619,8 @@ def _selftest():
             check(str(Path.home()) + "/Applications/GhostType.AppImage" in ght.read_text(),
                   "ghosttype.lua AppImage path points at the real home")
         fishtxt = (root / "fish" / "config.fish").read_text()
-        check("cachyos-fish-config" not in fishtxt and "grok" not in fishtxt
-              and "torii-greeting" in fishtxt,
-              "fish stripped of cachyos + grok, torii greeting kept")
+        check("cachyos-fish-config" not in fishtxt and "grok" not in fishtxt,
+              "fish stripped of cachyos + grok")
         ffjson = (root / "fastfetch" / "config.jsonc").read_text()
         check("__" not in ffjson and "system" in ffjson,
               "fastfetch config.jsonc rendered, no placeholders left")

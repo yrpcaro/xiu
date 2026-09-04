@@ -1404,17 +1404,8 @@ Item {
                     id: layoutChip
                     anchors.verticalCenter: parent.verticalCenter
                     visible: Keymap.code.length > 0
-                    width: layoutLbl.implicitWidth + 10 * pill.s
+                    width: layoutLbl.implicitWidth
                     height: 17 * pill.s
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: height / 2
-                        color: layoutArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.16) : Theme.tileBg
-                        border.width: 1
-                        border.color: layoutArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.5) : Theme.border
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
-                    }
 
                     Text {
                         id: layoutLbl
@@ -1430,6 +1421,7 @@ Item {
                     MouseArea {
                         id: layoutArea
                         anchors.fill: parent
+                        anchors.margins: -6 * pill.s
                         enabled: hover.live
                         cursorShape: Qt.PointingHandCursor
                         onClicked: pill.toggleLayout()

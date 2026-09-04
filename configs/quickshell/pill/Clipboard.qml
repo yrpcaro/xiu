@@ -200,7 +200,9 @@ PillSurface {
     Text {
         anchors.centerIn: list
         visible: root.results.length === 0
-        text: root.query.length ? "No matches" : (Cliphist.loaded ? "History empty" : "")
+        text: root.query.length ? "No matches"
+            : (Cliphist.backendMissing ? "clipvault is not installed — xiu check says what's missing"
+            : (Cliphist.loaded ? "History empty" : ""))
         color: Theme.faint
         font.family: Theme.font
         font.pixelSize: 10.5 * root.s

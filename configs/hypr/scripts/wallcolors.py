@@ -319,10 +319,12 @@ def generate_manual(hue, mode, sat, variant):
 
 def render_foot(b):
     """foot reads its palette from an include, so writing the file is enough:
-    every terminal opened afterwards opens in the current scheme."""
+    every terminal opened afterwards opens in the current scheme. Modern foot
+    splits the palette into [colors-dark]/[colors-light]; the pipeline always
+    drives the dark theme, which is also foot's default."""
     foot = Path.home() / ".config" / "foot"
     foot.mkdir(parents=True, exist_ok=True)
-    lines = ["[colors]"]
+    lines = ["[colors-dark]"]
     for i in range(8):
         lines.append("regular%d=%s" % (i, b["base%02x" % i].lstrip("#")))
     for i in range(8):
