@@ -11,7 +11,7 @@
 
 set -e
 
-REPO_URL="https://github.com/Gakuseei/Ricelin.git"
+REPO_URL="https://github.com/yrpcaro/xiu.git"
 DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ricelin"
 
 # os-release ID / ID_LIKE tokens per family, mirroring installer/distro.py so the
