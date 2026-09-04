@@ -2,9 +2,6 @@
 # every palette change; the editor picks it up on the next launch.
 theme = "xiu"
 
-[line-number]
-gutter = 2
-
 [editor]
 true-color = true
 cursorline = true
@@ -22,3 +19,9 @@ right = ["diagnostics", "selections", "position", "file-encoding", "file-line-en
 
 [editor.indent-guides]
 render = true
+
+[editor.gutters]
+layout = ["line-numbers", "spacer", "diagnostics", "diff"]
+
+[editor.gutters.line-numbers]
+min-width = 3

@@ -25,14 +25,13 @@ SettingsSurface {
 
     /**
      * Row registry; scrub rows expose a bump that steps their ScrubValue one
-     * increment. The layout row's vals gain the current layout at the end when it
-     * is not in the curated list, so an exotic layout shows as-is and a click
-     * wraps around to the start of the list.
+     * increment. The layout row opens the multi-select picker below it, where
+     * every xkb layout is one toggle away.
      */
     rows: [
         { item: sensRow, kind: "scrub", bump: function (d) { sensScrub.bump(d); } },
         { item: accelRow, kind: "seg", vals: ["flat", "adaptive"], get: function () { return root.accelProfile; }, set: function (v) { root.accelProfile = v; root.writeInputField("accel_profile", "\"" + v + "\""); } },
-        { item: layoutRow, kind: "seg", vals: root.kbLayoutVals, get: function () { return root.kbLayout; }, set: function (v) { root.setKbLayout(v); } },
+        { item: layoutRow, kind: "toggle", get: function () { return root.layoutOpen; }, set: function (v) { root.layoutOpen = v; } },
         { item: rateRow, kind: "scrub", bump: function (d) { rateScrub.bump(d); } },
         { item: delayRow, kind: "scrub", bump: function (d) { delayScrub.bump(d); } },
         { item: numlockRow, kind: "toggle", get: function () { return root.numlockOn; }, set: function (v) { root.numlockOn = v; root.writeInputField("numlock_by_default", v ? "true" : "false"); } },
@@ -48,7 +47,17 @@ SettingsSurface {
 
     property real sensitivity: 0
     property string accelProfile: "flat"
-    property string kbLayout: "de"
+
+    /**
+     * The selected keyboard layouts, in kb_layout order (the first is the
+     * default). The picker below edits the whole list at once — every xkb
+     * layout is available, parsed straight out of the installed rules.
+     */
+    property var selectedLayouts: []
+    property bool layoutOpen: false
+    property string layoutQuery: ""
+    /** Every xkb layout as { code, name }, from base.lst's layout section. */
+    property var allLayouts: []
     property int repeatRate: 25
     property int repeatDelay: 600
     property bool numlockOn: false
@@ -69,9 +78,6 @@ SettingsSurface {
         { label: "Adaptive", value: "adaptive" }
     ]
 
-    readonly property var kbLayouts: ["de", "us", "gb", "fr", "es", "it", "tr"]
-    readonly property var kbLayoutVals: kbLayouts.indexOf(kbLayout) >= 0 ? kbLayouts : kbLayouts.concat([kbLayout])
-
     onActiveChanged: {
         if (active) {
             inputFile.reload();
@@ -81,9 +87,30 @@ SettingsSurface {
             themeProc.running = true;
         } else {
             themeOpen = false;
+            layoutOpen = false;
             focusRowItem = null;
             kbIndex = -1;
         }
+    }
+
+    onLayoutOpenChanged: if (layoutOpen) {
+        layoutQuery = "";
+        if (!allLayouts.length)
+            layoutsFile.reload();
+    }
+
+    /** The picker's list: every xkb layout matching the query by code or name. */
+    readonly property var filteredLayouts: {
+        void layoutQuery;
+        var q = layoutQuery.trim().toLowerCase();
+        var out = [];
+        for (var i = 0; i < allLayouts.length; i++) {
+            var l = allLayouts[i];
+            if (!q.length || l.code.indexOf(q) === 0
+                    || l.name.toLowerCase().indexOf(q) >= 0)
+                out.push(l);
+        }
+        return out;
     }
 
     /**
@@ -102,7 +129,7 @@ SettingsSurface {
         var ap = SetInput.getField(inp, "accel_profile");
         root.accelProfile = ap.length > 0 ? ap : "flat";
         var kl = SetInput.getField(inp, "kb_layout");
-        root.kbLayout = kl.length > 0 ? kl : "de";
+        root.selectedLayouts = kl.length > 0 ? kl.split(",") : ["us"];
         var rr = parseInt(SetInput.getField(inp, "repeat_rate"), 10);
         root.repeatRate = isNaN(rr) ? 25 : rr;
         var rd = parseInt(SetInput.getField(inp, "repeat_delay"), 10);
@@ -136,9 +163,53 @@ SettingsSurface {
         reloadTimer.restart();
     }
 
-    function setKbLayout(v) {
-        root.kbLayout = v;
-        root.writeInputField("kb_layout", "\"" + v + "\"");
+    /**
+     * Writes the whole layout list back to input.lua and reloads Hyprland.
+     * The first entry is the default layout. The picker never offers
+     * removing the last remaining layout.
+     */
+    function setLayouts(list) {
+        if (!list || !list.length)
+            return;
+        root.selectedLayouts = list;
+        root.writeInputField("kb_layout", "\"" + list.join(",") + "\"");
+    }
+
+    /** Toggles one layout in the selection, guarding the last one standing. */
+    function toggleLayout(code) {
+        var next = selectedLayouts.slice();
+        var at = next.indexOf(code);
+        if (at >= 0) {
+            if (next.length <= 1)
+                return;
+            next.splice(at, 1);
+        } else {
+            next.push(code);
+        }
+        setLayouts(next);
+    }
+
+    /**
+     * Parses the `! layout` section of xkb's base.lst into { code, name }
+     * pairs — every keyboard layout the installed rules know about.
+     */
+    function parseLayouts(text) {
+        var out = [];
+        var inLayouts = false;
+        var lines = text.split("\n");
+        for (var i = 0; i < lines.length; i++) {
+            var l = lines[i];
+            if (l.length > 0 && l.charAt(0) === "!") {
+                inLayouts = l.indexOf("! layout") === 0;
+                continue;
+            }
+            if (!inLayouts)
+                continue;
+            var m = /^  (\S+)\s\s+(.+)$/.exec(l);
+            if (m)
+                out.push({ code: m[1], name: m[2].trim() });
+        }
+        root.allLayouts = out;
     }
 
     /**
@@ -176,6 +247,16 @@ SettingsSurface {
         path: root.inputPath
         blockLoading: true
         printErrors: false
+    }
+
+    /** xkb's own rule file — the authoritative list of every layout. */
+    FileView {
+        id: layoutsFile
+        path: "/usr/share/X11/xkb/rules/base.lst"
+        printErrors: false
+        onFileChanged: reload()
+        onLoadedChanged: if (loaded)
+            root.parseLayouts(text())
     }
 
     FileView {
@@ -417,26 +498,119 @@ SettingsSurface {
 
             FieldRow {
                 id: layoutRow
-                label: "Layout"
-                caption: "Click to cycle common layouts"
+                label: "Layouts"
+                caption: "Pick any number; the first is the default"
                 icon: "language"
 
-                Rectangle {
-                    width: layoutLbl.implicitWidth + 20 * root.s
-                    height: 22 * root.s
-                    radius: 9 * root.s
-                    color: "transparent"
-                    border.width: 1
-                    border.color: Theme.hairSoft
+                Text {
+                    text: root.selectedLayouts.join(", ")
+                    color: Theme.cream
+                    font.family: Theme.font
+                    font.pixelSize: 11 * root.s
+                    font.weight: Font.DemiBold
+                }
+            }
+
+            /**
+             * The layout picker: every xkb layout, searchable, multi-select.
+             * Toggles write the whole kb_layout list at once and reload.
+             */
+            Item {
+                width: parent.width
+                visible: root.layoutOpen
+                height: visible ? pickCol.implicitHeight : 0
+                clip: true
+                Behavior on height { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+
+                Column {
+                    id: pickCol
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.leftMargin: 9 * root.s
+                    anchors.rightMargin: 9 * root.s
+                    spacing: 7 * root.s
+
+                    SearchField {
+                        s: root.s
+                        width: parent.width
+                        placeholder: "Search layouts"
+                        onTextChanged: root.layoutQuery = text
+                    }
+
+                    ListView {
+                        width: parent.width
+                        height: 208 * root.s
+                        clip: true
+                        spacing: 2 * root.s
+                        model: root.filteredLayouts
+
+                        delegate: MouseArea {
+                            id: layRow
+                            required property var modelData
+                            width: layRow.parent ? layRow.parent.width : 0
+                            height: 26 * root.s
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.toggleLayout(layRow.modelData.code)
+
+                            readonly property bool selected:
+                                root.selectedLayouts.indexOf(layRow.modelData.code) >= 0
+                            /** The last remaining layout can never be unselected. */
+                            readonly property bool locked:
+                                selected && root.selectedLayouts.length <= 1
+
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.topMargin: 1 * root.s
+                                anchors.bottomMargin: 1 * root.s
+                                radius: 7 * root.s
+                                color: layRow.containsMouse ? Theme.frameBg : "transparent"
+                            }
+
+                            GlyphIcon {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 8 * root.s
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 14 * root.s
+                                height: 14 * root.s
+                                name: "check"
+                                color: layRow.selected ? Theme.vermLit : Theme.faint
+                                opacity: layRow.selected ? 1 : 0.25
+                                stroke: 2.2
+                            }
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 32 * root.s
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: layRow.modelData.code
+                                color: layRow.selected ? Theme.cream : Theme.subtle
+                                font.family: Theme.font
+                                font.pixelSize: 11.5 * root.s
+                                font.weight: Font.DemiBold
+                            }
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 92 * root.s
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: layRow.locked ? layRow.modelData.name + "  (last one)" : layRow.modelData.name
+                                color: layRow.locked ? Theme.faint : Theme.dim
+                                elide: Text.ElideRight
+                                font.family: Theme.font
+                                font.pixelSize: 10.5 * root.s
+                                font.weight: Font.Medium
+                            }
+                        }
+                    }
 
                     Text {
-                        id: layoutLbl
-                        anchors.centerIn: parent
-                        text: root.kbLayout
-                        color: Theme.cream
+                        visible: root.filteredLayouts.length === 0
+                        text: "No layouts match"
+                        color: Theme.faint
                         font.family: Theme.font
-                        font.pixelSize: 11 * root.s
-                        font.weight: Font.DemiBold
+                        font.pixelSize: 10 * root.s
                     }
                 }
             }

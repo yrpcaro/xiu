@@ -79,8 +79,9 @@ hl.bind(mod .. " + code:65", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr
 -- Keyboard layout: us <-> ir(winkeys), Alt+Shift like the classic DE toggle.
 -- The pill's layout chip fires the same command and follows along on the
 -- event; the release flag keeps it from firing the moment Shift goes down
--- inside another Alt+Shift combo.
+-- inside another Alt+Shift combo, and either Shift key works.
 hl.bind("ALT + code:50", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout
+hl.bind("ALT + code:62", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (right shift)
 
 -- Session, notifications, lock
 hl.bind("CTRL + ALT + code:119", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh power")) -- session menu
@@ -217,6 +218,8 @@ hl.bind(mod .. " + code:36", hl.dsp.exec_cmd(vars.terminal)) -- terminal
 hl.bind(mod .. " + code:25", hl.dsp.exec_cmd(vars.browser)) -- browser
 hl.bind(mod .. " + code:54", hl.dsp.exec_cmd(vars.editor)) -- editor
 hl.bind(mod .. " + code:26", hl.dsp.exec_cmd(vars.fileManager)) -- file manager
+hl.bind(mod .. " + code:38", hl.dsp.exec_cmd(vars.telegram)) -- telegram
+hl.bind(mod .. " + code:32", hl.dsp.exec_cmd(vars.musicPlayer)) -- spotify
 hl.bind("CTRL + ALT + code:55", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh mixer")) -- mixer
 
 -- Wallpaper, capture, record

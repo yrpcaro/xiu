@@ -23,8 +23,12 @@ local defaults = {
         btop = { match = { { class = "btop", title = "btop" } },
                  command = { "foot", "-a", "btop", "-T", "btop", "fish", "-C", "exec", "btop" } },
     },
-    music = {},
-    communication = {},
+    music = {
+        spotify = { match = { { class = "[Ss]potify" } }, command = { "spotify" } },
+    },
+    communication = {
+        telegram = { match = { { class = "org.telegram.desktop" } }, command = { "telegram-desktop" } },
+    },
     todo = {},
 }
 

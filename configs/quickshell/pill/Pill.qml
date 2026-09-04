@@ -1403,7 +1403,7 @@ Item {
                 Item {
                     id: layoutChip
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: Keymap.code.length > 0
+                    visible: Keymap.code.length > 0 && Keymap.layoutCount > 1
                     width: layoutLbl.implicitWidth
                     height: 17 * pill.s
 

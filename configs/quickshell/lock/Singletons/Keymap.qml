@@ -16,6 +16,21 @@ Singleton {
     property string keymap: ""
     readonly property string code: (keymap.indexOf("Persian") >= 0 || keymap.indexOf("Farsi") >= 0) ? "FA" : (keymap.length > 0 ? "US" : "")
 
+    /**
+     * How many layouts are configured, from `hyprctl getoption input:kb_layout`.
+     * The status corner's layout chip only exists when there is more than one.
+     */
+    property int layoutCount: 0
+
+    function applyLayoutCount(text) {
+        try {
+            var o = JSON.parse(text);
+            var v = o && o.str ? String(o.str) : "";
+            root.layoutCount = v.length ? v.split(",").length : 0;
+        } catch (e) {
+        }
+    }
+
     function applyDevices(text) {
         try {
             var devs = JSON.parse(text);
@@ -32,13 +47,24 @@ Singleton {
         }
     }
 
-    Component.onCompleted: devicesProc.running = true
+    Component.onCompleted: {
+        devicesProc.running = true;
+        layoutsProc.running = true;
+    }
 
     Process {
         id: devicesProc
         command: ["hyprctl", "devices", "-j"]
         stdout: StdioCollector {
             onStreamFinished: root.applyDevices(text)
+        }
+    }
+
+    Process {
+        id: layoutsProc
+        command: ["hyprctl", "getoption", "input:kb_layout", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: root.applyLayoutCount(text)
         }
     }
 

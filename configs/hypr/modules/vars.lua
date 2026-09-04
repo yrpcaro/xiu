@@ -19,9 +19,16 @@ local vars = {
     browser     = "brave",
     editor      = "foot -e helix",
     fileManager = "dolphin",
+    telegram    = "telegram-desktop",
+    musicPlayer = "spotify",
     volumeStep  = 5,
     volumeMax   = 100,
     sleepCmd    = "systemctl suspend",
+
+    -- Touchpad gestures (modules/gestures.lua): fingers for the workspace
+    -- swipe and for the vertical special-workspace pair.
+    gestureWorkspaceFingers = 3,
+    gestureFingers          = 4,
 }
 
 local ok, user = pcall(dofile, config_dir .. "/xiu/vars.lua")

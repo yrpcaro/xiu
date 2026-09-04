@@ -661,7 +661,7 @@ Item {
 
         Item {
             anchors.verticalCenter: parent.verticalCenter
-            visible: Keymap.code.length > 0
+            visible: Keymap.code.length > 0 && Keymap.layoutCount > 1
             width: layoutLbl.implicitWidth + 18 * content.s
             height: 22 * content.s
 
