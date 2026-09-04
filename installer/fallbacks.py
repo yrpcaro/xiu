@@ -167,6 +167,23 @@ def _cargo(pkg, family):
                          shlex.quote(os.path.join(release, "swww-daemon")),
                          shlex.quote(BIN_DIR))},
         ]
+    if crate == "xiu":
+        # The shell's own Rust CLI (the `xiu` command behind the emoji bind and
+        # the scheme/browser helpers). No distro ships it, so clone the repo and
+        # build the cli/ crate in place; pure Rust, so no build deps to stage.
+        release = os.path.join(BUILD_DIR, "xiu", "cli", "target", "release")
+        return [
+            _clone_step("the xiu cli is not on crates.io, clone the repo from github",
+                        "https://github.com/yrpcaro/xiu", "xiu"),
+            {"desc": "make sure cargo is here, then build the xiu cli (release)",
+             "shell": _CARGO_PREP + "; " + _in_build(
+                 "xiu", "cargo build --release --manifest-path cli/Cargo.toml")},
+            {"desc": "install the xiu binary into ~/.local/bin, no root needed",
+             "shell": "mkdir -p %s && install -m755 %s %s"
+                      % (shlex.quote(BIN_DIR),
+                         shlex.quote(os.path.join(release, "xiu")),
+                         shlex.quote(BIN_DIR))},
+        ]
     return [
         {"desc": "make sure cargo is here, then build %s from crates.io" % crate,
          "shell": _CARGO_PREP + "; cargo install " + shlex.quote(crate)},

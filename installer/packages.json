@@ -21,6 +21,9 @@
       "note": "not in the official Fedora repos (only the errornointernet COPR) and on debian only in testing/sid; Ubuntu-likes get the avengemedia PPA, plain Debian stays on the archive name",
       "repo": { "fedora": "copr:errornointernet/quickshell", "debian": "ppa:avengemedia/danklinux", "suse": "obs:home:AvengeMedia:danklinux" }, "fallback": null },
 
+    { "id": "xiu", "group": "core", "required": true, "desc": "The shell's own CLI (xiu emoji / scheme / browser / check)", "aur": false,
+      "names": { "arch": null, "debian": null, "fedora": null, "suse": null }, "fallback": "cargo" },
+
     { "id": "matugen", "group": "core", "required": true, "desc": "Builds the color palette from your wallpaper", "aur": false,
       "names": { "arch": "matugen", "debian": null, "fedora": "matugen", "suse": null },
       "repo": { "fedora": "copr:heus-sueh/packages" }, "fallback": "cargo" },
