@@ -93,6 +93,7 @@ ShellRoot {
                 s: lockSurface.screen ? lockSurface.screen.height / 1080 : 1
                 screenName: lockSurface.screen ? lockSurface.screen.name : ""
                 auth: pamAuth
+                user: root.currentUser
                 active: root.revealed
             }
         }
