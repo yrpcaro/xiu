@@ -70,13 +70,17 @@ local function normalize_window()
     end
 end
 
--- Launcher: tap Super alone. The release flag makes it fire only when the key
--- comes back up without any other key having borrowed the modifier.
-hl.bind(mod .. " + code:133", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh launcher"), release) -- tap Super: launcher
+-- Launcher on Super+Space. The earlier tap-Super bind (release on the bare
+-- modifier) misfired on every Super combo on some Hyprland builds — the
+-- mod-only release shadowing is not dependable across versions — so the
+-- launcher moved to an ordinary combo.
+hl.bind(mod .. " + code:65", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh launcher")) -- launcher
 
--- Keyboard layout: us <-> ir(winkeys), the Windows-style toggle. The pill's
--- layout chip fires the same command and follows along on the event.
-hl.bind(mod .. " + code:65", hl.dsp.exec_cmd("hyprctl switchxkblayout current next")) -- switch keyboard layout
+-- Keyboard layout: us <-> ir(winkeys), Alt+Shift like the classic DE toggle.
+-- The pill's layout chip fires the same command and follows along on the
+-- event; the release flag keeps it from firing the moment Shift goes down
+-- inside another Alt+Shift combo.
+hl.bind("ALT + code:50", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout
 
 -- Session, notifications, lock
 hl.bind("CTRL + ALT + code:119", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh power")) -- session menu
@@ -209,7 +213,7 @@ hl.bind(mod .. " + code:40", toggles.toggle("communication")) -- communication w
 hl.bind(mod .. " + code:27", toggles.toggle("todo")) -- todo workspace
 
 -- Apps
-hl.bind(mod .. " + code:28", hl.dsp.exec_cmd(vars.terminal)) -- terminal
+hl.bind(mod .. " + code:36", hl.dsp.exec_cmd(vars.terminal)) -- terminal
 hl.bind(mod .. " + code:25", hl.dsp.exec_cmd(vars.browser)) -- browser
 hl.bind(mod .. " + code:54", hl.dsp.exec_cmd(vars.editor)) -- editor
 hl.bind(mod .. " + code:26", hl.dsp.exec_cmd(vars.fileManager)) -- file manager

@@ -172,12 +172,12 @@ screenshot tool) makes sense; grab it from
 
 Every bind is on a raw keycode, so the table is layout-proof — the key is named
 for the `us` layout and lands on the same physical key in `ir(winkeys)`.
-`Super` is the Windows key; tap it alone for the launcher.
+`Super` is the Windows key.
 
 | Key | Action |
 |---|---|
-| `Super` (tap) | app launcher |
-| `Super` + `Space` | switch keyboard layout (us ⇄ ir) |
+| `Super` + `Space` | app launcher |
+| `Alt` + `Shift` | switch keyboard layout (us ⇄ ir) |
 | **Session** | |
 | `Ctrl` + `Alt` + `Del` | session menu (power) |
 | `Super` + `N` | notifications |
@@ -227,7 +227,7 @@ for the `us` layout and lands on the same physical key in `ir(winkeys)`.
 | `Ctrl` + `Shift` + `Esc` | system monitor workspace |
 | `Super` + `M` / `D` / `R` | music / communication / todo workspace |
 | **Apps & tools** | |
-| `Super` + `T` | terminal (foot) |
+| `Super` + `Return` | terminal (foot) |
 | `Super` + `W` | browser |
 | `Super` + `C` | editor |
 | `Super` + `E` | file manager |

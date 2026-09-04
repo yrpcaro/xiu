@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 /**
  * A glyph button for the lock's power corner. Instant mode fires on a plain

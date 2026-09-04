@@ -79,6 +79,6 @@ function mark_prompt_start --on-event fish_prompt
     printf '\e]133;A\e\\'
 end
 
-function fish_greeting
-    ~/.config/fish/torii-greeting.sh
-end
+# No greeting at all: nothing prints between opening the terminal and the
+# first prompt.
+set -g fish_greeting
