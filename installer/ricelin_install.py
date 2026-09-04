@@ -139,6 +139,8 @@ def _default_choices(args, info, manifest):
         "file_manager": "dolphin",
         "greeter": "sddm" if args.sddm else "none",
         "browser_theme": True,
+        "fresh_configs": False,
+        "legacy_swap": "fallback",
         "grub": False,
         "fish": True,
         "brave": args.brave,
@@ -183,6 +185,19 @@ def _wizard(args, info, manifest):
     ], default=0)
     greeter = ("none", "sddm", "greetd")[gidx]
 
+    lidx = tui.select_one("Legacy tools", [
+        ("Fallback", "ghostty and cliphist stay available as the optional terminal and clipboard backends", True),
+        ("Clean swap", "remove ghostty and cliphist once foot and clipvault are in", False),
+    ], default=0)
+    legacy_swap = ("fallback", "clean")[lidx]
+
+    keep = tui.confirm("Keep your existing configs", [
+        "Your fish config, keybinds and Settings changes are carried across",
+        "and three-way merged on updates. (Recommended)",
+        "Answer No to start from the repo's defaults instead.",
+    ])
+    fresh_configs = not keep
+
     full_pkgs = [p for p in manifest["packages"] if p.get("group") == "full"]
     optional_ids = set()
     if profile in ("full", "custom"):
@@ -216,7 +231,8 @@ def _wizard(args, info, manifest):
     return {
         "profile": profile, "aur_choice": aur_choice, "optional_ids": optional_ids,
         "file_manager": file_manager, "greeter": greeter,
-        "browser_theme": browser_theme, "grub": grub, "fish": fish, "brave": brave,
+        "browser_theme": browser_theme, "fresh_configs": fresh_configs,
+        "legacy_swap": legacy_swap, "grub": grub, "fish": fish, "brave": brave,
     }
 
 
@@ -328,8 +344,18 @@ def _summary_lines(info, choices, plan, args, do_pkgs):
         if plan["fallbacks"]:
             names = ", ".join(sorted({h for _, h, _ in plan["fallbacks"]}))
             lines.append("Build via fallback: " + names + ".")
-    if choices["sddm"]:
+    if choices["file_manager"] != "none":
+        lines.append(f"Install the {choices['file_manager']} file manager.")
+    if choices["greeter"] == "sddm":
         lines.append("Install the torii SDDM login theme.")
+    elif choices["greeter"] == "greetd":
+        lines.append("Set up greetd with the tuigreet login.")
+    if choices["browser_theme"]:
+        lines.append("Wire the browsers into the palette (userChrome + live theme host).")
+    if choices["legacy_swap"] == "clean":
+        lines.append("Remove ghostty and cliphist once foot and clipvault are in.")
+    if choices["fresh_configs"]:
+        lines.append("Start from the repo's config defaults (your old files are still backed up).")
     if choices["grub"]:
         lines.append("Install the GRUB theme.")
     if choices["brave"]:
@@ -479,6 +505,145 @@ def deploy_brave_theme(source, dry):
     return True, ""
 
 
+def deploy_browser_theme(source, dry):
+    """
+    Register the xiu native theme host with Firefox and Zen and drop the
+    userChrome plus its enabling prefs into every existing profile, so the
+    browsers follow the palette.
+
+    The host script is copied to a stable path (~/.config/xiu/xiufox-host.py,
+    the path baked into the manifest template) so registration never breaks
+    when the deploy set is reorganized. Profiles are only touched where a
+    browser root already exists — nothing is created for browsers not in use,
+    and an existing foreign userChrome.css is parked as .pre-xiu first. The
+    prefs land as a marked block in user.js so hand-written prefs around it
+    survive re-runs. The live-theme extension itself is unsigned (MV2): it
+    loads as a temporary add-on via about:debugging, or self-signed for
+    permanent use — the report says so.
+
+    Returns (ok, detail, count) with the number of profiles wired, for notes.
+    """
+    if dry:
+        print("  would deploy: browser theme host + userChrome into profiles")
+        return True, "", 0
+    src = Path(source) / "browser-integration"
+    home = Path.home()
+    try:
+        xiu = home / ".config" / "xiu"
+        xiu.mkdir(parents=True, exist_ok=True)
+        host = xiu / "xiufox-host.py"
+        shutil.copy2(src / "xiufox-host.py", host)
+        host.chmod(0o755)
+
+        manifest = (src / "native-host-manifest.json").read_text().replace(
+            "__HOME__", str(home))
+
+        wired = 0
+        for root, browser in ((home / ".mozilla", "firefox"), (home / ".zen", "zen")):
+            if not root.is_dir():
+                continue
+            nm = root / "native-messaging-hosts"
+            nm.mkdir(parents=True, exist_ok=True)
+            (nm / "io.github.yrpcaro.xiu.json").write_text(manifest)
+
+            userchrome = (src.parent / browser / "userChrome.css").read_text()
+            userjs = (src.parent / browser / "user.js").read_text() \
+                if (src.parent / browser / "user.js").is_file() else ""
+            block = "// >>> xiu (managed by the installer)\n" + userjs + "// <<< xiu\n"
+            for prof in sorted(root.rglob("prefs.js")):
+                prof_dir = prof.parent
+                chrome = prof_dir / "chrome"
+                chrome.mkdir(exist_ok=True)
+                uc = chrome / "userChrome.css"
+                if uc.is_file() and uc.read_text() != userchrome:
+                    keep = uc.with_suffix(".css.pre-xiu")
+                    if not keep.exists():
+                        shutil.copy2(uc, keep)
+                uc.write_text(userchrome)
+                ujs = prof_dir / "user.js"
+                body = ""
+                if ujs.is_file():
+                    body = ujs.read_text()
+                    if ">>> xiu" in body:
+                        head = body.split("// >>> xiu")[0].rstrip("\n")
+                        tail = body.split("// <<< xiu", 1)[-1].lstrip("\n")
+                        body = (head + "\n\n" if head.strip() else "") + \
+                            (tail if tail.strip() else "")
+                ujs.write_text(((body.rstrip("\n") + "\n\n") if body.strip() else "")
+                               + block)
+                wired += 1
+    except OSError as exc:
+        return False, f"{exc}: browser theme", wired
+    print(f"  wired: browser live theme into {wired} profile(s)")
+    return True, "", wired
+
+
+GREETD_CONF = """\
+# xiu: greetd + tuigreet. Pick your session once (F2); --remember-session
+# brings you straight back to it. Managed by the xiu installer: a config you
+# hand-edited is left alone, remove the file to let xiu take it back.
+[terminal]
+vt = 1
+
+[default_session]
+command = "tuigreet --time --asterisks --remember --remember-session"
+user = "greeter"
+"""
+
+
+def install_greetd(dry):
+    """
+    Write /etc/greetd/config.toml (a hand-edited config is left alone, with a
+    note) and point display-manager.service at greetd, stepping any other
+    enabled greeter aside first. Returns (results, notes): results are
+    (ok, detail, step, hint) tuples the caller folds into record(), notes are
+    plain strings for the report.
+    """
+    results, notes = [], []
+    cfg = Path("/etc/greetd/config.toml")
+    if cfg.is_file():
+        try:
+            existing = cfg.read_text()
+        except OSError as exc:
+            results.append((False, str(exc), "Read greetd config",
+                            "Check /etc/greetd permissions."))
+            return results, notes
+        if existing.strip() != GREETD_CONF.strip():
+            notes.append("Left your existing /etc/greetd/config.toml alone; "
+                         "delete it and re-run to let xiu manage it.")
+    elif dry:
+        print("  would run: write /etc/greetd/config.toml (tuigreet)")
+        print("  would run: sudo systemctl enable greetd.service")
+        return results, notes
+    else:
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
+            tmp.write(GREETD_CONF)
+            tmpname = tmp.name
+        try:
+            ok = subprocess.run(["sudo", "install", "-m", "644", "-D",
+                                 tmpname, str(cfg)]).returncode == 0
+        finally:
+            os.unlink(tmpname)
+        results.append((ok, "" if ok else "sudo install failed",
+                        "Write greetd config",
+                        "Write /etc/greetd/config.toml yourself (see the repo's GREETD_CONF)."))
+
+    dm = "/etc/systemd/system/display-manager.service"
+    if os.path.islink(dm):
+        current = os.path.basename(os.path.realpath(dm))
+        if current not in ("greetd.service", "") and not dry:
+            subprocess.run(["sudo", "systemctl", "disable", current],
+                           stderr=subprocess.DEVNULL)
+            notes.append(f"Stepped {current} aside as the display manager.")
+    if not dry:
+        ok = subprocess.run(["sudo", "systemctl", "enable", "greetd.service"],
+                            stderr=subprocess.DEVNULL).returncode == 0
+        results.append((ok, "" if ok else "systemctl enable failed",
+                        "Enable greetd", "Run: sudo systemctl enable greetd"))
+    return results, notes
+
+
 def _seed_update_baseline(source, config_root, dry):
     """
     Hand the in-app updater the commit just installed, so its first check counts new
@@ -547,6 +712,10 @@ def _report(plan, failures, notes, info, choices, args, do_pkgs, dry):
     if choices["brave"]:
         steps.append(("brave theme",
                       "brave://settings/appearance, load ~/.config/ricelin/brave-theme"))
+    if choices.get("browser_theme"):
+        steps.append(("browser theme",
+                      "Firefox/Zen: about:debugging, Load Temporary Add-on, "
+                      "~/.config/xiu/browser-integration/manifest.json; Brave: run xiu browser"))
 
     attention = []
     for step, _detail, hint in failures:
@@ -640,8 +809,9 @@ def run(args):
         if not ok:
             failures.append((step, detail, hint))
 
-    needs_sudo = (do_pkgs or choices["sddm"] or choices.get("grub")
-                  or choices["fish"] or choices["brave"]) and not dry
+    needs_sudo = (do_pkgs or choices["greeter"] != "none" or choices.get("grub")
+                  or choices["fish"] or choices["brave"]
+                  or (choices["legacy_swap"] == "clean" and do_pkgs)) and not dry
     keepalive_stop = sudo_keepalive() if needs_sudo else None
     try:
         if do_pkgs:
@@ -785,9 +955,12 @@ def run(args):
         # k. deploy the configs and make them portable. A copytree or write
         #    that hits an OSError mid-iteration is recorded and stepped past,
         #    so a real run still finishes with a report instead of a traceback.
+        #    A "start fresh" choice skips carrying the protected user files
+        #    across a managed replace (their pristine .bak backups still land).
         try:
             for action in deploy.deploy(src=args.source, config_root=deploy.CONFIG_ROOT,
-                                        apply=not dry):
+                                        apply=not dry,
+                                        keep_preserved=not choices["fresh_configs"]):
                 if action["action"] == "skip":
                     print(f"  deploy skip: {action['item']} ({action.get('reason', '')})")
                     continue
@@ -822,8 +995,8 @@ def run(args):
         record(ok, detail, "Seed wallpapers",
                "Copy any image into ~/Ricelin/wallpapers yourself.")
 
-        # m. themes.
-        if choices["sddm"]:
+        # m. login screen.
+        if choices["greeter"] == "sddm":
             sddm_installer = os.path.join(args.source, "sddm", "themes", "torii", "install.sh")
             if os.path.isfile(sddm_installer):
                 ok, detail = _run(["sh", sddm_installer], dry)
@@ -831,6 +1004,11 @@ def run(args):
                        "Run the SDDM theme installer by hand.")
             else:
                 notes.append(f"SDDM installer not found at {sddm_installer}, skipped.")
+        elif choices["greeter"] == "greetd":
+            results, gnotes = install_greetd(dry)
+            for gok, gdetail, gstep, ghint in results:
+                record(gok, gdetail, gstep, ghint)
+            notes.extend(gnotes)
         if choices["grub"] and info["bootloader"] == "grub":
             for action in grub_theme.apply(args.source, dry):
                 if dry:
@@ -840,7 +1018,68 @@ def run(args):
                     record(action["ok"], action["detail"], "Install GRUB theme",
                            "Run the GRUB theme steps by hand.")
 
-        # n. optional Brave: install it through the same resolve/fallback path the
+        # n. browsers into the palette: native host registration plus the
+        #     userChrome and its prefs into every existing profile. The
+        #     extension itself is unsigned and loads as a temporary add-on;
+        #     the report says how.
+        if choices["browser_theme"]:
+            ok, detail, wired = deploy_browser_theme(args.source, dry)
+            record(ok, detail, "Wire browser theme",
+                   "Copy configs/browser-integration by hand and load the userChrome.")
+            if wired == 0 and not dry:
+                notes.append("No Firefox/Zen profiles found yet; re-run the "
+                             "installer after their first launch to wire the theme in.")
+
+        # n2. chosen extras that need one activation step past the package:
+        #     spicetify gets pointed at the xiu theme and applied once, and
+        #     vesktop's themes dir is created so the palette pipeline has
+        #     somewhere to drop the xiu CSS (vesktop normally creates it on
+        #     first run, which may be after the first wallpaper change).
+        if not dry:
+            if "spicetify-cli" in choices["optional_ids"] and shutil.which("spicetify"):
+                ok, detail = _run(["spicetify", "config", "current_theme", "xiu",
+                                   "color_scheme", "xiu"], dry)
+                record(ok, detail, "Select spicetify theme",
+                       "Run: spicetify config current_theme xiu color_scheme xiu")
+                ok, detail = _run(["spicetify", "backup", "apply"], dry)
+                record(ok, detail, "Apply spicetify theme",
+                       "Run: spicetify backup apply")
+            if "vesktop" in choices["optional_ids"]:
+                try:
+                    (Path.home() / ".config" / "vesktop" / "themes").mkdir(
+                        parents=True, exist_ok=True)
+                except OSError:
+                    pass
+
+        # n3. clean swap: retire the legacy alternatives once their
+        #    replacements are confirmed in. Fail-soft by design — the package
+        #    manager refuses a removal something else needs, we just surface
+        #    it. The fallback choice leaves both installed instead.
+        if do_pkgs and choices["legacy_swap"] == "clean":
+            fam = info["family"]
+            remove_argv = {
+                "arch": ["pacman", "-Rns", "--noconfirm"],
+                "debian": ["apt-get", "remove", "-y"],
+                "fedora": ["dnf", "remove", "-y"],
+                "suse": ["zypper", "rm", "-y"],
+            }.get(fam)
+            for old_id, new_id in (("ghostty", "foot"), ("cliphist", "clipvault")):
+                if remove_argv is None:
+                    break
+                old_pkg = next((p for p in manifest["packages"] if p["id"] == old_id), None)
+                new_pkg = next((p for p in manifest["packages"] if p["id"] == new_id), None)
+                old = (old_pkg or {}).get("names", {}).get(fam)
+                new = (new_pkg or {}).get("names", {}).get(fam)
+                if not (old and new and pkg.is_installed(new, fam) and shutil.which(old)):
+                    continue
+                ok, detail = _run(pkg.privileged(remove_argv + [old], fam), dry)
+                if ok and not dry:
+                    notes.append(f"Removed {old} ({new} takes over).")
+                else:
+                    record(ok, detail, f"Remove {old}",
+                           f"Run it yourself once you are sure: {' '.join(remove_argv)} {old}")
+
+        # o. optional Brave: install it through the same resolve/fallback path the
         #    core packages use (arch -> AUR brave-bin, off arch -> Flathub), then
         #    drop the theme files in place. The theme is never auto-applied, since
         #    Chromium signs its prefs; the user loads it from brave://settings.
