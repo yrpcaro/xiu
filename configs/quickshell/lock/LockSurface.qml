@@ -10,6 +10,15 @@ Item {
     property real s: 1
     property var auth: null
     property string screenName: ""
+    property string user: ""
+
+    /**
+     * The final pass of the blur chain, handed to Content so the password
+     * field can crop a frosted glass sample out of it (the field's own small
+     * blur passes run over that crop, reusing the same compiled shader).
+     */
+    readonly property var blurBehind: blurLayer.status === Loader.Ready
+        ? blurLayer.item.finalPass : null
 
     /**
      * Drives the lock-open morph. A pill-shaped hole grows from the pill's resting
@@ -68,6 +77,8 @@ Item {
 
         sourceComponent: Component {
           Item {
+            /** Handed up to LockSurface.blurBehind for the field's glass. */
+            property Item finalPass: blurFinal
             anchors.fill: parent
 
             Image {
@@ -252,6 +263,7 @@ Item {
             }
 
             ShaderEffect {
+                id: blurFinal
                 anchors.fill: parent
                 property var source: blurV3Src
                 property vector2d srcSize: surface.eighthVec
@@ -279,6 +291,8 @@ Item {
         s: surface.s
         auth: surface.auth
         isMain: surface.isMain
+        user: surface.user
+        blurBehind: surface.blurBehind
     }
 
     /**
