@@ -241,13 +241,16 @@ def backup(target, apply=True):
     return str(bak)
 
 
-def deploy(src=CONFIGS, config_root=CONFIG_ROOT, apply=False):
+def deploy(src=CONFIGS, config_root=CONFIG_ROOT, apply=False, keep_preserved=True):
     """
     Copy every deploy-set item into ~/.config and drop the ownership marker so
     uninstall knows it is ours. A foreign config in the way is always backed up
     before it goes (to .bak, or the next free .bak.N when one is taken), never
     blind-removed; one of our own older copies is replaced cleanly with no
-    backup. Returns the action list; nothing moves unless apply is set.
+    backup. keep_preserved=False skips carrying the protected user files across
+    a managed replace (the fresh-start choice); their pristine .bak backups
+    still land either way. Returns the action list; nothing moves unless apply
+    is set.
     """
     src = Path(src)
     config_root = Path(config_root)
@@ -264,7 +267,8 @@ def deploy(src=CONFIGS, config_root=CONFIG_ROOT, apply=False):
         managed = _is_managed(dest) if exists else False
         bak = backup(dest, apply=False) if (exists and not managed) else None
         keep = [rel for rel in PRESERVED
-                if rel.startswith(dest_rel + "/") and (config_root / rel).is_file()] if managed else []
+                if rel.startswith(dest_rel + "/") and (config_root / rel).is_file()] \
+            if (managed and keep_preserved) else []
         actions.append({
             "item": name,
             "action": "replace" if managed else "deploy",
