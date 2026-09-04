@@ -2,6 +2,10 @@
 # distribution's fish package. Every tool is guarded so a missing binary
 # never breaks the shell.
 
+# The installer drops the xiu CLI (and the fallback tools) into ~/.local/bin;
+# make sure that is on PATH even when the profile does not add it.
+fish_add_path -g ~/.local/bin ~/.cargo/bin
+
 if type -q starship
     set -gx STARSHIP_CONFIG $__fish_config_dir/starship.toml
     starship init fish | source
@@ -9,8 +13,9 @@ end
 if type -q direnv
     direnv hook fish | source
 end
+# zoxide owns cd itself, the caelestia way: plain `cd` gets the fuzzy jump.
 if type -q zoxide
-    zoxide init fish | source
+    zoxide init fish --cmd cd | source
 end
 
 abbr -a ff fastfetch
@@ -82,3 +87,9 @@ end
 # No greeting at all: nothing prints between opening the terminal and the
 # first prompt.
 set -g fish_greeting
+
+# Your own fish bits, kept outside the deployed tree like xiu-vars.lua on the
+# hypr side, so updates never touch them.
+if test -f ~/.config/xiu/user-config.fish
+    source ~/.config/xiu/user-config.fish
+end

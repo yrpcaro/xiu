@@ -900,6 +900,26 @@ def run(args):
                     record(ok, detail, "Set up uinput",
                            "Add yourself to the input group and reload udev by hand.")
 
+            # g2. ddcutil reaches the monitors' DDC/CI through /dev/i2c-*; the
+            #     package ships the udev rule granting the i2c group, so all
+            #     that is left is the membership. Without it the mixer's
+            #     per-monitor brightness faders detect nothing.
+            def _in_group(name):
+                try:
+                    out = subprocess.run(["id", "-nG"], capture_output=True, text=True)
+                    return (" " + name + " ") in (" " + out.stdout.replace(",", " ") + " ")
+                except OSError:
+                    return True
+
+            if shutil.which("ddcutil") and not _in_group("i2c"):
+                ok, detail = _shell(
+                    'sudo groupadd -f i2c && sudo usermod -aG i2c "$(id -un)" '
+                    '&& sudo udevadm control --reload && sudo udevadm trigger', dry)
+                record(ok, detail, "Set up i2c for DDC",
+                       "Run: sudo usermod -aG i2c $(whoami), then log out and back in.")
+                notes.append("Added you to the i2c group so the mixer can see every "
+                             "monitor's brightness — one re-login for it to land.")
+
             # h. services: enable on systemd, print the manual commands otherwise.
             if info["init"] == "systemd":
                 if _active("systemd-networkd") or _active("iwd"):

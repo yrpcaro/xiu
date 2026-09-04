@@ -124,6 +124,12 @@
     { "id": "brightnessctl", "group": "core", "required": true, "desc": "Backlight control", "aur": false,
       "names": { "arch": "brightnessctl", "debian": "brightnessctl", "fedora": "brightnessctl", "suse": "brightnessctl" }, "fallback": null },
 
+    { "id": "ddcutil", "group": "core", "required": true, "desc": "External-monitor brightness for the mixer (one fader per display)", "aur": false,
+      "names": { "arch": "ddcutil", "debian": "ddcutil", "fedora": "ddcutil", "suse": "ddcutil" }, "fallback": null },
+
+    { "id": "nvibrant", "group": "core", "required": false, "desc": "Screen vibrance fader in the mixer", "aur": true,
+      "names": { "arch": "nvibrant", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
     { "id": "playerctl", "group": "core", "required": true, "desc": "Media key and now-playing control", "aur": false,
       "names": { "arch": "playerctl", "debian": "playerctl", "fedora": "playerctl", "suse": "playerctl" }, "fallback": null },
 

@@ -1,14 +1,26 @@
-/* Xiu Firefox: rounded window, quiet URL bar, no window buttons. Needs
+/* Xiu Firefox: rounded window, quiet URL bar, no window buttons, chrome
+   following the wallpaper palette. Needs
    toolkit.legacyUserProfileCustomizations.stylesheets (see user.js). */
 
 :root {
     --xiu-radius: 12px;
+
+    /* The palette block: wallcolors.py rewrites these six values on every
+       wallpaper or scheme change, so the chrome follows the desktop even
+       before the live-theme extension loads. */
+    --xiu-surface: #1c120c;
+    --xiu-surface-high: #2e231b;
+    --xiu-cream: #e6d6cb;
+    --xiu-dim: #8a7d74;
+    --xiu-outline: #3a2a22;
+    --xiu-primary: #e0563b;
 }
 
 /* Round the whole window against the compositor's transparent background */
 #main-window {
     border-radius: var(--xiu-radius) !important;
     overflow: hidden;
+    background-color: var(--xiu-surface) !important;
 }
 
 /* Decorations come from the compositor; the in-content buttons go away */
@@ -30,4 +42,35 @@
 }
 panel {
     --panel-border-radius: 10px !important;
+}
+
+/* The chrome wears the palette */
+#nav-bar,
+#TabsToolbar,
+#PersonalToolbar {
+    background-color: var(--xiu-surface) !important;
+    color: var(--xiu-cream) !important;
+}
+
+#urlbar {
+    background-color: var(--xiu-surface-high) !important;
+    color: var(--xiu-cream) !important;
+    border-color: var(--xiu-outline) !important;
+}
+#urlbar[focused] {
+    border-color: var(--xiu-primary) !important;
+}
+
+.tab-label,
+.tab-text {
+    color: var(--xiu-dim) !important;
+}
+.tab[selected] .tab-label,
+.tab[selected] .tab-text {
+    color: var(--xiu-cream) !important;
+}
+
+toolbar .toolbarbutton-1 {
+    color: var(--xiu-dim) !important;
+    fill: var(--xiu-dim) !important;
 }

@@ -691,7 +691,9 @@ def render_yazi(pill, b):
     p = pill
     lines = [
         "# Written by wallcolors.py on every palette change.",
-        "[mgr]",
+        "# [manager] is the long-lived section name — current yazi also accepts",
+        "# [mgr], older ones only this one — and the tab separator key is 'sep'.",
+        "[manager]",
         'cwd = { fg = "%s" }' % p["cream"],
         'border_style = { fg = "%s" }' % p["outline_variant"],
         'find_keyword = { fg = "%s", bold = true }' % p["primary"],
@@ -707,8 +709,7 @@ def render_yazi(pill, b):
         'active = { fg = "%s", bg = "%s", bold = true }'
         % (p["bright"], p["surface_container_high"]),
         'inactive = { fg = "%s" }' % p["dim"],
-        'sep_inner = { fg = "%s" }' % p["outline_variant"],
-        'sep_outer = { fg = "%s" }' % p["outline_variant"],
+        'sep = { fg = "%s" }' % p["outline_variant"],
         "",
         "[mode]",
         'normal_main = { fg = "%s", bg = "%s", bold = true }'
@@ -772,6 +773,36 @@ def render_spicetify(pill, b):
     prefs = d / "config-xpui.ini"
     if prefs.is_file() and "current_theme = xiu" in prefs.read_text():
         subprocess.run(["spicetify", "refresh"], stderr=subprocess.DEVNULL)
+
+
+def render_userchrome(pill):
+    """Recolor the xiu palette block inside every deployed userChrome.css
+    (Firefox and Zen profiles the installer wired), so the browser chrome
+    follows the wallpaper even before the live-theme extension loads. Only
+    files carrying the xiu variable block are touched; a user's own
+    userChrome is never rewritten."""
+    subs = {
+        "--xiu-surface": pill["surface"],
+        "--xiu-surface-high": pill["surface_container_high"],
+        "--xiu-cream": pill["cream"],
+        "--xiu-dim": pill["dim"],
+        "--xiu-outline": pill["outline_variant"],
+        "--xiu-primary": pill["primary"],
+    }
+    for root in (Path.home() / ".mozilla" / "firefox", Path.home() / ".zen"):
+        if not root.is_dir():
+            continue
+        for uc in root.glob("*/chrome/userChrome.css"):
+            try:
+                text = uc.read_text()
+            except OSError:
+                continue
+            if "--xiu-surface:" not in text:
+                continue
+            for key, value in subs.items():
+                text = re.sub(r"%s:\s*#[0-9a-fA-F]{3,8};" % re.escape(key),
+                              "%s: %s;" % (key, value), text)
+            uc.write_text(text)
 
 
 def render_discord(pill):
@@ -1191,6 +1222,7 @@ def fan_out(pill, seed, variant):
     render_spicetify(pill, b)
     render_discord(pill)
     render_telegram(pill)
+    render_userchrome(pill)
     render_vscode(pill)
     render_zed(pill)
     render_browser(pill)

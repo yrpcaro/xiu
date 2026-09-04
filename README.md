@@ -29,9 +29,8 @@ config file. There is also a lock screen and
 [rishot](https://github.com/Gakuseei/rishot), the screenshot and annotation
 tool, which lives in its own repo.
 
-Hovering the pill lights it (a soft lift and an ember border tint) but never
-resizes or remorphs it — it opens on a click, a keybind or an event, never on a
-pointer crossing.
+Mere hovering never changes the pill: it opens on a click, a keybind or an
+event, never on a pointer crossing.
 
 ## What's different from Ricelin
 
@@ -39,7 +38,7 @@ pointer crossing.
 
 - The whole bind map rewritten in the caelestia arrangement but on raw keycodes
   (`code:NNN`), so every bind hits the same physical key on both configured
-  layouts — `us` and `ir(winkeys)`, toggled with `Super+Space`.
+  layouts — `us` and `ir(winkeys)`, toggled with `Alt+Shift`.
 - Workspaces in groups of ten: digits pick the slot in the current group,
   `Ctrl+Super` + digit picks the group. Special workspaces for the stash
   (`Super+S`), the private space (`Super+Alt+P`) and the minimized set
@@ -68,9 +67,13 @@ pointer crossing.
 
 - Terminal: **foot** (ghostty stays available as the optional fallback).
 - Clipboard: **clipvault** behind the pill surface (cliphist as the fallback).
-- The Rust set: eza, bat, fd, ripgrep, dust, zoxide, gitui, starship, direnv,
-  bottom, yazi — with the fish aliases to match (`y` even closes into the
-  directory you were in).
+- The Rust set: eza, bat, fd, ripgrep, dust, zoxide (owning `cd` itself,
+  the caelestia way), gitui, starship, direnv, bottom, yazi — with the fish
+  aliases to match (`y` even closes into the directory you were in), plus a
+  `~/.config/xiu/user-config.fish` hook for your own bits.
+- Touchpad gestures, caelestia-style: three fingers swipe between
+  workspaces, four fingers pull up the stash — finger counts configurable
+  through `xiu-vars.lua`.
 - **xiu**, the shell's own Rust CLI: `xiu shell/wallpaper/scheme/screenshot/
   record/clipboard/emoji/toggle/browser` plus `xiu check`, a drift and health
   report for the install.
@@ -229,6 +232,8 @@ for the `us` layout and lands on the same physical key in `ir(winkeys)`.
 | **Apps & tools** | |
 | `Super` + `Return` | terminal (foot) |
 | `Super` + `W` | browser |
+| `Super` + `A` | Telegram |
+| `Super` + `O` | Spotify |
 | `Super` + `C` | editor |
 | `Super` + `E` | file manager |
 | `Ctrl` + `Alt` + `V` | mixer |
