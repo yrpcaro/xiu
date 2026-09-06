@@ -317,14 +317,24 @@ def generate_manual(hue, mode, sat, variant):
     return pill, seed, variant
 
 
-def render_foot(b):
-    """foot reads its palette from an include, so writing the file is enough:
-    every terminal opened afterwards opens in the current scheme. Modern foot
-    splits the palette into [colors-dark]/[colors-light]; the pipeline always
-    drives the dark theme, which is also foot's default."""
-    foot = Path.home() / ".config" / "foot"
-    foot.mkdir(parents=True, exist_ok=True)
-    lines = ["[colors-dark]"]
+def render_foot(pill, b):
+    """foot's entire color section lives in the include (foot.ini never
+    reopens [colors-dark]), so writing the file is enough: every terminal
+    opened afterwards opens in the current scheme. Modern foot splits the
+    palette into [colors-dark]/[colors-light]; the pipeline always drives the
+    dark theme, which is also foot's default."""
+    foot = _tool_dir("foot")
+    if foot is None:
+        return
+    lines = [
+        "[colors-dark]",
+        "alpha=0.85",
+        "background=%s" % b["base00"].lstrip("#"),
+        "foreground=%s" % b["base07"].lstrip("#"),
+        "cursor=%s %s" % (pill["primary"].lstrip("#"), b["base07"].lstrip("#")),
+        "selection-background=%s" % b["base02"].lstrip("#"),
+        "selection-foreground=%s" % b["base07"].lstrip("#"),
+    ]
     for i in range(8):
         lines.append("regular%d=%s" % (i, b["base%02x" % i].lstrip("#")))
     for i in range(8):
@@ -1210,7 +1220,7 @@ def fan_out(pill, seed, variant):
     for i in range(16):
         lines.append(f'palette = {i}={b["base%02x" % i]}')
     (CACHE / "ghostty-colors").write_text("\n".join(lines) + "\n")
-    render_foot(b)
+    render_foot(pill, b)
     render_btop(pill, b)
     render_htop(pill, b)
     render_nvtop(pill, b)
