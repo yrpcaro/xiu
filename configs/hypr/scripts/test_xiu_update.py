@@ -228,6 +228,22 @@ def main():
     assert (share / "ricelin-update" / ".git").is_dir(), "existing xiu home wins, legacy left alone"
     print("M2 pre-rename clone and manifest migrate to xiu homes: ok")
 
+    """
+    M3: an existing clone whose origin still points at the pre-fork remote is
+    repointed at the requested remote before any fetch, so a box cloned while
+    the engine shipped upstream's URL can never pull upstream Ricelin over
+    xiu again.
+    """
+    os.environ["XDG_DATA_HOME"] = str(tmp / "data3")
+    ru.ensure_clone(str(origin), do_fetch=False)
+    ru.git(ru.data_dir(), "remote", "set-url", "origin",
+           "https://github.com/Gakuseei/Ricelin.git")
+    ru.ensure_clone("https://github.com/yrpcaro/xiu.git", do_fetch=False)
+    url = ru.git(ru.data_dir(), "remote", "get-url", "origin").strip()
+    assert url == "https://github.com/yrpcaro/xiu.git", url
+    print("M3 stale clone origin repointed at the fork: ok")
+    os.environ["XDG_DATA_HOME"] = str(share)
+
     print("\nALL TESTS PASSED")
 
 

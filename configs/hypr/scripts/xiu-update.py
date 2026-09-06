@@ -191,9 +191,18 @@ def is_devmode(config_root):
 
 
 def ensure_clone(remote, do_fetch):
-    """Clone the pristine mirror if missing, otherwise fetch. Returns the clone path."""
+    """
+    Clone the pristine mirror if missing, otherwise fetch. An existing clone's
+    origin is repointed at the requested remote first when it differs: early
+    boxes cloned while the engine shipped upstream's URL, and a fetch from that
+    origin would sync upstream Ricelin over xiu — the very revert loop this
+    engine exists to prevent. Returns the clone path.
+    """
     clone = data_dir()
     if (clone / ".git").exists():
+        current = git(clone, "remote", "get-url", "origin", check=False).strip()
+        if current and current != remote:
+            git(clone, "remote", "set-url", "origin", remote)
         if do_fetch:
             git(clone, "fetch", "origin", "main")
         return clone
@@ -603,6 +612,46 @@ def install_missing_deps(clone, head, ids):
     return failures
 
 
+def rebuild_cli(clone, base, head, apply):
+    """
+    Best-effort rebuild of the xiu CLI when the update touches cli/: the
+    keybinds and the control verbs all run through the binary, so an update
+    that ships new subcommands would otherwise leave the old binary in place
+    (nothing else refreshes it — the installer only runs on a full install).
+    Runs only when cargo is already on PATH, never bootstrapping rustup from
+    here, and returns a failure string for the report instead of failing the
+    apply. None means there was nothing to do.
+    """
+    if not apply or not base:
+        return None
+    if shutil.which("cargo") is None:
+        return None
+    diff = subprocess.run(
+        ["git", "-C", str(clone), "diff", "--quiet", base, head, "--", "cli/"],
+        capture_output=True)
+    if diff.returncode == 0:
+        return None
+    target = Path.home() / ".cache" / "ricelin" / "build" / "xiu-target"
+    bin_dir = Path.home() / ".local" / "bin"
+    env = dict(os.environ, CARGO_TARGET_DIR=str(target))
+    build = subprocess.run(
+        ["cargo", "build", "--release", "--manifest-path", str(clone / "cli" / "Cargo.toml")],
+        capture_output=True, text=True, env=env)
+    if build.returncode != 0:
+        tail = (build.stderr or "").strip().splitlines()
+        return "cli rebuild failed: " + (tail[-1] if tail else "cargo build error")
+    try:
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        install = subprocess.run(
+            ["install", "-m755", str(target / "release" / "xiu"), str(bin_dir / "xiu")],
+            capture_output=True, text=True)
+    except OSError as exc:
+        return f"cli install failed: {exc}"
+    if install.returncode != 0:
+        return "cli install failed: " + (install.stderr.strip() or "unknown error")
+    return None
+
+
 def run(mode, remote, config_root, take, install_ids):
     if is_devmode(config_root):
         return {"status": "devmode", "behind": 0, "fromDate": "", "toDate": "",
@@ -654,6 +703,10 @@ def run(mode, remote, config_root, take, install_ids):
     rows, conflicts, sha_updates = reconcile_protected(
         clone, config_root, manifest, head, apply, take)
     code_changed = sync_code(clone, config_root, head, apply)
+
+    cli_error = rebuild_cli(clone, base, head, apply)
+    if cli_error:
+        dep_failures.append({"id": "xiu-cli", "error": cli_error})
 
     if apply:
         manifest.setdefault("modules", {}).update(sha_updates)

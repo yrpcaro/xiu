@@ -121,9 +121,9 @@ main() {
 		|| [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.ricelin-managed" ]; } \
 		&& ! has_flag --reinstall "$@" && ! has_flag --uninstall "$@"; then
 		say "xiu is already installed."
-		say "  Update:       open Settings > Updates in the pill, or run: ricelin update"
+		say "  Update:       open Settings > Updates in the pill, or run: xiu update"
 		say "  Re-install:   curl -fsSL https://raw.githubusercontent.com/yrpcaro/xiu/main/install.sh | sh -s -- --reinstall"
-		say "  Uninstall:    ricelin uninstall"
+		say "  Uninstall:    xiu uninstall"
 		exit 0
 	fi
 

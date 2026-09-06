@@ -6,7 +6,8 @@
     the trailing -- comments are the names it shows. App commands live in
     modules/vars.lua and category workspaces in modules/toggles.lua, both
     overridable from ~/.config/xiu/. rishot owns the Print binds in
-    rishot.lua.
+    rishot.lua. Surface opens and the clipboard go through the xiu CLI
+    (`xiu open <surface>`), which is on PATH.
 ]]
 local mod = "SUPER"
 local vars = require("modules.vars")
@@ -74,7 +75,7 @@ end
 -- modifier) misfired on every Super combo on some Hyprland builds — the
 -- mod-only release shadowing is not dependable across versions — so the
 -- launcher moved to an ordinary combo.
-hl.bind(mod .. " + code:65", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh launcher")) -- launcher
+hl.bind(mod .. " + code:65", hl.dsp.exec_cmd("xiu open launcher")) -- launcher
 
 -- Keyboard layout: us <-> ir(winkeys), Alt+Shift like the classic DE toggle.
 -- The pill's layout chip fires the same command and follows along on the
@@ -84,8 +85,8 @@ hl.bind("ALT + code:50", hl.dsp.exec_cmd("hyprctl switchxkblayout current next")
 hl.bind("ALT + code:62", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (right shift)
 
 -- Session, notifications, lock
-hl.bind("CTRL + ALT + code:119", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh power")) -- session menu
-hl.bind(mod .. " + code:57", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh link")) -- notifications
+hl.bind("CTRL + ALT + code:119", hl.dsp.exec_cmd("xiu open power")) -- session menu
+hl.bind(mod .. " + code:57", hl.dsp.exec_cmd("xiu open link")) -- notifications
 hl.bind("CTRL + ALT + code:54", hl.dsp.exec_cmd("qs -c pill ipc call notifs clear")) -- clear notifications
 hl.bind(mod .. " + code:45", hl.dsp.exec_cmd('qs -c pill ipc call pill peek ""')) -- peek the pill
 hl.bind(mod .. " + code:46", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/lock.sh")) -- lock
@@ -220,17 +221,17 @@ hl.bind(mod .. " + code:54", hl.dsp.exec_cmd(vars.editor)) -- editor
 hl.bind(mod .. " + code:26", hl.dsp.exec_cmd(vars.fileManager)) -- file manager
 hl.bind(mod .. " + code:38", hl.dsp.exec_cmd(vars.telegram)) -- telegram
 hl.bind(mod .. " + code:32", hl.dsp.exec_cmd(vars.musicPlayer)) -- spotify
-hl.bind("CTRL + ALT + code:55", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh mixer")) -- mixer
+hl.bind("CTRL + ALT + code:55", hl.dsp.exec_cmd("xiu open mixer")) -- mixer
 
 -- Wallpaper, capture, record
 hl.bind(mod .. " + code:56", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/wallpaper.sh")) -- random wallpaper
-hl.bind(mod .. " + SHIFT + code:56", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh wallpaper")) -- wallpaper picker
+hl.bind(mod .. " + SHIFT + code:56", hl.dsp.exec_cmd("xiu open wallpaper")) -- wallpaper picker
 hl.bind(mod .. " + SHIFT + code:54", hl.dsp.exec_cmd("hyprpicker -a")) -- color picker
-hl.bind(mod .. " + code:42", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh gameMode")) -- game mode
-hl.bind("CTRL + ALT + code:27", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/record.sh")) -- screen record
+hl.bind(mod .. " + code:42", hl.dsp.exec_cmd("xiu open gameMode")) -- game mode
+hl.bind("CTRL + ALT + code:27", hl.dsp.exec_cmd("xiu record")) -- screen record
 
 -- Clipboard
-hl.bind(mod .. " + code:55", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/open-surface.sh clipboard")) -- clipboard history
+hl.bind(mod .. " + code:55", hl.dsp.exec_cmd("xiu clipboard")) -- clipboard history
 hl.bind("CTRL + SHIFT + ALT + code:55", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/paste-latest.sh"), locked) -- paste latest clipboard
 hl.bind(mod .. " + code:60", hl.dsp.exec_cmd("xiu emoji -p")) -- emoji picker
 

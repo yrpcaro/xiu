@@ -74,8 +74,10 @@ event, never on a pointer crossing.
 - Touchpad gestures, caelestia-style: three fingers swipe between
   workspaces, four fingers pull up the stash — finger counts configurable
   through `xiu-vars.lua`.
-- **xiu**, the shell's own Rust CLI: `xiu shell/wallpaper/scheme/screenshot/
-  record/clipboard/emoji/toggle/browser` plus `xiu check`, a drift and health
+- **xiu**, the shell's own Rust CLI: `xiu shell/open/wallpaper/scheme/
+  screenshot/record/clipboard/emoji/gamemode/browser` plus the control verbs
+  (`xiu restart/start/stop/log/status/update/uninstall`) and `xiu check`, a
+  drift and health
   report for the install.
 
 **The lock screen**
