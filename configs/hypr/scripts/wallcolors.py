@@ -328,6 +328,7 @@ def render_foot(pill, b):
         return
     lines = [
         "[colors-dark]",
+        "blur=yes",
         "alpha=0.85",
         "background=%s" % b["base00"].lstrip("#"),
         "foreground=%s" % b["base07"].lstrip("#"),
