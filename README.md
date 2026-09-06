@@ -22,7 +22,7 @@ whatever surface I need.
 ![The pill surfaces](assets/shell.png)
 
 The pill becomes media and now playing, a calendar, the wallpaper picker, the
-clipboard history (clipvault behind it), an audio and brightness mixer, network
+clipboard history (cliphist behind it), an audio and brightness mixer, network
 and bluetooth controls, a system monitor, a launcher, and the settings surface
 where keybinds, idle behavior and the palette mode live without touching a
 config file. There is also a lock screen and
@@ -66,7 +66,7 @@ event, never on a pointer crossing.
 **Tools**
 
 - Terminal: **foot** (ghostty stays available as the optional fallback).
-- Clipboard: **clipvault** behind the pill surface (cliphist as the fallback).
+- Clipboard: **cliphist** behind the pill surface.
 - The Rust set: eza, bat, fd, ripgrep, dust, zoxide (owning `cd` itself,
   the caelestia way), gitui, starship, direnv, bottom, yazi — with the fish
   aliases to match (`y` even closes into the directory you were in), plus a
@@ -129,8 +129,8 @@ the install:
 - **login screen** — TTY (default), the torii SDDM theme, or greetd + tuigreet
 - **browser live theme** — register the native host and drop the userChrome
   into your Firefox/Zen profiles
-- **legacy tools** — keep ghostty + cliphist as fallbacks, or remove them once
-  foot + clipvault are in
+- **legacy tools** — keep ghostty as the fallback terminal, or remove it once
+  foot is in
 - **your configs** — carry them across (Settings, keybinds, fish; three-way
   merged on updates) or start from the repo defaults
 

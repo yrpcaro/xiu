@@ -103,10 +103,7 @@
     { "id": "btop", "group": "core", "required": true, "desc": "System monitor on the CTRL+SHIFT+Escape workspace", "aur": false,
       "names": { "arch": "btop", "debian": "btop", "fedora": "btop", "suse": "btop" }, "fallback": null },
 
-    { "id": "clipvault", "group": "core", "required": true, "desc": "Clipboard history behind the pill surface", "aur": true,
-      "names": { "arch": "clipvault", "debian": null, "fedora": null, "suse": null }, "fallback": "cargo" },
-
-    { "id": "cliphist", "group": "core", "required": false, "desc": "Alternative clipboard history (clipvault is the default)", "aur": false,
+    { "id": "cliphist", "group": "core", "required": true, "desc": "Clipboard history behind the pill surface", "aur": false,
       "names": { "arch": "cliphist", "debian": "cliphist", "fedora": "cliphist", "suse": "cliphist" }, "fallback": null },
 
     { "id": "wl-clipboard", "group": "core", "required": true, "desc": "Wayland clipboard plumbing", "aur": false,

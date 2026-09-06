@@ -143,7 +143,7 @@ fn check(_args: &[String]) -> i32 {
 
     println!("health:");
     let tools = [
-        "Hyprland", "qs", "foot", "clipvault", "matugen", "swww", "rishot",
+        "Hyprland", "qs", "foot", "cliphist", "matugen", "swww", "rishot",
     ];
     let missing: Vec<&str> = tools.iter().copied().filter(|t| !on_path(t)).collect();
     if missing.is_empty() {
