@@ -186,8 +186,8 @@ def _wizard(args, info, manifest):
     greeter = ("none", "sddm", "greetd")[gidx]
 
     lidx = tui.select_one("Legacy tools", [
-        ("Fallback", "ghostty stays available as the optional terminal backend", True),
-        ("Clean swap", "remove ghostty once foot is in", False),
+        ("Fallback", "ghostty and cliphist stay available as the optional terminal and clipboard backends", True),
+        ("Clean swap", "remove ghostty and cliphist once foot and clipvault are in", False),
     ], default=0)
     legacy_swap = ("fallback", "clean")[lidx]
 
@@ -353,7 +353,7 @@ def _summary_lines(info, choices, plan, args, do_pkgs):
     if choices["browser_theme"]:
         lines.append("Wire the browsers into the palette (userChrome + live theme host).")
     if choices["legacy_swap"] == "clean":
-        lines.append("Remove ghostty once foot is in.")
+        lines.append("Remove ghostty and cliphist once foot and clipvault are in.")
     if choices["fresh_configs"]:
         lines.append("Start from the repo's config defaults (your old files are still backed up).")
     if choices["grub"]:
@@ -1083,7 +1083,7 @@ def run(args):
                 "fedora": ["dnf", "remove", "-y"],
                 "suse": ["zypper", "rm", "-y"],
             }.get(fam)
-            for old_id, new_id in (("ghostty", "foot"),):
+            for old_id, new_id in (("ghostty", "foot"), ("cliphist", "clipvault")):
                 if remove_argv is None:
                     break
                 old_pkg = next((p for p in manifest["packages"] if p["id"] == old_id), None)
