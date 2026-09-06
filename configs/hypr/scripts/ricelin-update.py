@@ -41,8 +41,11 @@ PROTECTED = [
     "hypr/modules/stash-apps.lua",
     "hypr/modules/spaces.lua",
     "hypr/hypridle.conf",
-    "fish/config.fish",
 ]
+
+# fish/config.fish is deliberately absent: the fish toolkit is xiu-owned and
+# user personalization lives in ~/.config/xiu/user-config.fish (sourced by the
+# shipped config), so merging user copies only preserves stale greetings.
 
 
 def data_dir():

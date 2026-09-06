@@ -67,6 +67,10 @@ GRUB_EXCLUDED = ["grub/install-torii.sh", "grub/probe-sda4.sh", "grub/10_ricelin
 # ships standalone and cannot be imported from here). On a managed re-deploy
 # these are carried across the replace instead of reverting to the repo copy,
 # so a curl|sh re-run stops undoing Settings (idle timeouts, keybinds, layout).
+# fish/config.fish is NOT here on purpose: the shell's fish toolkit is xiu-owned
+# and personalization has its own hook (~/.config/xiu/user-config.fish, sourced
+# by the shipped config), so preserving user copies only ever keeps stale
+# Ricelin-era greetings (the torii fish_greeting) alive across re-deploys.
 PRESERVED = [
     "hypr/modules/decoration.lua",
     "hypr/modules/binds.lua",
@@ -78,7 +82,6 @@ PRESERVED = [
     "hypr/modules/stash-apps.lua",
     "hypr/modules/spaces.lua",
     "hypr/hypridle.conf",
-    "fish/config.fish",
 ]
 
 # The single auto monitor that replaces a user's hand-tuned layout. Their real
@@ -472,8 +475,8 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
             idle.write_text(text.replace("/home/erik", home))
 
     # Strip the portability blockers only from a pristine shipped fish. A user's
-    # own config.fish (carried across a re-deploy via PRESERVED, or three-way
-    # merged by the updater) is never rewritten by this step.
+    # own config.fish (kept in fish.bak, or hand-restored after a deploy) is
+    # never rewritten by this step.
     fish = config_root / "fish" / "config.fish"
     if fish.is_file() and _pristine("fish/config.fish", config_root, src):
         cleaned, removed = _strip_fish(fish.read_text())
@@ -702,11 +705,13 @@ def _selftest():
         (root / "fish" / "config.fish").write_text(fish_user)
         plan3 = deploy(config_root=root, apply=True)
         fish_act = next(a for a in plan3 if a["item"] == "fish")
-        check("fish/config.fish" in fish_act["preserved"],
-              "re-deploy plans to carry the user fish across the replace")
+        check("fish/config.fish" not in fish_act["preserved"],
+              "re-deploy no longer preserves the user fish: the shipped xiu config wins")
+        check((root / "fish" / "config.fish").read_text() != fish_user,
+              "stale user config.fish (torii-greeting era) is replaced by the deploy")
         neutralize(config_root=root, apply=True)
-        check((root / "fish" / "config.fish").read_text() == fish_user,
-              "user config.fish survived re-deploy + neutralize, cachyos line kept")
+        check((root / "fish" / "config.fish").read_text() != fish_user,
+              "neutralize keeps the shipped config.fish, user fish gone for good")
         check((root / "hypr" / "scripts" / "lock.sh").exists(),
               "non-protected code files still refreshed on re-deploy")
 
