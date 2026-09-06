@@ -11,8 +11,10 @@ Thumbs.db
 *.legacy
 
 # install.sh ownership markers and config backups, only ever live under ~/.config
+.xiu-managed
 .ricelin-managed
 *.bak-ricelin-*
+*.bak-xiu-*
 
 # Per-machine
 .envrc

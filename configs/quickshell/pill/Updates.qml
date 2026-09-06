@@ -6,7 +6,7 @@ import Quickshell.Io
 import "Singletons"
 
 /**
- * 更 UPDATES sub-surface: a terminal-free face for the Ricelin update engine. It
+ * 更 UPDATES sub-surface: a terminal-free face for the xiu update engine. It
  * never touches git itself; it shells out to the python engine at
  * ~/.config/hypr/scripts/ricelin-update.py, which prints one JSON object, and
  * renders that. `check` is a safe dry-run that reports how far behind the install
@@ -28,7 +28,7 @@ SettingsSurface {
     implicitHeight: content.implicitHeight
     rows: []
 
-    readonly property string engine: Quickshell.env("HOME") + "/.config/hypr/scripts/ricelin-update.py"
+    readonly property string engine: Quickshell.env("HOME") + "/.config/hypr/scripts/xiu-update.py"
 
     property string status: ""
     property string version: ""
@@ -245,7 +245,12 @@ SettingsSurface {
 
     FileView {
         id: manifestFile
-        path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin/update.json"
+        /** The engine moved the manifest to state/xiu; the old state/ricelin
+         * copy is read until the first engine run performs the move. */
+        path: {
+            var base = Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state");
+            return base + "/xiu/update.json";
+        }
         watchChanges: true
         printErrors: false
         onLoaded: root.readManifest()

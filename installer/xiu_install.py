@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-The Ricelin installer orchestrator: the thin top layer that ties distro
+The xiu installer orchestrator: the thin top layer that ties distro
 detection, the package planner, the fallback handlers, the config deploy and the
 terminal UI into one real install flow.
 
@@ -214,14 +214,14 @@ def _wizard(args, info, manifest):
     grub = False
     if info["bootloader"] == "grub":
         grub = tui.confirm("GRUB theme", [
-            "Install the Ricelin GRUB theme.",
+            "Install the xiu GRUB theme.",
             "Theme only, it does not touch your boot entries.",
         ])
 
     brave = True if args.brave else False
     if not args.brave:
         bidx = tui.select_one("Brave browser", [
-            ("Install Brave", "Brave browser with the matching Ricelin theme", True),
+            ("Install Brave", "Brave browser with the matching xiu theme", True),
             ("Skip", "Leave Brave out for now", False),
         ], default=1)
         brave = bidx == 0
@@ -417,19 +417,19 @@ def _summary_lines(info, choices, plan, args, do_pkgs):
     if choices["grub"]:
         lines.append("Install the GRUB theme.")
     if choices["brave"]:
-        lines.append("Install Brave with the matching Ricelin theme.")
+        lines.append("Install Brave with the matching xiu theme.")
     if choices["fish"]:
         lines.append("Set fish as your login shell.")
     if _is_update(info):
-        lines.append("Update the Ricelin config; your Settings are kept.")
+        lines.append("Update the xiu config; your Settings are kept.")
     else:
-        lines.append("Back up and deploy the Ricelin config.")
+        lines.append("Back up and deploy the xiu config.")
     return lines
 
 
 def _is_update(info):
     """
-    True when this run lands on top of an earlier Ricelin deploy, spotted by the
+    True when this run lands on top of an earlier xiu deploy, spotted by the
     managed marker on the two dirs that always deploy. That flips the messaging
     from "back up and deploy" to "update, your files are kept", since a managed
     replace makes no backup and carries the protected user files across.
@@ -553,12 +553,13 @@ def link_ricelin_cli(dry):
 
 def deploy_brave_theme(source, dry):
     """
-    Copy the bundled Brave theme into ~/.config/ricelin so the user can point
-    Brave at it. Chromium signs its own preferences, so the theme can never be
-    applied reliably from outside; it just has to sit on disk, ready to load from
-    brave://settings. Returns (ok, detail) so the caller folds it into record().
+    Copy the bundled Brave theme into ~/.config/xiu so the user can point Brave
+    at it. Chromium signs its own preferences, so the theme can never be applied
+    reliably from outside; it just has to sit on disk, ready to load from
+    brave://settings. A pre-rename copy at ~/.config/ricelin/brave-theme moves
+    over first. Returns (ok, detail) so the caller folds it into record().
     """
-    dest_show = "~/.config/ricelin/brave-theme"
+    dest_show = "~/.config/xiu/brave-theme"
     if dry:
         print(f"  would deploy: brave-theme -> {dest_show}")
         return True, ""
@@ -567,6 +568,10 @@ def deploy_brave_theme(source, dry):
         return False, f"brave theme not found at {src}"
     dest = os.path.expanduser(dest_show)
     try:
+        old = os.path.expanduser("~/.config/ricelin/brave-theme")
+        if os.path.isdir(old) and not os.path.isdir(dest):
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            shutil.move(old, dest)
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         shutil.copytree(src, dest, dirs_exist_ok=True)
     except OSError as exc:
@@ -737,7 +742,7 @@ def _seed_update_baseline(source, config_root, dry):
             capture_output=True, text=True, check=True).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return True, ""
-    engine = Path(config_root) / "hypr" / "scripts" / "ricelin-update.py"
+    engine = Path(config_root) / "hypr" / "scripts" / "xiu-update.py"
     if not head or not engine.exists():
         return True, ""
     try:
@@ -781,7 +786,7 @@ def _report(plan, failures, notes, info, choices, args, do_pkgs, dry):
     steps.append(("pick a wallpaper", "Super+C to swap or grab more"))
     if choices["brave"]:
         steps.append(("brave theme",
-                      "brave://settings/appearance, load ~/.config/ricelin/brave-theme"))
+                      "brave://settings/appearance, load ~/.config/xiu/brave-theme"))
     if choices.get("browser_theme"):
         steps.append(("browser theme",
                       "Firefox/Zen: about:debugging, Load Temporary Add-on, "
@@ -792,7 +797,7 @@ def _report(plan, failures, notes, info, choices, args, do_pkgs, dry):
         cmd = hint[len("Run: "):] if hint.startswith("Run: ") else hint
         attention.append((step, cmd))
 
-    title = "Dry run complete" if dry else "Ricelin is in"
+    title = "Dry run complete" if dry else "xiu is in"
     tui.closing(title, tally, steps, attention, notes or None)
 
 
@@ -814,7 +819,7 @@ def run(args):
         helper_label = "Not needed"
     has_config = any(v["exists"] for v in info["existing"].values())
     if _is_update(info):
-        config_label = "Ricelin (this run updates it, your Settings are kept)"
+        config_label = "xiu (this run updates it, your Settings are kept)"
     elif has_config:
         config_label = "Found (backed up before anything is replaced)"
     else:
@@ -1220,7 +1225,7 @@ def run(args):
                 notes.append("Skipped the Brave install, only deployed its theme.")
             ok, detail = deploy_brave_theme(args.source, dry)
             record(ok, detail, "Deploy Brave theme",
-                   "Copy configs/brave-theme to ~/.config/ricelin/brave-theme yourself.")
+                   "Copy configs/brave-theme to ~/.config/xiu/brave-theme yourself.")
     finally:
         if keepalive_stop:
             keepalive_stop()
@@ -1235,7 +1240,7 @@ def run(args):
 
 def run_uninstall(args):
     """
-    Remove every Ricelin-managed config and put the pre-install backups back.
+    Remove every xiu-managed config and put the pre-install backups back.
     Packages stay; only the deployed files go. Confirms interactively before
     touching anything, and refuses to run headless, since a piped one-liner
     should never be able to wipe a config unattended.
@@ -1245,7 +1250,7 @@ def run_uninstall(args):
     plan = deploy.uninstall(config_root=deploy.CONFIG_ROOT, apply=False)
     removals = [a for a in plan if a["action"] == "remove"]
     if not removals:
-        tui.info(["Nothing Ricelin-managed found in ~/.config, nothing to remove."])
+        tui.info(["Nothing xiu-managed found in ~/.config, nothing to remove."])
         tui.outro("Done")
         return 0
 
@@ -1262,7 +1267,7 @@ def run_uninstall(args):
         tui.outro("Dry run complete")
         return 0
     try:
-        if not tui.confirm("Remove Ricelin", lines):
+        if not tui.confirm("Remove xiu", lines):
             tui.outro("Cancelled")
             return 0
     except RuntimeError:
@@ -1282,15 +1287,15 @@ def run_uninstall(args):
             print(f"  removed: {link}")
         except OSError:
             pass
-    tui.info(["The repo clone in ~/.local/share/ricelin and your wallpapers in "
-              "~/Ricelin are left for you to delete."])
-    tui.outro("Ricelin removed")
+    tui.info(["The repo clone in ~/.local/share/xiu and your wallpapers in "
+              "~/Pictures/xiu/wallpapers are left for you to delete."])
+    tui.outro("xiu removed")
     return 0
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Install the Ricelin Hyprland rice across distro families.")
+        description="Install the xiu Hyprland rice across distro families.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Walk the whole flow and change nothing")
     parser.add_argument("--quickstart", action="store_true",
@@ -1302,11 +1307,11 @@ def main():
     parser.add_argument("--sddm", action="store_true",
                         help="Preselect the torii SDDM login theme")
     parser.add_argument("--brave", action="store_true",
-                        help="Preselect Brave plus its Ricelin theme")
+                        help="Preselect Brave plus its xiu theme")
     parser.add_argument("--no-deps", action="store_true",
                         help="Skip the package step, only deploy the configs")
     parser.add_argument("--reinstall", action="store_true",
-                        help="Run the full install over an existing Ricelin install")
+                        help="Run the full install over an existing xiu install")
     parser.add_argument("--uninstall", action="store_true",
                         help="Remove the deployed configs and restore the backups")
     args = parser.parse_args()

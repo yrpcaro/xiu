@@ -1,18 +1,20 @@
 #!/bin/sh
 #
-# Ricelin bootstrap.
+# xiu bootstrap.
 #
 # Thin entrypoint for `curl -fsSL .../install.sh | bash`. It does the bare
 # minimum to get the real installer running on a fresh machine: detect the
 # distro family (so it knows the package manager), make sure git and python3
 # are present, fetch the rice, then hand the whole flow to the Python installer.
 # The wizard, the package logic and the config deploy all live in
-# installer/ricelin_install.py, not here.
+# installer/xiu_install.py, not here.
 
 set -e
 
 REPO_URL="https://github.com/yrpcaro/xiu.git"
-DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ricelin"
+DIR="${XDG_DATA_HOME:-$HOME/.local/share}/xiu"
+# Where the pre-rename clone lives; moved over below when the new dir is free.
+OLD_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ricelin"
 
 # os-release ID / ID_LIKE tokens per family, mirroring installer/distro.py so the
 # bootstrap picks the same package manager the Python installer expects.
@@ -23,7 +25,7 @@ SUSE_IDS="suse opensuse sles sled tumbleweed leap"
 
 say()  { printf '%s\n' "$*"; }
 step() { printf '\n:: %s\n' "$*"; }
-die()  { printf 'ricelin: %s\n' "$*" >&2; exit 1; }
+die()  { printf 'xiu: %s\n' "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 in_list() {
@@ -83,11 +85,18 @@ ensure_deps() {
 
 fetch() {
 	mkdir -p "$(dirname "$DIR")"
+	# A box installed before the rename carries its clone at the old path;
+	# move it over when the new home is free so the checkout, its remotes
+	# and any local state survive, then proceed as usual.
+	if [ -d "$OLD_DIR/.git" ] && [ ! -d "$DIR/.git" ]; then
+		step "Moving the pre-rename clone to $DIR"
+		mv "$OLD_DIR" "$DIR" || say "  could not move the old clone, fetching fresh"
+	fi
 	if [ -d "$DIR/.git" ]; then
-		step "Updating Ricelin in $DIR"
+		step "Updating xiu in $DIR"
 		git -C "$DIR" pull --ff-only || say "  could not fast-forward, using the current checkout"
 	else
-		step "Cloning Ricelin into $DIR"
+		step "Cloning xiu into $DIR"
 		git clone --depth 1 "$REPO_URL" "$DIR"
 	fi
 }
@@ -103,16 +112,17 @@ has_flag() {
 
 main() {
 	say "Preparing installer interface..."
-	[ "$(uname -s)" = Linux ] || die "Ricelin only installs on Linux"
+	[ "$(uname -s)" = Linux ] || die "xiu only installs on Linux"
 
 	# A box that already carries the managed deploy updates through the in-app
 	# updater, not through a full re-install; re-running the one-liner is almost
 	# always someone looking for "how do I update". --reinstall forces the wizard.
-	if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.ricelin-managed" ] \
+	if { [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.xiu-managed" ] \
+		|| [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.ricelin-managed" ]; } \
 		&& ! has_flag --reinstall "$@" && ! has_flag --uninstall "$@"; then
-		say "Ricelin is already installed."
+		say "xiu is already installed."
 		say "  Update:       open Settings > Updates in the pill, or run: ricelin update"
-		say "  Re-install:   curl -fsSL https://raw.githubusercontent.com/Gakuseei/Ricelin/main/install.sh | sh -s -- --reinstall"
+		say "  Re-install:   curl -fsSL https://raw.githubusercontent.com/yrpcaro/xiu/main/install.sh | sh -s -- --reinstall"
 		say "  Uninstall:    ricelin uninstall"
 		exit 0
 	fi
@@ -126,7 +136,7 @@ main() {
 	ensure_deps "$fam"
 	fetch
 
-	exec python3 "$DIR/installer/ricelin_install.py" --source "$DIR/configs" "$@"
+	exec python3 "$DIR/installer/xiu_install.py" --source "$DIR/configs" "$@"
 }
 
 main "$@"

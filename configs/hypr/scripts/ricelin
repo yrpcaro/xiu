@@ -16,7 +16,7 @@
 #   ricelin status                    what's running and the installed version
 
 SCRIPTS="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
-ENGINE="$SCRIPTS/ricelin-update.py"
+ENGINE="$SCRIPTS/xiu-update.py"
 WATCHDOG="$SCRIPTS/watchdog.sh"
 SURFACES="pill lock"
 
@@ -92,7 +92,8 @@ installed_version() {
             return
         fi
     fi
-    mf="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin/update.json"
+    mf="${XDG_STATE_HOME:-$HOME/.local/state}/xiu/update.json"
+    [ -f "$mf" ] || mf="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin/update.json"
     if [ -f "$mf" ] && command -v jq >/dev/null 2>&1; then
         sha=$(jq -r '.syncedSha // empty' "$mf")
         [ -n "$sha" ] && { printf '%s' "$(echo "$sha" | cut -c1-7)"; return; }
@@ -207,7 +208,9 @@ cmd_update() {
 }
 
 cmd_uninstall() {
-    installer="${XDG_DATA_HOME:-$HOME/.local/share}/ricelin/installer/ricelin_install.py"
+    installer="${XDG_DATA_HOME:-$HOME/.local/share}/xiu/installer/xiu_install.py"
+    [ -f "$installer" ] || installer="${XDG_DATA_HOME:-$HOME/.local/share}/ricelin/installer/xiu_install.py"
+    [ -f "$installer" ] || installer="${XDG_DATA_HOME:-$HOME/.local/share}/ricelin/installer/ricelin_install.py"
     [ -f "$installer" ] || die "installer not found ($installer); remove ~/.config/hypr and ~/.config/quickshell by hand, your originals sit next to them as .bak"
     command -v python3 >/dev/null 2>&1 || die "python3 not found"
     exec python3 "$installer" --uninstall

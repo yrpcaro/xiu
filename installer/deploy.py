@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Ricelin config deploy layer.
+xiu config deploy layer.
 
 Copies the rice into ~/.config, drops an ownership marker so uninstall knows
 what is safe to pull, makes the deployed copies portable (neutralize), and
@@ -20,7 +20,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-MARKER = ".ricelin-managed"
+MARKER = ".xiu-managed"
+# Pre-rename marker: a box deployed before the xiu rename still carries it, so
+# reads accept either and writes always stamp the new one.
+LEGACY_MARKER = ".ricelin-managed"
 
 # Repo root is the parent of this installer/ dir; the deployable configs sit
 # under configs/ next to it.
@@ -63,7 +66,7 @@ DEPLOY_SET = [
 GRUB_EXCLUDED = ["grub/install-torii.sh", "grub/probe-sda4.sh", "grub/10_ricelin"]
 
 # User-owned config files a re-run must never reset: the same protected set the
-# update engine three-way merges (hand-mirrored from ricelin-update.py, which
+# update engine three-way merges (hand-mirrored from xiu-update.py, which
 # ships standalone and cannot be imported from here). On a managed re-deploy
 # these are carried across the replace instead of reverting to the repo copy,
 # so a curl|sh re-run stops undoing Settings (idle timeouts, keybinds, layout).
@@ -141,9 +144,25 @@ def _marker_for(dest, is_dir=None):
     return (dest / MARKER) if is_dir else dest.with_name(dest.name + MARKER)
 
 
+def _marker_paths(dest, is_dir=None):
+    """Both the current and the pre-rename marker location for a dest."""
+    dest = Path(dest)
+    if is_dir is None:
+        is_dir = dest.is_dir() and not dest.is_symlink()
+    names = [MARKER, LEGACY_MARKER]
+    return [(dest / n) if is_dir else dest.with_name(dest.name + n) for n in names]
+
+
 def _is_managed(dest, is_dir=None):
-    """True when we deployed this dest, spotted by the marker file."""
-    return _marker_for(dest, is_dir).is_file()
+    """True when we deployed this dest, spotted by the marker file (either name)."""
+    return any(m.is_file() for m in _marker_paths(dest, is_dir))
+
+
+def _unlink_markers(dest, is_dir=None):
+    """Remove every marker variant a dest may carry, current or pre-rename."""
+    for marker in _marker_paths(dest, is_dir):
+        if marker.exists():
+            marker.unlink()
 
 
 def _rm(path):
@@ -202,7 +221,7 @@ def _has_nvidia():
 def detect_existing(config_root=CONFIG_ROOT):
     """
     Look at each deploy-set item in ~/.config and report whether it is there
-    and, if so, whether Ricelin put it there (carries our marker) or it is a
+    and, if so, whether xiu put it there (carries our marker) or it is a
     foreign config we would back up before replacing. Returns a dict keyed by
     item name with the path, exists, managed and a plain status word.
     """
@@ -287,9 +306,7 @@ def deploy(src=CONFIGS, config_root=CONFIG_ROOT, apply=False, keep_preserved=Tru
             continue
         if managed:
             saved = {rel: (config_root / rel).read_bytes() for rel in keep}
-            marker = _marker_for(dest, is_dir)
-            if marker.exists():
-                marker.unlink()
+            _unlink_markers(dest, is_dir)
             _rm(dest)
         else:
             # Foreign config moves aside first, so it is never lost to _rm.
@@ -500,7 +517,7 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
 
 def uninstall(config_root=CONFIG_ROOT, apply=False):
     """
-    Remove every Ricelin-managed item from ~/.config and put its pristine .bak
+    Remove every xiu-managed item from ~/.config and put its pristine .bak
     back. A dest without our marker is the user's own config, left untouched.
     Returns the action list; nothing is removed unless apply is set.
     """
@@ -514,16 +531,14 @@ def uninstall(config_root=CONFIG_ROOT, apply=False):
         is_dir = dest.is_dir() and not dest.is_symlink()
         if not _is_managed(dest, is_dir):
             actions.append({"item": name, "action": "skip",
-                            "reason": "not Ricelin-managed", "dest": str(dest)})
+                            "reason": "not xiu-managed", "dest": str(dest)})
             continue
         bak = dest.with_name(dest.name + ".bak")
         restore = str(bak) if (bak.exists() or bak.is_symlink()) else None
         actions.append({"item": name, "action": "remove",
                         "dest": str(dest), "restored": restore})
         if apply:
-            marker = _marker_for(dest, is_dir)
-            if marker.exists():
-                marker.unlink()
+            _unlink_markers(dest, is_dir)
             _rm(dest)
             if restore:
                 shutil.move(str(bak), str(dest))
@@ -723,7 +738,7 @@ def _selftest():
     # paths, so the selftest holds them byte-equal.
     import importlib.util
     spec = importlib.util.spec_from_file_location(
-        "_ricelin_update", REPO_ROOT / "configs" / "hypr" / "scripts" / "ricelin-update.py")
+        "_xiu_update", REPO_ROOT / "configs" / "hypr" / "scripts" / "xiu-update.py")
     engine = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(engine)
     check(PRESERVED == engine.PROTECTED,

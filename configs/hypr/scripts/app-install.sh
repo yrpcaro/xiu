@@ -166,7 +166,7 @@ extract_install() {
 	local icon_path="$icon_dir/$slug.png"
 	[ -f "$icon_path" ] || { icon_path="$icon_dir/$slug.svg"; [ -f "$icon_path" ] || icon_path=""; }
 
-	local df_out="$desktop_dir/ricelin-$slug.desktop"
+	local df_out="$desktop_dir/xiu-$slug.desktop"
 	{
 		echo "[Desktop Entry]"
 		echo "Type=Application"
@@ -180,7 +180,7 @@ extract_install() {
 		[ -n "$categories" ] && echo "Categories=$categories"
 		[ -n "$wmclass" ] && echo "StartupWMClass=$wmclass"
 		echo "Terminal=false"
-		echo "X-Ricelin-AppImage=true"
+		echo "X-Xiu-AppImage=true"
 	} >"$df_out"
 
 	reg_set "$slug" "$name" "$dest" "$icon_path" "$df_out" "$appid"

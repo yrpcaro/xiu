@@ -78,7 +78,7 @@ ShellRoot {
             + "gdbus call --session --dest org.freedesktop.Notifications "
             + "--object-path /org/freedesktop/Notifications "
             + "--method org.freedesktop.Notifications.Notify "
-            + "Ricelin 0 '' 'Ricelin updated' \"$b\" '[]' '{}' 5000 >/dev/null 2>&1"]
+            + "xiu 0 '' 'xiu updated' \"$b\" '[]' '{}' 5000 >/dev/null 2>&1"]
     }
 
     Binding {
@@ -109,7 +109,7 @@ ShellRoot {
      */
     Process {
         running: Flags.keepAwake
-        command: ["systemd-inhibit", "--what=idle:sleep", "--who=Ricelin",
+        command: ["systemd-inhibit", "--what=idle:sleep", "--who=xiu",
                   "--why=keep awake", "--mode=block", "sleep", "infinity"]
     }
 

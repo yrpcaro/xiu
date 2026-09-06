@@ -17,7 +17,7 @@ copy-on-select = clipboard
 keybind = ctrl+v=paste_from_clipboard
 confirm-close-surface = false
 
-# Warm Ricelin default theme. The wallpaper picker writes a matching
+# Warm xiu default theme. The wallpaper picker writes a matching
 # palette to the cache file below, which overrides everything here.
 background = #1c120c
 foreground = #e6d6cb

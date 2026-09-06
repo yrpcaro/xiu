@@ -92,7 +92,12 @@ fn check(_args: &[String]) -> i32 {
     let mut configs_ok = true;
     for (name, dir) in dirs {
         let path = format!("{cfg}/{dir}");
-        let state = if std::path::Path::new(&format!("{path}/.ricelin-managed")).is_file() {
+        // Either marker counts: .xiu-managed is what deploys stamp now, a
+        // pre-rename .ricelin-managed still marks a box we own.
+        let managed = [".xiu-managed", ".ricelin-managed"]
+            .iter()
+            .any(|m| std::path::Path::new(&format!("{path}/{m}")).is_file());
+        let state = if managed {
             "managed"
         } else if std::path::Path::new(&path).is_dir() {
             configs_ok = false;

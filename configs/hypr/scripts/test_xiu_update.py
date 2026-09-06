@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Self-test for ricelin-update.py against throwaway git repos in a temp dir. No
+Self-test for xiu-update.py against throwaway git repos in a temp dir. No
 network, no touching the user's real config. Builds a fake origin with a couple of
 commits (some carrying changelog: trailers, some not) and a fake live config, then
 drives check/apply through the engine and asserts the merge classes behave.
@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-spec = importlib.util.spec_from_file_location("ricelin_update", HERE / "ricelin-update.py")
+spec = importlib.util.spec_from_file_location("xiu_update", HERE / "xiu-update.py")
 ru = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ru)
 
@@ -36,7 +36,7 @@ def write(path, text):
 def main():
     tmp = Path(tempfile.mkdtemp())
     origin = tmp / "origin"
-    data = tmp / "data" / "ricelin-update"
+    data = tmp / "data" / "xiu-update"
     state = tmp / "state"
     config = tmp / "config"
 
@@ -194,6 +194,39 @@ def main():
     assert "corrupt" in corrupt["error"].lower(), corrupt
     assert corrupt["modules"] == [] and corrupt["behind"] == 0, "must not masquerade as first run"
     print("M1 corrupt manifest -> error, not first run: ok")
+
+    """
+    M2: the pre-rename state migrates. A manifest under state/ricelin/ and a
+    clone under share/ricelin-update both move to their xiu homes on the first
+    load, and the moved manifest is still read as the live baseline.
+    """
+    share = tmp / "data"
+    old_state = tmp / "state" / "ricelin"
+    old_state.mkdir(parents=True, exist_ok=True)
+    (old_state / "update.json").write_text('{"syncedSha": "abc", "modules": {}}')
+    # the xiu manifest from the earlier tests must be out of the way for the move
+    ru.manifest_path().unlink()
+    m = ru.load_manifest()
+    assert m == {"syncedSha": "abc", "modules": {}}, m
+    assert ru.manifest_path().is_file(), "manifest moved to the xiu state dir"
+    assert not (old_state / "update.json").exists(), "old manifest gone"
+
+    # the clone moves too, but only when its xiu home doesn't already exist:
+    # in a fresh data dir the legacy clone relocates...
+    fresh = tmp / "data2"
+    (fresh / "ricelin-update" / ".git").mkdir(parents=True)
+    os.environ["XDG_DATA_HOME"] = str(fresh)
+    ru.migrate_legacy()
+    assert (fresh / "xiu-update" / ".git").is_dir(), "clone moved to the xiu data dir"
+    assert not (fresh / "ricelin-update" / ".git").exists(), "old clone gone"
+    # ...while in the main data dir, where xiu-update already exists from the
+    # runs above, a legacy leftover stays put — the move never fights a home
+    # that is already there.
+    (share / "ricelin-update" / ".git").mkdir(parents=True)
+    os.environ["XDG_DATA_HOME"] = str(share)
+    ru.migrate_legacy()
+    assert (share / "ricelin-update" / ".git").is_dir(), "existing xiu home wins, legacy left alone"
+    print("M2 pre-rename clone and manifest migrate to xiu homes: ok")
 
     print("\nALL TESTS PASSED")
 

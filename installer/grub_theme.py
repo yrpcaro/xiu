@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-The generic, brick-safe GRUB theme step for the Ricelin installer.
+The generic, brick-safe GRUB theme step for the xiu installer.
 
 It does one thing: drop the torii theme into /boot/grub and point GRUB at it. It
 never touches boot entries, never disables os-prober, never deploys a curated
@@ -27,7 +27,7 @@ GRUB_ROOT = "/boot/grub"
 THEME_DEST = f"{GRUB_ROOT}/themes/{THEME}"
 THEME_TXT = f"{THEME_DEST}/theme.txt"
 GRUB_DEFAULT = "/etc/default/grub"
-GRUB_BACKUP = "/etc/default/grub.ricelin-bak"
+GRUB_BACKUP = "/etc/default/grub.xiu-bak"
 GRUB_CFG = f"{GRUB_ROOT}/grub.cfg"
 
 

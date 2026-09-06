@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tier-3 fallback handlers for the Ricelin installer. These cover the packages
+Tier-3 fallback handlers for the xiu installer. These cover the packages
 that have no native package on a given distro family, so the installer has to
 fetch them another way: build from source, pull a prebuilt release, run a
 crate install, or hand off to Flathub or a project's own installer.

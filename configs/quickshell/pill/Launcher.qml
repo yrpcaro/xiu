@@ -50,7 +50,16 @@ PillSurface {
     readonly property string appimageScript: Quickshell.env("HOME") + "/.config/hypr/scripts/app-install.sh"
 
     function appimageSlug(entry) {
-        return entry && entry.id && entry.id.indexOf("ricelin-") === 0 ? entry.id.substring(8) : "";
+        // AppImages the rice installed carry a xiu- (or pre-rename ricelin-)
+        // desktop id prefix; both count, so installs from before the rename
+        // keep resolving.
+        if (!entry || !entry.id)
+            return "";
+        if (entry.id.indexOf("xiu-") === 0)
+            return entry.id.substring(4);
+        if (entry.id.indexOf("ricelin-") === 0)
+            return entry.id.substring(8);
+        return "";
     }
 
     Process { id: appimageProc }
@@ -286,7 +295,8 @@ PillSurface {
 
             readonly property var entry: root.results[index]
             readonly property bool selected: index === root.selectedIndex
-            readonly property bool isAppImage: entry && entry.id && entry.id.indexOf("ricelin-") === 0
+            readonly property bool isAppImage: entry && entry.id
+                && (entry.id.indexOf("xiu-") === 0 || entry.id.indexOf("ricelin-") === 0)
             readonly property bool editing: root.editIndex === index && isAppImage
             property bool armed: false
             onEditingChanged: if (!editing) armed = false

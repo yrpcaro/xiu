@@ -166,7 +166,7 @@ def render_fastfetch(pill):
     tmpl = ff / "config.jsonc.in"
     if not tmpl.is_file():
         print("wallcolors: config.jsonc.in missing in ~/.config/fastfetch, skipping "
-              "fastfetch recolour (apply the Ricelin update or re-run the installer)",
+              "fastfetch recolour (apply the xiu update or re-run the installer)",
               file=sys.stderr)
         return
     seq = lambda h: "%d;%d;%d" % tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))

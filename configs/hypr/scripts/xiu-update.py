@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Update engine for the Ricelin rice. The in-app Settings updater shells out to
+Update engine for the xiu rice. The in-app Settings updater shells out to
 this and parses the single JSON object it prints on stdout.
 
 The model: keep a dedicated pristine clone that the user never touches, so a pull
@@ -52,13 +52,44 @@ PROTECTED = [
 
 
 def data_dir():
+    """Where the pristine mirror clone lives (plus its backups nearby)."""
     base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
-    return Path(base) / "ricelin-update"
+    return Path(base) / "xiu-update"
 
 
 def manifest_path():
     base = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
-    return Path(base) / "ricelin" / "update.json"
+    return Path(base) / "xiu" / "update.json"
+
+
+def migrate_legacy():
+    """
+    One-shot moves of the pre-rename state: the pristine clone lived under
+    ~/.local/share/ricelin-update and the manifest under ~/.local/state/ricelin/.
+    Each moves only when its new home doesn't exist yet, so the pair settles
+    after one run and a user who deliberately recreated an old path is never
+    fought. Best-effort by design — a failed move just means the old location
+    keeps being read until it succeeds.
+    """
+    share = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    new_clone = Path(share) / "xiu-update"
+    if not (new_clone / ".git").exists():
+        old_clone = Path(share) / "ricelin-update"
+        if (old_clone / ".git").exists():
+            try:
+                os.rename(old_clone, new_clone)
+            except OSError:
+                pass
+    new_man = manifest_path()
+    if not new_man.exists():
+        state = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+        old_man = Path(state) / "ricelin" / "update.json"
+        if old_man.exists():
+            try:
+                new_man.parent.mkdir(parents=True, exist_ok=True)
+                os.rename(old_man, new_man)
+            except OSError:
+                pass
 
 
 def git(repo, *args, check=True):
@@ -80,6 +111,7 @@ def load_manifest():
     since that would re-baseline every protected file to HEAD and skip every change
     between the lost base and HEAD.
     """
+    migrate_legacy()
     path = manifest_path()
     if not path.exists():
         return {"syncedSha": None, "modules": {}}
@@ -118,7 +150,7 @@ def backup_protected(config_root):
     was live to back up.
     """
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    dest_root = data_dir().parent / "ricelin-update-backup" / stamp
+    dest_root = data_dir().parent / "xiu-update-backup" / stamp
     made = None
     for rel in PROTECTED:
         live = config_root / rel
@@ -364,7 +396,7 @@ def baseline(config_root, sha):
 
 # ── Missing dependencies ──────────────────────────────────────────────────────
 #
-# A Ricelin update can introduce a new package the rice now needs (cava did once).
+# An update can introduce a new package the rice now needs (cava did once).
 # The engine reads the upstream package manifest from the clone, works out which
 # core packages are not installed on this machine, and offers to install the chosen
 # ones on apply.
