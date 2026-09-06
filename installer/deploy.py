@@ -102,6 +102,8 @@ hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 
 hl.env("QT_QPA_PLATFORMTHEME", "kde")
+
+hl.env("RISHOT_SAVEDIR", os.getenv("HOME") .. "/Pictures/Screenshots")
 """
 
 # Appended only when an nvidia GPU is on the bus.

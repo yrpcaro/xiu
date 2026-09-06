@@ -441,21 +441,33 @@ def _is_update(info):
 def seed_wallpapers(dry):
     """
     Give a fresh box a wallpaper to show. Every wallpaper consumer reads
-    ~/Ricelin/wallpapers (wallpaper.sh, the picker, the search, the palette), but
-    that dir is gitignored and untracked, so a clone ships none: no background, an
-    empty picker, the palette never fires. Create the dir plus the downloads
-    subfolder and the ricelin cache, and when it holds no images yet, copy the
-    tracked starter set in so swww, the picker and the palette all light up.
-    Fail-soft like every other step: an OSError comes back as (ok, detail) for
-    the report instead of aborting the run.
+    ~/Pictures/xiu/wallpapers (wallpaper.sh, the picker, the search, the
+    palette), but that dir is gitignored and untracked, so a clone ships none:
+    no background, an empty picker, the palette never fires. A box carrying
+    the pre-xiu collection at ~/Ricelin/wallpapers gets it moved over first
+    (only when the new home doesn't exist yet, so the move settles after one
+    run). Then create the dir plus the downloads subfolder and the ricelin
+    cache, and when it holds no images yet, copy the tracked starter set in
+    so swww, the picker and the palette all light up. Fail-soft like every
+    other step: an OSError comes back as (ok, detail) for the report instead
+    of aborting the run.
     """
     home = Path.home()
-    wp = home / "Ricelin" / "wallpapers"
+    wp = home / "Pictures" / "xiu" / "wallpapers"
+    old = home / "Ricelin" / "wallpapers"
     starters = Path(__file__).resolve().parent / "starter-wallpapers"
     if dry:
-        print("  would seed wallpapers -> ~/Ricelin/wallpapers")
+        print("  would seed wallpapers -> ~/Pictures/xiu/wallpapers "
+              "(moving ~/Ricelin/wallpapers first when present)")
         return True, ""
     try:
+        if old.is_dir() and not wp.exists():
+            (home / "Pictures" / "xiu").mkdir(parents=True, exist_ok=True)
+            shutil.move(str(old), str(wp))
+            try:
+                (home / "Ricelin").rmdir()
+            except OSError:
+                pass
         (wp / "downloads").mkdir(parents=True, exist_ok=True)
         (home / ".cache" / "ricelin").mkdir(parents=True, exist_ok=True)
         exts = (".jpg", ".jpeg", ".png")
@@ -1083,7 +1095,7 @@ def run(args):
         #    populated picker and a palette to render.
         ok, detail = seed_wallpapers(dry)
         record(ok, detail, "Seed wallpapers",
-               "Copy any image into ~/Ricelin/wallpapers yourself.")
+               "Copy any image into ~/Pictures/xiu/wallpapers yourself.")
 
         # m. login screen.
         if choices["greeter"] == "sddm":

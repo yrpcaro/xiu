@@ -44,6 +44,21 @@ ShellRoot {
     }
 
     /**
+     * The rice's default content homes, created at boot: wallpapers the picker
+     * and palette read, recordings the recorder saves into, screenshots rishot
+     * auto-saves to (RISHOT_SAVEDIR in env.lua points at the same path).
+     * Idempotent, no output, harmless wherever they already exist — they only
+     * matter so the first wallpaper pick, recording and screenshot never land
+     * in a missing folder.
+     */
+    Process {
+        running: true
+        command: ["sh", "-c",
+            "mkdir -p \"$HOME/Pictures/xiu/wallpapers\" "
+            + "\"$HOME/Videos/Screenrecording\" \"$HOME/Pictures/Screenshots\""]
+    }
+
+    /**
      * After an update relaunches the shell, raise a one-shot toast naming what
      * landed, so the apply ends in a confirmation instead of a silent restart. The
      * updater drops the marker just before it restarts; the short delay lets the

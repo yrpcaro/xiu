@@ -12,3 +12,7 @@ hl.env("__GL_VRR_ALLOWED",          "0")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 
 hl.env("QT_QPA_PLATFORMTHEME", "kde")
+
+-- rishot's auto-save folder (it has no config file of its own; the env var
+-- is the knob). Keep in sync with the dirs the pill creates at boot.
+hl.env("RISHOT_SAVEDIR", os.getenv("HOME") .. "/Pictures/Screenshots")

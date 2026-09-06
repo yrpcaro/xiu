@@ -29,10 +29,11 @@ import Quickshell.Io
  * started/stopped state, so the start is not also pushed as a notification.
  *
  * The output directory is the Flags-persisted `recordDir`, falling back to
- * `$HOME/Videos/Recordings`; `pickDir()` runs a native folder picker (kdialog
- * or zenity) and writes the chosen path back to Flags so the displayed path,
- * Open action and recent list all follow it. A `recording` poll reconciles an
- * externally started or stopped recorder so the state is never stale.
+ * `$HOME/Videos/Screenrecording`; `pickDir()` runs a native folder picker
+ * (kdialog or zenity) and writes the chosen path back to Flags so the
+ * displayed path, Open action and recent list all follow it. A `recording`
+ * poll reconciles an externally started or stopped recorder so the state is
+ * never stale.
  *
  * The recent list carries a cover thumbnail per clip: `refreshRecent()` first
  * runs the thumb script (ffmpeg extracts a single frame into a cache dir under
@@ -45,7 +46,7 @@ Singleton {
     id: root
 
     readonly property string home: Quickshell.env("HOME")
-    readonly property string defaultDir: home + "/Videos/Recordings"
+    readonly property string defaultDir: home + "/Videos/Screenrecording"
     readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (home + "/.cache")) + "/ricelin/rec-thumbs/"
     readonly property string thumbScript: home + "/.config/hypr/scripts/rec-thumbs.sh"
     readonly property string outDir: {
@@ -481,7 +482,23 @@ Singleton {
         onTriggered: if (!pollProc.running) pollProc.running = true
     }
 
-    Component.onCompleted: refreshRecent()
+    /**
+     * One-shot move of the recordings folder from the pre-xiu default
+     * (~/Videos/Recordings) to the new one. Skipped the moment the new dir
+     * exists or the old one is gone, so it settles after exactly one run;
+     * a Flags-pinned recordDir is untouched either way.
+     */
+    Process {
+        id: migrateDir
+        command: ["sh", "-c",
+            "o=\"$HOME/Videos/Recordings\"; n=\"$HOME/Videos/Screenrecording\"; "
+            + "[ -d \"$o\" ] && [ ! -d \"$n\" ] && mv -- \"$o\" \"$n\" || true"]
+    }
+
+    Component.onCompleted: {
+        migrateDir.running = true;
+        refreshRecent();
+    }
 
     /** Command surface for scripts and the xiu CLI. */
     IpcHandler {

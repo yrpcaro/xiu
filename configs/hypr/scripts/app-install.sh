@@ -206,7 +206,7 @@ install_wallpaper() {
 	name="${base%.*}"
 	wpdir="$(jq -r '.wallpaperDir // ""' "${XDG_STATE_HOME:-$HOME/.local/state}/ricelin/flags.json" 2>/dev/null || echo "")"
 	[ -n "$wpdir" ] || wpdir="$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/ricelin-wallpaper-dir" 2>/dev/null || true)"
-	[ -n "$wpdir" ] || wpdir="$HOME/Ricelin/wallpapers"
+	[ -n "$wpdir" ] || wpdir="$HOME/Pictures/xiu/wallpapers"
 	mkdir -p "$wpdir"
 	case "$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]')" in
 		*.webp) dest="$wpdir/$name.png"; magick "$src" "$dest" ;;

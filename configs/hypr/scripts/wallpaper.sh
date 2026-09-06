@@ -4,15 +4,25 @@ set -euo pipefail
 flags_file="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin/flags.json"
 WPDIR=$(jq -r '.wallpaperDir // ""' "$flags_file" 2>/dev/null || echo "")
 if [ -z "$WPDIR" ]; then
+    # One-shot move of the collection from the pre-xiu default into its new
+    # home. Skipped the moment the new dir exists or the old one is gone, so
+    # it settles after exactly one run and never fights a user who put
+    # something new at the old path on purpose.
+    if [ -d "$HOME/Ricelin/wallpapers" ] && [ ! -d "$HOME/Pictures/xiu/wallpapers" ]; then
+        mkdir -p "$HOME/Pictures/xiu"
+        if mv "$HOME/Ricelin/wallpapers" "$HOME/Pictures/xiu/wallpapers"; then
+            rmdir "$HOME/Ricelin" 2>/dev/null || true
+        fi
+    fi
     # No explicit folder set: adopt an existing collection in the usual spots.
     # Two or more images counts as a collection, a single stray file does not,
     # so an incidental picture never hijacks the default.
-    for cand in "$HOME/Pictures/Wallpapers" "$HOME/Pictures/wallpapers" "$HOME/Wallpapers" "$HOME/wallpapers"; do
+    for cand in "$HOME/Pictures/xiu/wallpapers" "$HOME/Pictures/Wallpapers" "$HOME/Pictures/wallpapers" "$HOME/Wallpapers" "$HOME/wallpapers"; do
         [ -d "$cand" ] || continue
         n=$(find "$cand" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.png' -o -iname '*.gif' -o -iname '*.webp' -o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' -o -iname '*.mov' \) | head -2 | wc -l)
         if [ "$n" -ge 2 ]; then WPDIR="$cand"; break; fi
     done
-    [ -n "$WPDIR" ] || WPDIR="$HOME/Ricelin/wallpapers"
+    [ -n "$WPDIR" ] || WPDIR="$HOME/Pictures/xiu/wallpapers"
 fi
 RESOLVED="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin-wallpaper-dir"
 printf '%s\n' "$WPDIR" > "$RESOLVED"
