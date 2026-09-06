@@ -237,7 +237,7 @@ Item {
                 radius: 10 * content.s
                 anchors.verticalCenter: parent.verticalCenter
                 clip: true
-                color: "#1a100c"
+                color: Theme.fieldBg
                 Image {
                     id: coverImg
                     anchors.fill: parent
@@ -526,7 +526,15 @@ Item {
             anchors.rightMargin: 46 * content.s
             verticalAlignment: TextInput.AlignVCenter
             horizontalAlignment: TextInput.AlignHCenter
-            echoMode: TextInput.Normal
+            /**
+             * Masked mode must be TextInput.Password, never Normal with a
+             * transparent text color: a selection (Ctrl+A, mouse drag) paints
+             * the selected run in the selection foreground and revealed the
+             * real glyphs on screen. Password echoes the mask character per
+             * char — the beads row draws the indicator dots — so a selection
+             * can only ever highlight dots.
+             */
+            echoMode: content.reveal ? TextInput.Normal : TextInput.Password
             color: content.reveal ? Theme.bright : "transparent"
             font.family: Theme.font
             font.pixelSize: 15 * content.s

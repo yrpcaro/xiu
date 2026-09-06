@@ -12,6 +12,7 @@ Singleton {
     readonly property bool dyn: Flags.paletteMode !== "static"
 
     readonly property color verm:   dyn ? Qt.darker(Dyn.primary, 1.18) : "#c0442b"
+    readonly property color vermLit: dyn ? Dyn.primary : "#e0563b"
     readonly property color cream:  dyn ? Dyn.cream : "#e6d6cb"
     readonly property color bright: dyn ? Dyn.bright : "#fff6f0"
     readonly property color dim:    dyn ? Dyn.dim : "#8a7d74"
