@@ -250,11 +250,14 @@ def _choice_ids(choices):
     return ids
 
 
-def _build_plan(manifest, info, choices):
+def _build_plan(manifest, info, choices, cli_local):
     """
     Resolve the chosen groups into concrete batches. Native packages already on
     the box are dropped (idempotent); the AUR ones, the repos to enable and the
-    fallbacks are kept. Returns the split lists the runner walks.
+    fallbacks are kept. The xiu CLI is dropped from every list when
+    cli_local — the dedicated build step compiles it from the running checkout
+    instead of the generic cargo fallback's second clone. Returns the split
+    lists the runner walks.
     """
     family = info["family"]
     by_id = {p["id"]: p for p in manifest["packages"]}
@@ -267,6 +270,8 @@ def _build_plan(manifest, info, choices):
     optional_native = set()
     for r in rows:
         if r["action"] == "skip":
+            continue
+        if r["id"] == "xiu" and cli_local:
             continue
         if r["action"] == "fallback":
             if fallbacks.present(r["target"], by_id[r["id"]]):
@@ -284,6 +289,57 @@ def _build_plan(manifest, info, choices):
             optional_native.add(r["target"])
     return {"repos": repos, "native": native, "aur": aur, "fallbacks": fb,
             "skipped": skipped, "optional_native": optional_native}
+
+
+def cli_local(source):
+    """
+    True when the installer is running out of a repo checkout that carries the
+    cli/ crate, so the xiu CLI can be built in place instead of cloned again.
+    """
+    return (Path(source).resolve().parent / "cli" / "Cargo.toml").is_file()
+
+
+def build_xiu_cli(source, dry):
+    """
+    Build and install the shell's own Rust CLI from the checkout the installer
+    is running out of — the exact commit being deployed, not whatever main a
+    second clone would fetch (the generic cargo fallback, kept for source dirs
+    without a checkout, clones the repo from github again). Runs on every
+    install path, --no-deps included: the keybinds call `xiu`, so a box without
+    the binary has dead binds. Always rebuilds, so a re-run also updates the
+    binary the first deploy left behind (the update engine never does).
+    Compiles into the shared build cache so the checkout stays clean, and
+    installs into ~/.local/bin, which needs no root. Returns (ok, detail,
+    built) with built=False when this source has no cli/ crate and the caller
+    should fall through to the generic fallback.
+    """
+    if not cli_local(source):
+        return True, "", False
+    crate = Path(source).resolve().parent / "cli" / "Cargo.toml"
+    target = os.path.join(fallbacks.BUILD_DIR, "xiu-target")
+    bin_ = os.path.join(fallbacks.BIN_DIR, "xiu")
+    shell_build = (
+        fallbacks._CARGO_PREP
+        + "; CARGO_TARGET_DIR=%s cargo build --release --manifest-path %s"
+        % (shlex.quote(target), shlex.quote(str(crate)))
+    )
+    shell_install = "mkdir -p %s && install -m755 %s %s" % (
+        shlex.quote(fallbacks.BIN_DIR),
+        shlex.quote(os.path.join(target, "release", "xiu")),
+        shlex.quote(bin_),
+    )
+    if dry:
+        print("  would run: %s" % shell_build)
+        print("  would run: %s" % shell_install)
+        return True, "", True
+    ok, detail = _shell(shell_build, dry)
+    if not ok:
+        return ok, detail, True
+    ok, detail = _shell(shell_install, dry)
+    if not ok:
+        return ok, detail, True
+    print("  built: xiu cli -> %s" % bin_)
+    return True, "", True
 
 
 def _aur_install_argv(names, family, aur_choice):
@@ -346,6 +402,8 @@ def _summary_lines(info, choices, plan, args, do_pkgs):
             lines.append("Build via fallback: " + names + ".")
     if choices["file_manager"] != "none":
         lines.append(f"Install the {choices['file_manager']} file manager.")
+    if cli_local(args.source):
+        lines.append("Build the xiu CLI from this checkout.")
     if choices["greeter"] == "sddm":
         lines.append("Install the torii SDDM login theme.")
     elif choices["greeter"] == "greetd":
@@ -790,7 +848,7 @@ def run(args):
             tui.info(["No controlling terminal, taking the Quick defaults."])
             choices = _default_choices(args, info, manifest)
 
-    plan = _build_plan(manifest, info, choices)
+    plan = _build_plan(manifest, info, choices, cli_local(args.source))
 
     summary = _summary_lines(info, choices, plan, args, do_pkgs)
     if args.quickstart:
@@ -1001,7 +1059,19 @@ def run(args):
             record(False, str(exc), "Neutralize configs",
                    "Check ~/.config permissions and re-run the installer.")
 
-        # k2. put the ricelin control CLI on PATH now that the script is deployed.
+        # k2. build the xiu CLI from this very checkout, after the deploy so
+        #     the binaries and the configs it drives land together. Runs on
+        #     every path (the keybinds call xiu), rebuilds so a re-run also
+        #     refreshes the binary, and never needs root.
+        ok, detail, built = build_xiu_cli(args.source, dry)
+        record(ok, detail, "Build the xiu CLI",
+               "Run: cd <xiu repo>/cli && cargo build --release "
+               "&& install -m755 target/release/xiu ~/.local/bin/xiu")
+        if ok and not built:
+            notes.append("No cli/ crate next to the configs source; the xiu "
+                         "CLI will come through the cargo fallback instead.")
+
+        # k3. put the ricelin control CLI on PATH now that the script is deployed.
         ok, detail, linked = link_ricelin_cli(dry)
         record(ok, detail, "Link ricelin CLI",
                "Symlink ~/.local/bin/ricelin to ~/.config/hypr/scripts/ricelin yourself.")
