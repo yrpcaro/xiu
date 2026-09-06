@@ -28,7 +28,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-DEFAULT_REMOTE = "https://github.com/Gakuseei/Ricelin.git"
+# The xiu fork, not upstream Ricelin: an apply syncs code files from here, so
+# pointing at Gakuseei/Ricelin would silently revert xiu-only changes on every
+# update (the suspected cause of the clipboard reverting itself on a live box).
+DEFAULT_REMOTE = "https://github.com/yrpcaro/xiu.git"
 
 PROTECTED = [
     "hypr/modules/decoration.lua",
