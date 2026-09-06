@@ -439,11 +439,20 @@ def pkg_installed(name, family):
     """
     Whether the native package is installed, read-only and quiet. A failed query
     (wrong tool, no db) counts as not installed rather than raising, mirroring the
-    installer's own is_installed.
+    installer's own is_installed — including its Arch acceptance rules: an AUR
+    -bin build of the same name (hyprland-bin for hyprland) satisfies the
+    requirement, and pacman -T settles Provides, so an update never demands a
+    package the box already carries under another name.
     """
     try:
         if family == "arch":
-            r = subprocess.run(["pacman", "-Qq", name], capture_output=True, text=True)
+            for candidate in (name, f"{name}-bin"):
+                r = subprocess.run(["pacman", "-Qq", candidate],
+                                   capture_output=True, text=True)
+                if r.returncode == 0:
+                    return True
+            r = subprocess.run(["pacman", "-T", name],
+                               capture_output=True, text=True)
             return r.returncode == 0
         if family == "debian":
             r = subprocess.run(["dpkg-query", "-W", "-f=${Status}", name],

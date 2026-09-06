@@ -35,11 +35,24 @@ def is_installed(name, family):
     Ask the native package DB whether name is installed, read-only and quiet. A
     missing package is a normal answer, not an error, so any failure to even run
     the query (wrong tool, no DB) returns False rather than raising.
+
+    On Arch a package is also satisfied by an AUR -bin build of the same name
+    (hyprland-bin standing in for hyprland): pacman sees them as unrelated
+    packages, but installing the repo name alongside would be a redundant
+    rebuild at best and a file conflict at worst. `pacman -T` is asked last and
+    settles the rest: it resolves Provides, so a package another one declares
+    it provides (awww providing swww on CachyOS) counts as installed too.
     """
     _require_family(family)
     try:
         if family == "arch":
-            r = subprocess.run(["pacman", "-Qq", name], capture_output=True, text=True)
+            for candidate in (name, f"{name}-bin"):
+                r = subprocess.run(["pacman", "-Qq", candidate],
+                                   capture_output=True, text=True)
+                if r.returncode == 0:
+                    return True
+            r = subprocess.run(["pacman", "-T", name],
+                               capture_output=True, text=True)
             return r.returncode == 0
         if family == "debian":
             r = subprocess.run(["dpkg-query", "-W", "-f=${Status}", name],
@@ -295,6 +308,13 @@ def _selftest():
     assert is_installed("bash", "arch") is True
     assert is_installed("definitely-not-a-real-pkg-xyz", "arch") is False
     checks += 3
+
+    # Arch acceptance rules: a provided name (gawk provides awk) and a name whose
+    # AUR -bin build stands in for it (brave-bin carries brave) both count as
+    # installed, so the installer never rebuilds or file-conflicts over them.
+    assert is_installed("awk", "arch") is True
+    assert is_installed("brave", "arch") is True
+    checks += 2
 
     print(f"pkg.py selftest: {checks} checks passed")
 
