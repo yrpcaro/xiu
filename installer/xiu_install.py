@@ -489,6 +489,48 @@ def seed_wallpapers(dry):
         return False, f"{exc}: seed wallpapers"
 
 
+VARS_TEMPLATE = """\
+-- xiu personalization. Any key from modules/vars.lua can be overridden here:
+-- return { terminal = "ghostty", fileManager = "yazi" }
+-- This file is yours; updates and re-installs never touch it again.
+-- See ~/.config/hypr/modules/vars.lua for every key and its default.
+return {
+%(body)s
+}
+"""
+
+
+def seed_vars(choices, dry):
+    """
+    Land the wizard's file-manager choice where Super+E reads it:
+    ~/.config/xiu/vars.lua, the override file vars.lua loads on every start.
+    Written only when the file doesn't exist — a box that already
+    personalized it keeps every line as-is. yazi is a TUI, so it rides in a
+    foot window the way the editor default does. Fail-soft like every step.
+    """
+    dest = deploy.CONFIG_ROOT / "xiu" / "vars.lua"
+    if dry:
+        print("  would seed vars.lua (file manager: %s)" % choices["file_manager"])
+        return True, ""
+    try:
+        if dest.is_file():
+            print(f"  vars.lua already present -> {dest} (left untouched)")
+            return True, ""
+        fm = choices["file_manager"]
+        body = {
+            "dolphin": '    fileManager = "dolphin",  -- chosen in the installer',
+            "thunar": '    fileManager = "thunar",  -- chosen in the installer',
+            "yazi": '    fileManager = "foot -e yazi",  -- chosen in the installer; a TUI needs the terminal',
+            "none": '    -- fileManager = "dolphin",  -- uncomment to set yours',
+        }.get(fm, '    -- fileManager = "dolphin",')
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(VARS_TEMPLATE % {"body": body})
+        print(f"  seeded vars.lua -> {dest}")
+        return True, ""
+    except OSError as exc:
+        return False, f"{exc}: seed vars.lua"
+
+
 def bridge_wallpaper_binary(dry):
     """
     Point the rice's awww binary at swww. The wallpaper scripts call awww and
@@ -1065,6 +1107,11 @@ def run(args):
 
         # l. seed a starter wallpaper so the first boot has a background, a
         #    populated picker and a palette to render.
+        ok, detail = seed_vars(choices, dry)
+        record(ok, detail, "Seed vars.lua",
+               "Create ~/.config/xiu/vars.lua yourself "
+               "(see ~/.config/hypr/modules/vars.lua for the keys).")
+
         ok, detail = seed_wallpapers(dry)
         record(ok, detail, "Seed wallpapers",
                "Copy any image into ~/Pictures/xiu/wallpapers yourself.")
