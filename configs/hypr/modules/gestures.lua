@@ -6,7 +6,9 @@
 
     Gesture actions are Hyprland-native: "workspace" for the horizontal
     swipe, "special" with a workspace name for the vertical pair, and a Lua
-    function for anything bespoke.
+    function for anything bespoke. The finger count lives on hl.gesture only
+    — gestures:workspace_swipe_fingers was removed in Hyprland 0.56, where
+    an N-finger swipe is whatever hl.gesture registered for N fingers.
 ]]
 local vars = require("modules.vars")
 
@@ -18,7 +20,6 @@ hl.config({
         workspace_swipe_direction_lock           = true,
         workspace_swipe_direction_lock_threshold = 10,
         workspace_swipe_create_new               = true,
-        workspace_swipe_fingers                  = vars.gestureWorkspaceFingers,
     },
 })
 
