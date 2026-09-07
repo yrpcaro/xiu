@@ -7,13 +7,16 @@ import Quickshell.Widgets
 
 /**
  * A power tile for the lock's corner: the pill's Power surface drawn at lock
- * scale. Same rounded-square tile as every other control — resting on the
- * quiet field fill and border, hover lighting the stroke and the glyph — with
- * the pill's hold contract: instant mode fires on a plain click (sleep), hold
- * mode arms with a press-and-hold measured by the bottom-up heat fill under
- * the glyph and fires only when it arrives. An early release eases the fill
- * back down and nothing happens, so a stray tap on the lock screen can never
- * restart or power off the session.
+ * scale. Same tile language — resting transparent with the capsule's quiet
+ * stroke, hover lighting the fill and the glyph (vermilion on the destructive
+ * pair, cream on the safe one), the hairline between the groups living in
+ * the parent row — and the pill's hold contract: instant mode fires on a
+ * plain click (sleep), hold mode arms with a press-and-hold measured by the
+ * bottom-up heat fill under the glyph and fires only when it arrives. An
+ * early release eases the fill back down and nothing happens, so a stray tap
+ * on the lock screen can never restart or power off the session. Hover
+ * reports the tile's label upward so the corner can name the hovered tile
+ * without shifting anything.
  */
 Item {
     id: btn
@@ -23,13 +26,22 @@ Item {
     property real s: 1
     /** 0 = fire on click; anything else is the hold duration in ms. */
     property real holdMs: 1150
+    /** True for the destructive pair: hover, hold and the label speak vermilion. */
+    property bool confirm: false
+    /** The name the corner's floating label shows while this tile is hovered. */
+    property string label: ""
     signal fired
+    signal hoverEnter
+    signal hoverExit
 
     width: 34 * s
     height: width
 
     /** The hold progress, 0..1; the heat fill and the glyph tint track it. */
     property real holdP: 0
+
+    readonly property bool lit: area.containsMouse || btn.holdP > 0
+    readonly property color accent: btn.confirm ? Theme.vermLit : Theme.cream
 
     function fire() {
         proc.running = true;
@@ -44,11 +56,11 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: 10 * s
-        color: Theme.fieldBg
+        color: btn.lit ? Theme.frameBg : "transparent"
         border.width: 1
-        /** Resting is the capsule's quiet stroke; hover or an armed hold lights it. */
-        border.color: area.containsMouse || btn.holdP > 0
-            ? Qt.alpha(Theme.cream, 0.28) : Theme.fieldBorder
+        /** Resting is the capsule's quiet stroke; a hover or an armed hold lights it. */
+        border.color: btn.lit ? Theme.frameBorder : Theme.fieldBorder
+        Behavior on color { ColorAnimation { duration: 200; easing.type: Easing.InOutQuad } }
         Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.InOutQuad } }
     }
 
@@ -82,8 +94,8 @@ Item {
         width: 16 * s
         height: 16 * s
         name: btn.glyph
-        color: btn.holdP > 0 ? Theme.vermLit
-            : (area.pressed || area.containsMouse ? Theme.cream : Theme.dim)
+        color: btn.holdP > 0 ? Theme.flameCore
+            : (btn.lit ? btn.accent : Theme.iconDim)
         stroke: 1.7
     }
 
@@ -111,6 +123,8 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        onEntered: btn.hoverEnter()
+        onExited: btn.hoverExit()
         onPressed: {
             if (btn.holdMs <= 0)
                 return;

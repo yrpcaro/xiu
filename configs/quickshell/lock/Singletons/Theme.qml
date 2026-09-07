@@ -22,4 +22,14 @@ Singleton {
     readonly property color fieldBorder: dyn ? Qt.alpha(cream, 0.30) : Qt.rgba(230 / 255, 214 / 255, 203 / 255, 0.30)
     readonly property color trackBg: dyn ? Qt.alpha(cream, 0.16) : Qt.rgba(240 / 255, 224 / 255, 215 / 255, 0.16)
     readonly property color error:  dyn ? Dyn.primary : "#e0563b"
+
+    // Pill-parity tokens for the power corner — the same names and values the
+    // pill's Theme gives its Power tiles, so the corner reads as the pill's
+    // surface drawn at lock scale.
+    readonly property color frameBg: dyn ? Qt.alpha(cream, 0.055) : Qt.rgba(230 / 255, 214 / 255, 203 / 255, 0.055)
+    readonly property color frameBorder: dyn ? Qt.alpha(cream, 0.10) : Qt.rgba(230 / 255, 214 / 255, 203 / 255, 0.10)
+    readonly property color hair: Qt.alpha(cream, 0.13)
+    readonly property color iconDim: dyn ? Qt.alpha(cream, 0.78) : "#cdbfb4"
+    readonly property color subtle: dyn ? Qt.alpha(cream, 0.62) : "#b9a99e"
+    readonly property color flameCore: dyn ? Qt.lighter(Dyn.primary, 1.6) : "#ffd9c2"
 }

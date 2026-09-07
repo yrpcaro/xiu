@@ -65,6 +65,23 @@ Item {
     }
     readonly property bool wifiOn: (typeof Networking !== "undefined" && Networking) ? Networking.wifiEnabled : false
 
+    // The power corner's floating label: the name of the hovered tile (with
+    // its hold hint on the destructive pair), cleared when the hover leaves.
+    // Cleared only when the label is still ours, so sliding straight from one
+    // tile to the next never blanks between the two hovers.
+    property string powerLabel: ""
+    property bool powerLabelHot: false
+
+    function namePower(name, hot) {
+        powerLabel = name;
+        powerLabelHot = hot;
+    }
+
+    function clearPower(name) {
+        if (powerLabel === name)
+            powerLabel = "";
+    }
+
     Connections {
         target: content.auth
         enabled: content.auth !== null
@@ -654,12 +671,55 @@ Item {
     }
 
     /**
-     * The status corner, bottom right: the active keyboard layout, battery
-     * charge with its charging tone, and the network state, then the session
-     * power actions at the very corner. Sleep fires on a click; restart and
-     * shutdown arm with a press-and-hold.
+     * The sound the machine is making, CapsuleOS-style: cava's 12 levels
+     * drawn as a centered row of stems under the password capsule, growing
+     * both ways from the midline. Only visible while something is actually
+     * playing and not silent — the singleton quiet-gates both — so a paused
+     * player leaves the lock as calm as before. Heights bind straight to the
+     * 60fps values with no Behavior, so the stems answer the music directly.
      */
     Row {
+        anchors.top: capsule.bottom
+        anchors.topMargin: 26 * content.s
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: 6 * content.s
+        opacity: content.isMain && Cava.active && !Cava.quiet ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 400 } }
+        visible: opacity > 0.01
+
+        Repeater {
+            model: Cava.bars
+
+            delegate: Item {
+                id: stem
+                required property int index
+                width: 3.5 * content.s
+                height: 30 * content.s
+
+                readonly property real level: Cava.values.length > stem.index ? Cava.values[stem.index] : 0
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: stem.width
+                    height: Math.max(stem.width, stem.height * stem.level)
+                    radius: width / 2
+                    /** Cream stems; the loud ones catch the ember accent. */
+                    color: stem.level > 0.62 ? Theme.vermLit : Qt.alpha(Theme.cream, 0.72)
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                }
+            }
+        }
+    }
+
+    /**
+     * The status corner, bottom right: the active keyboard layout, battery
+     * charge with its charging tone, and the network state, then the power
+     * group at the very corner — the pill's Power surface at lock scale, with
+     * the hairline split between the safe sleep tile and the destructive
+     * hold-to-fire pair.
+     */
+    Row {
+        id: powerCorner
         visible: content.isMain
         anchors.right: parent.right
         anchors.bottom: parent.bottom
@@ -768,26 +828,72 @@ Item {
             color: Theme.trackBg
         }
 
-        HoldGlyph {
+        // The pill's tile spacing, scaled: 12 on a 50px tile becomes 8 on 34.
+        Row {
             anchors.verticalCenter: parent.verticalCenter
-            s: content.s
-            glyph: "moon"
-            holdMs: 0
-            argv: ["systemctl", "suspend"]
-        }
+            spacing: 8 * content.s
 
-        HoldGlyph {
-            anchors.verticalCenter: parent.verticalCenter
-            s: content.s
-            glyph: "reboot"
-            argv: ["systemctl", "reboot"]
-        }
+            HoldGlyph {
+                anchors.verticalCenter: parent.verticalCenter
+                s: content.s
+                glyph: "moon"
+                label: "Sleep"
+                holdMs: 0
+                argv: ["systemctl", "suspend"]
+                onHoverEnter: content.namePower(label, false)
+                onHoverExit: content.clearPower(label)
+            }
 
-        HoldGlyph {
-            anchors.verticalCenter: parent.verticalCenter
-            s: content.s
-            glyph: "shutdown"
-            argv: ["systemctl", "poweroff"]
+            // The hairline between the safe group and the destructive pair.
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 1
+                height: 18 * content.s
+                color: Theme.hair
+            }
+
+            HoldGlyph {
+                anchors.verticalCenter: parent.verticalCenter
+                s: content.s
+                glyph: "reboot"
+                label: "Restart — hold"
+                confirm: true
+                argv: ["systemctl", "reboot"]
+                onHoverEnter: content.namePower(label, true)
+                onHoverExit: content.clearPower(label)
+            }
+
+            HoldGlyph {
+                anchors.verticalCenter: parent.verticalCenter
+                s: content.s
+                glyph: "shutdown"
+                label: "Shutdown — hold"
+                confirm: true
+                argv: ["systemctl", "poweroff"]
+                onHoverEnter: content.namePower(label, true)
+                onHoverExit: content.clearPower(label)
+            }
         }
+    }
+
+    /**
+     * The pill's hover label, floated above the corner so nothing shifts:
+     * names the hovered tile, vermilion on the destructive pair, fading in
+     * and out like the pill's does.
+     */
+    Text {
+        visible: content.isMain
+        anchors.right: parent.right
+        anchors.rightMargin: parent.width * 0.045
+        anchors.bottom: powerCorner.top
+        anchors.bottomMargin: 14 * content.s
+        text: content.powerLabel
+        color: content.powerLabelHot ? Theme.vermLit : Theme.subtle
+        font.family: Theme.font
+        font.pixelSize: 11 * content.s
+        font.weight: Font.Medium
+        font.letterSpacing: 0.4 * content.s
+        opacity: text.length > 0 ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 200 } }
     }
 }
