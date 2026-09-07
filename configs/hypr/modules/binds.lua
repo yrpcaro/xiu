@@ -79,10 +79,16 @@ hl.bind(mod .. " + code:65", hl.dsp.exec_cmd("xiu open launcher")) -- launcher
 
 -- Keyboard layout: us <-> ir(winkeys), Alt+Shift like the classic DE toggle.
 -- The pill's layout chip fires the same command and follows along on the
--- event; the release flag keeps it from firing the moment Shift goes down
--- inside another Alt+Shift combo, and either Shift key works.
-hl.bind("ALT + code:50", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout
-hl.bind("ALT + code:62", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (right shift)
+-- event. Hyprland matches binds against the modifier state from before the
+-- key event is applied, so a release bind must carry the released key's own
+-- modifier in its mask: these four fire the moment either key of the pair
+-- lifts, whichever went down first and whichever side of the keyboard it is
+-- on. Holding Ctrl or Super alongside breaks the exact mask match, so
+-- Ctrl+Alt+Shift combos and Super shortcuts never trip the toggle.
+hl.bind("ALT + SHIFT + code:50", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (left shift)
+hl.bind("ALT + SHIFT + code:62", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (right shift)
+hl.bind("ALT + SHIFT + code:64", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (left alt)
+hl.bind("ALT + SHIFT + code:108", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (right alt)
 
 -- Session, notifications, lock
 hl.bind("CTRL + ALT + code:119", hl.dsp.exec_cmd("xiu open power")) -- session menu
