@@ -1,0 +1,4 @@
+# bat follows the terminal's own 16-color palette — the wallcolors semantic
+# layer — so syntax highlighting recolors with every wallpaper change instead
+# of riding a fixed theme.
+--theme="ansi"

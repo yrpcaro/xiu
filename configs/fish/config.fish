@@ -60,6 +60,12 @@ end
 if type -q dust
     alias du dust
 end
+# rip2's rip is rm with a safety net: deletions land in the graveyard
+# (~/.local/share/rip) and `rip -u` brings them back; `command rm` is still
+# the real thing when you mean it.
+if type -q rip
+    alias rm rip
+end
 
 # nvim owns the vi/vim names when it is around
 if type -q nvim
@@ -79,9 +85,34 @@ if type -q yazi
     end
 end
 
+# Terminals that never read a config file still open in the current palette:
+# replay the wallcolors OSC sequences, guarded so piped shells stay clean.
+if test -t 1; and test -f ~/.cache/ricelin/sequences.txt
+    cat ~/.cache/ricelin/sequences.txt
+end
+
 # Prompt marks (OSC 133) so the terminal can jump between prompts in scrollback
 function mark_prompt_start --on-event fish_prompt
     printf '\e]133;A\e\\'
+end
+
+# Syntax colors follow the wallpaper: wallcolors.py rewrites syntax.fish on
+# every palette change. Sourced before the user's own file so a hand
+# override still wins; a missing file leaves fish's defaults alone.
+if test -f $__fish_config_dir/syntax.fish
+    source $__fish_config_dir/syntax.fish
+end
+
+# fzf rides the terminal's own palette: ANSI slots for the chrome, the pill's
+# accent for the pointer, read fresh at every shell start.
+if type -q fzf
+    set -gx FZF_DEFAULT_OPTS "--color=fg:7,bg:-1,hl:6,fg+:15,bg+:0,hl+:14,info:8,border:8,prompt:4,marker:13,spinner:8,header:8"
+    set -l _xiu_accent (jq -r '.primary // empty' ~/.cache/ricelin/colors.json 2>/dev/null)
+    if test -n "$_xiu_accent"
+        set -gx FZF_DEFAULT_OPTS "$FZF_DEFAULT_OPTS,pointer:$_xiu_accent"
+    end
+    source /usr/share/fzf/key-bindings.fish 2>/dev/null
+    source /usr/share/fzf/completions.fish 2>/dev/null
 end
 
 # No greeting at all: nothing prints between opening the terminal and the

@@ -85,11 +85,17 @@
     { "id": "ripgrep", "group": "core", "required": true, "desc": "grep replacement behind the fish alias", "aur": false,
       "names": { "arch": "ripgrep", "debian": "ripgrep", "fedora": "ripgrep", "suse": "ripgrep" }, "fallback": "cargo" },
 
+    { "id": "fzf", "group": "core", "required": true, "desc": "Fuzzy finder behind the fish key bindings, colored from the terminal palette", "aur": false,
+      "names": { "arch": "fzf", "debian": "fzf", "fedora": "fzf", "suse": "fzf" }, "fallback": null },
+
     { "id": "gitui", "group": "core", "required": true, "desc": "Git TUI behind the lg abbreviation", "aur": false,
       "names": { "arch": "gitui", "debian": null, "fedora": null, "suse": null }, "fallback": "cargo" },
 
     { "id": "dust", "group": "core", "required": true, "desc": "Disk usage treemap (du-dust)", "aur": false,
       "names": { "arch": "dust", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "rip2", "group": "core", "required": true, "desc": "rm replacement with a recoverable graveyard, behind the fish alias", "aur": true,
+      "names": { "arch": "rip2-bin", "debian": null, "fedora": null, "suse": null }, "binary": "rip", "fallback": "cargo" },
 
     { "id": "starship", "group": "core", "required": true, "desc": "The fish prompt", "aur": false,
       "names": { "arch": "starship", "debian": "starship", "fedora": "starship", "suse": "starship" }, "fallback": "cargo" },
