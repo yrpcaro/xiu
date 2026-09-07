@@ -138,6 +138,7 @@ def _default_choices(args, info, manifest):
         "optional_ids": set(full_ids) if profile == "full" else set(),
         "file_manager": "dolphin",
         "greeter": "sddm" if args.sddm else "none",
+        "sddm_theme": "torii",
         "browser_theme": True,
         "fresh_configs": False,
         "legacy_swap": "fallback",
@@ -180,10 +181,18 @@ def _wizard(args, info, manifest):
 
     gidx = tui.select_one("Login screen", [
         ("TTY", "No greeter; start Hyprland from a terminal login", True),
-        ("SDDM", "Graphical login with the torii theme", False),
+        ("SDDM", "Graphical login with a xiu theme", False),
         ("greetd", "Minimal greeter with tuigreet", False),
     ], default=0)
     greeter = ("none", "sddm", "greetd")[gidx]
+
+    sddm_theme = "torii"
+    if greeter == "sddm":
+        tidx = tui.select_one("SDDM theme", [
+            ("washi", "Mirrors the lock screen: frosted wallpaper, the Zen Kaku clock, palette-following", True),
+            ("torii", "The cinematic torii video wallpaper", False),
+        ], default=0)
+        sddm_theme = ("washi", "torii")[tidx]
 
     lidx = tui.select_one("Legacy tools", [
         ("Fallback", "ghostty and cliphist stay available as the optional terminal and clipboard backends", True),
@@ -231,6 +240,7 @@ def _wizard(args, info, manifest):
     return {
         "profile": profile, "aur_choice": aur_choice, "optional_ids": optional_ids,
         "file_manager": file_manager, "greeter": greeter,
+        "sddm_theme": sddm_theme,
         "browser_theme": browser_theme, "fresh_configs": fresh_configs,
         "legacy_swap": legacy_swap, "grub": grub, "fish": fish, "brave": brave,
     }
@@ -405,7 +415,7 @@ def _summary_lines(info, choices, plan, args, do_pkgs):
     if cli_local(args.source):
         lines.append("Build the xiu CLI from this checkout.")
     if choices["greeter"] == "sddm":
-        lines.append("Install the torii SDDM login theme.")
+        lines.append(f"Install the {choices.get('sddm_theme', 'torii')} SDDM login theme.")
     elif choices["greeter"] == "greetd":
         lines.append("Set up greetd with the tuigreet login.")
     if choices["browser_theme"]:
@@ -1118,10 +1128,13 @@ def run(args):
 
         # m. login screen.
         if choices["greeter"] == "sddm":
-            sddm_installer = os.path.join(args.source, "sddm", "themes", "torii", "install.sh")
+            theme = choices.get("sddm_theme", "torii")
+            if theme not in ("torii", "washi"):
+                theme = "torii"
+            sddm_installer = os.path.join(args.source, "sddm", "themes", theme, "install.sh")
             if os.path.isfile(sddm_installer):
                 ok, detail = _run(["sh", sddm_installer], dry)
-                record(ok, detail, "Install SDDM theme",
+                record(ok, detail, f"Install SDDM theme ({theme})",
                        "Run the SDDM theme installer by hand.")
             else:
                 notes.append(f"SDDM installer not found at {sddm_installer}, skipped.")
