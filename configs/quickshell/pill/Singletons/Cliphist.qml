@@ -20,6 +20,14 @@ import Quickshell.Io
  * the raw binary descriptor ("245 KiB image/png 1920x1080"), label/sizeLabel
  * its display split ("png 1920×1080" / "245 KiB") and thumb the absolute path
  * of the cached preview png (empty for text).
+ *
+ * clipvault only records what `wl-paste --watch clipvault store` feeds it, and
+ * nothing else in the session runs that pipe. The autostart script starts it
+ * once at boot, but a watcher that dies early (boot race, compositor restart)
+ * used to stop history silently forever. So this singleton also heartbeats the
+ * guarded script every 20s: it no-ops while the watcher lives, restarts it
+ * when it doesn't, and the pgrep guard inside keeps it to one watcher however
+ * often it runs. The heartbeat stays down while clipvault is missing.
  */
 Singleton {
     id: root
@@ -44,6 +52,26 @@ Singleton {
 
     readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/clipvault-thumbs/"
     readonly property string thumbScript: Quickshell.env("HOME") + "/.config/hypr/scripts/cliphist-thumbs.sh"
+    readonly property string watchScript: Quickshell.env("HOME") + "/.config/hypr/scripts/cliphist-watch.sh"
+
+    /**
+     * Re-runs the guarded watcher script every 20s. Detached, so the shell
+     * owns nothing: the watcher the script leaves behind outlives pill
+     * restarts, and the script's own pgrep guard means the heartbeat can
+     * never stack a second one. Started by the backend probe, not at
+     * creation, so a box without clipvault never spawns doomed watchers.
+     */
+    Timer {
+        id: storeHeartbeat
+        interval: 20000
+        repeat: true
+        onTriggered: Quickshell.execDetached(["sh", root.watchScript])
+    }
+
+    function kickStore() {
+        Quickshell.execDetached(["sh", root.watchScript])
+        storeHeartbeat.running = true
+    }
 
     function refresh() {
         if (thumbProc.running || listProc.running || delProc.running || delQueue.length) {
@@ -214,7 +242,11 @@ Singleton {
     Process {
         id: probeProc
         command: ["sh", "-c", "command -v clipvault >/dev/null 2>&1"]
-        onExited: root.backendMissing = exitCode !== 0
+        onExited: {
+            root.backendMissing = exitCode !== 0
+            if (!root.backendMissing)
+                root.kickStore()
+        }
     }
 
     Component.onCompleted: {
