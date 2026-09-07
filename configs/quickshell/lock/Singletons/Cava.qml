@@ -5,6 +5,15 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
 
+/**
+ * Audio levels for the lock screen, CapsuleOS-style: cava runs with the
+ * lock's own assets/cava.conf (raw ascii, 12 bars, 0-100, 60fps) and each
+ * line lands in `values` as 12 floats. The process only runs while the lock
+ * is up AND something is actually playing — Mpris gates it, with a 1.5s hold
+ * after a pause so the bars don't blink out mid-song — and `quiet` goes true
+ * after 3s of silence so the renderer can fade instead of showing a flat
+ * line. shell.qml flips `enabled` with the lock itself.
+ */
 Singleton {
     id: root
 
