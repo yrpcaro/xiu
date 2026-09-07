@@ -620,17 +620,22 @@ def rebuild_cli(clone, base, head, apply):
     (nothing else refreshes it — the installer only runs on a full install).
     Runs only when cargo is already on PATH, never bootstrapping rustup from
     here, and returns a failure string for the report instead of failing the
-    apply. None means there was nothing to do.
+    apply. An update that ships CLI changes without cargo on PATH is NOT
+    silent: the report gets a failure row telling the user to re-run the
+    installer (which bootstraps rust) — otherwise new binds call subcommands
+    the stale binary does not have. None means there was nothing to do.
     """
     if not apply or not base:
-        return None
-    if shutil.which("cargo") is None:
         return None
     diff = subprocess.run(
         ["git", "-C", str(clone), "diff", "--quiet", base, head, "--", "cli/"],
         capture_output=True)
     if diff.returncode == 0:
         return None
+    if shutil.which("cargo") is None:
+        return ("this update ships CLI changes but cargo is not on PATH; "
+                "re-run the installer (it bootstraps rust) or install rustup, "
+                "then update again")
     target = Path.home() / ".cache" / "ricelin" / "build" / "xiu-target"
     bin_dir = Path.home() / ".local" / "bin"
     env = dict(os.environ, CARGO_TARGET_DIR=str(target))

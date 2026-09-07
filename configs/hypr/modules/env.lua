@@ -2,6 +2,12 @@ hl.env("XCURSOR_THEME",   "Bibata-Modern-Ice")
 hl.env("XCURSOR_SIZE",    "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 
+-- The xiu CLI and the fallback tools install into ~/.local/bin, which login
+-- managers never put on the session PATH — so keybinds calling `xiu` died on
+-- boxes whose login shell never added it. fish re-adds it per shell in
+-- config.fish; this prepend covers the compositor and everything it spawns.
+hl.env("PATH", os.getenv("HOME") .. "/.local/bin:" .. (os.getenv("PATH") or ""))
+
 hl.env("LIBVA_DRIVER_NAME",         "nvidia")
 hl.env("NVD_BACKEND",               "direct")
 hl.env("MOZ_DISABLE_RDD_SANDBOX",   "1")

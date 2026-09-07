@@ -45,13 +45,14 @@ def _in_build(name, cmd):
 
 # One shell prelude that guarantees cargo is on PATH: bootstrap rustup when cargo
 # is missing, then source ~/.cargo/env so the freshly installed cargo is reachable
-# in this very shell. The trailing source uses ';' (not '&&') on purpose, so a box
-# that already has cargo from its distro, with no ~/.cargo/env to source, still
-# falls through to the build instead of aborting on the missing file.
+# in this very shell. The source is guarded by an if — a bare `.` on a missing
+# file is fatal to a non-interactive POSIX sh (exit 1, build never runs), which
+# is exactly what happened on distro-cargo boxes that have cargo on PATH but no
+# ~/.cargo/env to source; the if leaves them falling through to the build.
 _CARGO_PREP = (
     "command -v cargo >/dev/null 2>&1 || "
     "(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y); "
-    '. "$HOME/.cargo/env"'
+    'if [ -f "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env"; fi'
 )
 
 
@@ -340,7 +341,9 @@ def present(fallback_id, pkg):
     """
     try:
         if fallback_id in ("cargo", "ghostty", "dotool", "curl"):
-            return shutil.which(pkg["id"]) is not None
+            # rip2's crate name and binary name differ, so entries may carry
+            # the binary to probe; everything else is probed by its id.
+            return shutil.which(pkg.get("binary", pkg["id"])) is not None
         if fallback_id == "nerdfont":
             font_dir = Path(FONT_DIR)
             return font_dir.is_dir() and any(font_dir.glob("JetBrainsMono*"))
