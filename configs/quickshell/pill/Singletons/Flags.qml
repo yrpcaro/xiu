@@ -31,6 +31,8 @@ Singleton {
     property alias pillBlur: adapter.pillBlur
     property alias topGap: adapter.topGap
     property alias appGap: adapter.appGap
+    property alias autoHide: adapter.autoHide
+    property alias autoHideDelay: adapter.autoHideDelay
     property alias recordCountdown: adapter.recordCountdown
     property alias recordDir: adapter.recordDir
     property alias recordFps: adapter.recordFps
@@ -54,6 +56,24 @@ Singleton {
     property alias nightLightOnMin: adapter.nightLightOnMin
     property alias nightLightOffMin: adapter.nightLightOffMin
 
+    /**
+     * True once flags.json has been read (or written from defaults): windows
+     * that size off flag values wait for it so a commit made from the
+     * adapter defaults is never followed by a visible resize.
+     */
+    readonly property bool loaded: root._loaded
+    property bool _loaded: false
+
+    /**
+     * Auto-hide timing derived from autoHideDelay: how long the pointer must
+     * dwell on the edge strip before the pill reveals, and how long it
+     * lingers after the pointer leaves before retracting. "off" restores
+     * instant behaviour in both directions.
+     */
+    readonly property var _delaySteps: ({ off: [0, 0], short: [120, 350], medium: [200, 600], long: [350, 1100] })
+    readonly property int revealDwellMs: (_delaySteps[autoHideDelay] || _delaySteps.medium)[0]
+    readonly property int hideLingerMs: (_delaySteps[autoHideDelay] || _delaySteps.medium)[1]
+
     FileView {
         id: file
         path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin/flags.json"
@@ -63,9 +83,12 @@ Singleton {
 
         onFileChanged: reload()
         onAdapterUpdated: writeAdapter()
+        onLoaded: root._loaded = true
         onLoadFailed: function(error) {
-            if (error === FileViewError.FileNotFound)
+            if (error === FileViewError.FileNotFound) {
                 writeAdapter();
+                root._loaded = true;
+            }
         }
 
         JsonAdapter {
@@ -92,6 +115,10 @@ Singleton {
             property real topGap: 1.0
             /** Pill-to-window band as a fraction of the shipped 12px. 0 tucks the windows flush under the pill. */
             property real appGap: 1.0
+            /** CapsuleOS-style auto-hide: the pill retracts off the top edge when nothing needs it; dwell the screen edge to reveal. Off by default — the hover-pill behavior is the default contract. */
+            property bool autoHide: false
+            /** Reveal dwell / retract linger preset: off, short, medium, long. */
+            property string autoHideDelay: "medium"
             property int recordCountdown: 5
             property string recordDir: ""
             property int recordFps: 60

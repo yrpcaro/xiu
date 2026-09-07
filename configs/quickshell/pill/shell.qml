@@ -253,11 +253,14 @@ ShellRoot {
             screen: modelData
             color: "transparent"
             exclusionMode: ExclusionMode.Normal
-            exclusiveZone: Flags.gameMode ? gameBarH : reservedH
+            /** Don't map until flags.json is read: a commit made from the adapter defaults could reserve the band one frame before the real flag value re-sizes it. */
+            visible: Flags.loaded
+            /** Auto-hide gives the band back to the windows: nothing is reserved, so tiled clients climb to the screen edge and the pill floats over them on demand. */
+            exclusiveZone: Flags.gameMode ? gameBarH : (Flags.autoHide ? 0 : reservedH)
             aboveWindows: true
 
             anchors { top: true; left: true; right: true }
-            implicitHeight: Flags.gameMode ? gameBarH : reservedH
+            implicitHeight: Flags.gameMode ? gameBarH : (Flags.autoHide ? 1 : reservedH)
 
             mask: emptyReserve
             Region { id: emptyReserve }
@@ -296,6 +299,55 @@ ShellRoot {
             readonly property bool summoned: modal || root.peekMon === modelData.name
             readonly property bool pillHidden: monFullscreen && !summoned
 
+            /**
+             * autoHide, CapsuleOS-style: the pill retracts off the top edge
+             * when nothing needs it and a 4px hover strip at the screen edge
+             * brings it back. Only the resting pill ever hides — a hover
+             * latch, hold, peek, drag, surface, OSD or game bar all keep it
+             * out, and anything summoned by keybind lands with the pill
+             * visible. Revealing needs a short dwell on the strip so a
+             * cursor flung at a tab bar sitting under it never flashes the
+             * pill; leaving arms a linger so it survives a brief mouse-out.
+             * The delay setting's "off" restores instant in both directions.
+             * Off by default — with the flag false this whole block is inert
+             * and the hover pill behaves exactly as before.
+             */
+            property bool autoHidden: false
+            property bool edgeHeld: false
+            readonly property bool restingHideable: Flags.autoHide && !monFullscreen
+                && !surfaceOpen && pill.mode === "rest"
+            readonly property bool pointerHeld: pill.hovered || edgeHeld
+
+            onRestingHideableChanged: {
+                if (restingHideable) {
+                    armLinger();
+                } else {
+                    lingerT.stop();
+                    dwellT.stop();
+                    autoHidden = false;
+                }
+            }
+            onPointerHeldChanged: {
+                if (pointerHeld) {
+                    lingerT.stop();
+                    if (autoHidden) {
+                        if (Flags.revealDwellMs <= 0) autoHidden = false;
+                        else dwellT.restart();
+                    }
+                } else {
+                    dwellT.stop();
+                    armLinger();
+                }
+            }
+            function armLinger() {
+                if (!restingHideable || pointerHeld || autoHidden) return;
+                if (Flags.hideLingerMs <= 0) autoHidden = true;
+                else lingerT.restart();
+            }
+            Timer { id: dwellT; interval: Flags.revealDwellMs; onTriggered: overlay.autoHidden = false }
+            Timer { id: lingerT; interval: Flags.hideLingerMs; onTriggered: overlay.autoHidden = true }
+            Component.onCompleted: armLinger()
+
             onMonFullscreenChanged: if (monFullscreen) {
                 if (root.openMon === modelData.name) root.close();
                 if (root.peekMon === modelData.name) root.peekMon = "";
@@ -311,8 +363,15 @@ ShellRoot {
 
             anchors { top: true; left: true; right: true; bottom: true }
 
-            mask: modal ? fullRegion : (pillHidden ? hiddenRegion : pillRegion)
+            mask: modal ? fullRegion : (pillHidden ? hiddenRegion : (autoHidden ? edgeRegion : pillRegion))
             Region { id: hiddenRegion }
+            Region {
+                id: edgeRegion
+                x: 0
+                y: 0
+                width: overlay.width
+                height: 4
+            }
             Region {
                 id: pillRegion
                 readonly property real baseW: Math.max(pill.width, pill.targetW)
@@ -320,6 +379,20 @@ ShellRoot {
                 y: pill.y
                 width: baseW + pill.inputPadRight
                 height: Math.max(pill.height, pill.targetH)
+
+                /**
+                 * With auto-hide on, the reveal strip stays part of the pill's
+                 * own mask. Without it the mask swap that reveals the pill drops
+                 * the pointer that just triggered it — the edge strip is no
+                 * longer masked in, hover goes false, and the pill retracts into
+                 * a flicker loop instead of sliding out.
+                 */
+                Region {
+                    x: 0
+                    y: 0
+                    width: overlay.width
+                    height: Flags.autoHide ? 4 : 0
+                }
             }
             Region {
                 id: fullRegion
@@ -354,8 +427,27 @@ ShellRoot {
                 anchors.fill: parent
                 focus: overlay.surfaceOpen || pill.quickChoosing
 
+                /**
+                 * The one hover source for the whole overlay, split by pointer
+                 * position: the top 4px are the auto-hide reveal zone and only
+                 * hold `edgeHeld`, so dwelling there brings the pill back in
+                 * its resting form without growing it, while `pill.hovered` —
+                 * what grows it to the hover pill — needs the pointer on the
+                 * capsule itself. With auto-hide off the input mask is the
+                 * pill's own region, so the split is invisible.
+                 */
                 HoverHandler {
-                    onHoveredChanged: pill.hovered = hovered
+                    onPointChanged: {
+                        overlay.edgeHeld = hovered && Flags.autoHide && point.position.y < 4;
+                        pill.hovered = hovered
+                            && point.position.y >= pillRegion.y
+                            && point.position.x >= pillRegion.x
+                            && point.position.x <= pillRegion.x + pillRegion.width;
+                    }
+                    onHoveredChanged: if (!hovered) {
+                        overlay.edgeHeld = false;
+                        pill.hovered = false;
+                    }
                 }
                 Keys.onEscapePressed: {
                     if (pill.quickChoosing) {
@@ -447,7 +539,7 @@ ShellRoot {
                     surface: overlay.surface
                     forcePinned: root.peekMon === overlay.modelData.name
 
-                    opacity: overlay.pillHidden ? 0 : 1
+                    opacity: overlay.pillHidden || overlay.autoHidden ? 0 : 1
                     Behavior on opacity {
                         NumberAnimation {
                             duration: Motion.morph
@@ -456,7 +548,7 @@ ShellRoot {
                         }
                     }
                     transform: Translate {
-                        y: overlay.pillHidden ? -(pill.height + overlay.topGap) : 0
+                        y: overlay.pillHidden || overlay.autoHidden ? -(pill.height + overlay.topGap) : 0
                         Behavior on y {
                             NumberAnimation {
                                 duration: Motion.morph
