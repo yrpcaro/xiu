@@ -69,10 +69,16 @@ def analyze(wallpaper):
         capture_output=True, text=True).stdout
     buckets, total, lum, chroma = {}, 0, 0.0, 0
     for line in out.splitlines():
-        m = re.search(r"\s*(\d+):\s*\([^)]*\)\s*#([0-9A-Fa-f]{6})", line)
+        m = re.search(r"\s*(\d+):\s*\([^)]*\)\s*#([0-9A-Fa-f]{6,16})", line)
         if not m:
             continue
         count, hex_str = int(m.group(1)), m.group(2)
+        if len(hex_str) > 6:
+            # Q16/HDRI builds print 16-bit (and alpha) components; keep the
+            # high byte of each of the first three so #RRRRGGGGBBBB still
+            # reads as #RRGGBB instead of a garbage hue.
+            step = len(hex_str) // (4 if len(hex_str) % 3 else 3)
+            hex_str = "".join(hex_str[i:i + 2] for i in range(0, 3 * step, step))
         r, g, b = (int(hex_str[i:i + 2], 16) / 255 for i in (0, 2, 4))
         h, l, s = colorsys.rgb_to_hls(r, g, b)
         total += count
@@ -86,10 +92,11 @@ def analyze(wallpaper):
         if not bucket["best"] or score > bucket["best"][0]:
             bucket["best"] = (score, h, s)
     mean_l = lum / total if total else 0.0
+    share = chroma / total if total else 0.0
     if not buckets or chroma < 0.08 * total:
-        return None, 0.0, mean_l
+        return None, 0.0, mean_l, share
     win = max(buckets.values(), key=lambda v: v["wsat"])
-    return win["best"][1], win["best"][2], mean_l
+    return win["best"][1], win["best"][2], mean_l, share
 
 
 def colourfulness(wallpaper):
@@ -152,6 +159,244 @@ def tint(hue, sat, light):
 def lerp(x, x0, x1, y0, y1):
     t = max(0.0, min(1.0, (x - x0) / (x1 - x0)))
     return y0 + t * (y1 - y0)
+
+
+def tint_deg(h_deg, s, l):
+    return tint((h_deg % 360.0) / 360.0, s, l)
+
+
+def hue_sat_of(hex_color):
+    """(hue in degrees, saturation) of a #rrggbb, for reading matugen's slots."""
+    r, g, b = (int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    h, _l, s = colorsys.rgb_to_hls(r, g, b)
+    return h * 360.0, s
+
+
+# ---------------------------------------------------------------------------
+# The terminal's semantic layer, ported from CapsuleOS's Night Glass engine
+# (a sibling Ricelin fork): fixed perceived-luminance bands so the tonal
+# composition never changes with the wallpaper, per-zone chroma ceilings so
+# nothing goes neon, WCAG contrast floors against the terminal's own
+# background, and hue-bent statuses — red, green and yellow stay recognizable
+# but lean toward the wallpaper's hue inside their family bounds, and hold a
+# fixed editorial chroma so they stay colored even on grey wallpapers. It runs
+# as a post-process over matugen's base16: matugen still owns the surface
+# ramp, the seed hue and the scheme presets; this layer owns what the 16 ANSI
+# slots actually look like, which a raw base16 dump leaves half grey (slots
+# 1-6 land on matugen's ramp) and half neon (the accents at full material
+# saturation).
+
+# Value bands: every chromatic slot snaps its perceived luminance into the
+# voice band (normals) or the light band (brights), both stated as contrast
+# against the terminal background. Green-zone hues get an extra chroma cut —
+# mid greens look brighter than they read, so they need holding down.
+VOICE_CONTRAST, VOICE_WIDTH = 4.5, 0.05
+LIGHT_CONTRAST, LIGHT_WIDTH = 6.0, 0.06
+GREEN_ZONE, GREEN_ZONE_PENALTY = (90.0, 200.0), 0.15
+
+# Chroma ceilings and the ramp: cool slots scale their saturation with how
+# chromatic the wallpaper actually was (share of chromatic pixels), so a
+# near-grey wallpaper keeps near-grey cools while the statuses stay colored.
+ACC_SAT_CAP = 0.65
+RAMP_LO, RAMP_HI = 0.08, 0.20
+
+# Status families: canonical hue, the circular bounds the bent hue may live
+# in, how far it may lean toward the wallpaper hue, and the fixed chroma that
+# survives achromatic wallpapers. The ok family is teal/mint rather than leaf
+# green (CapsuleOS's user-validated pick); it still reads as "green" next to
+# the bent red and yellow.
+TERMINAL_SEMANTIC = {"danger": (0.0, (345.0, 20.0)),
+                     "ok": (160.0, (140.0, 170.0)),
+                     "warning": (55.0, (40.0, 65.0))}
+SEMANTIC_BEND = 15.0
+SEMANTIC_SAT = 0.55
+
+# WCAG floors: normals and brights against the background, bright-black gets
+# the lower muted floor. There is deliberately no floor against the selection
+# background: both terminals draw selection-foreground over ANSI colors, and
+# matugen's light base02 would lift every slot out of its band.
+ANSI_FLOOR, ANSI_FLOOR_MUTED = 4.5, 3.0
+COOL_MIN_SEP, COOL_SPREAD = 30.0, 40.0
+
+
+def _linearize(c8):
+    c = c8 / 255.0
+    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def rel_luminance(hex_color):
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
+    return 0.2126 * _linearize(r) + 0.7152 * _linearize(g) + 0.0722 * _linearize(b)
+
+
+def contrast_ratio(hex_a, hex_b):
+    la, lb = rel_luminance(hex_a), rel_luminance(hex_b)
+    lighter, darker = max(la, lb), min(la, lb)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def signed_arc(a_deg, b_deg):
+    """Signed shortest arc a->b in (-180, 180]."""
+    d = (b_deg - a_deg) % 360.0
+    return d - 360.0 if d > 180.0 else d
+
+
+def circ_clamp(h_deg, lo_deg, hi_deg):
+    """Clamp onto the circular interval lo->hi (walking clockwise lo..hi)."""
+    if (h_deg - lo_deg) % 360.0 <= (hi_deg - lo_deg) % 360.0:
+        return h_deg % 360.0
+    # outside: snap to the nearer endpoint by circular distance
+    if abs(signed_arc(h_deg, lo_deg)) <= abs(signed_arc(h_deg, hi_deg)):
+        return lo_deg % 360.0
+    return hi_deg % 360.0
+
+
+def band(target_contrast, base_hex, width):
+    y = target_contrast * (rel_luminance(base_hex) + 0.05) - 0.05
+    return (y, y + width)
+
+
+def snap_to_band(hex_color, band_tuple):
+    """Lift/drop the color's lightness (hue and sat held) until its perceived
+    luminance lands inside the band; Y is monotone in HSL lightness, so a
+    binary search finds it. Outside colors always come back inside."""
+    lo, hi = band_tuple
+    if lo <= rel_luminance(hex_color) <= hi:
+        return hex_color
+    _h, l, s = colorsys.rgb_to_hls(*(int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5)))
+    target = (lo + hi) / 2
+    lo_l, hi_l = 0.0, 1.0
+    for _ in range(40):
+        mid = (lo_l + hi_l) / 2
+        if rel_luminance(tint(_h, s, mid)) < target:
+            lo_l = mid
+        else:
+            hi_l = mid
+    return tint(_h, s, hi_l)
+
+
+def sat_cap(h_deg, base_cap):
+    h = h_deg % 360.0
+    if GREEN_ZONE[0] <= h <= GREEN_ZONE[1]:
+        return max(0.05, base_cap - GREEN_ZONE_PENALTY)
+    return base_cap
+
+
+def chroma_ramp(share):
+    if share <= RAMP_LO:
+        return 0.0
+    if share >= RAMP_HI:
+        return 1.0
+    return (share - RAMP_LO) / (RAMP_HI - RAMP_LO)
+
+
+def clamp_light(hex_color, target, bg_hex):
+    """Smallest lightness >= the input's whose tint meets `target` WCAG
+    contrast against `bg_hex`; hue/sat are held fixed so only lightness moves,
+    and the result is never darker than the input (a lift, never a floor) —
+    the right direction whenever the color sits above its background, which
+    in an always-dark terminal is always. Best effort: if even white falls
+    short of `target`, white ships."""
+    if contrast_ratio(hex_color, bg_hex) >= target:
+        return hex_color
+    _h, l, s = colorsys.rgb_to_hls(*(int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5)))
+    if contrast_ratio(tint(_h, s, 1.0), bg_hex) < target:
+        return tint(_h, s, 1.0)
+    lo, hi = l, 1.0
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        if contrast_ratio(tint(_h, s, mid), bg_hex) >= target:
+            hi = mid
+        else:
+            lo = mid
+    return tint(_h, s, hi)
+
+
+def bend_semantic(base_hue_deg, dominant_deg, bounds):
+    d = signed_arc(base_hue_deg, dominant_deg)
+    bent = base_hue_deg + max(-SEMANTIC_BEND, min(SEMANTIC_BEND, d))
+    return circ_clamp(bent, *bounds)
+
+
+def semantic_terminal(pill, b, seed, share=None):
+    """matugen's base16 through the semantic layer: returns the 16-slot ANSI
+    list and rewrites the six accent slots in `b` in place, so every TUI
+    renderer (btop, yazi, helix, …) that reads them as red/yellow/green/
+    cyan/blue/magenta shows exactly what the terminal shows. The grey ramp
+    (base00-07) stays matugen's: it is the variant- and preset-tuned surface
+    the borders and backgrounds already use.
+
+    Statuses (ANSI 1-3) bend their canonical family hue toward the seed's hue
+    inside their bounds. Cools (4-6) sit in the seed's family too — dominant
+    carries the blue slot, magenta and cyan spread to its sides — walked
+    clear of the statuses and of each other, with saturation capped per hue
+    zone and scaled by the wallpaper's chroma share (1.0 assumed when the
+    caller doesn't know — presets and manual hues are deliberate choices).
+    Orange (base09) keeps matugen's hue but joins the bands and floors, since
+    the gradients that use it want an orange, not a bent status."""
+    bg, fg = b["base00"], b["base07"]
+    dom, dom_sat = hue_sat_of(seed)
+    chromatic = dom_sat > 0.02
+    if share is None:
+        share = 1.0 if chromatic else 0.0
+    ramp = chroma_ramp(share) if chromatic else 0.0
+
+    sem = {name: (bend_semantic(h, dom, bounds) if chromatic else h)
+           for name, (h, bounds) in TERMINAL_SEMANTIC.items()}
+
+    # Cool slots: the seed's own family, spread around it like CapsuleOS's
+    # trio (dominant carries the cool slots — matugen's base16 accent slots
+    # follow the material scheme's roles, which for a warm seed puts a gold
+    # in the blue slot), then walked clockwise until each clears the semantic
+    # hues and the cools already placed: a gold-family seed bends warning
+    # onto the dominant hue, and un-walked cools would render yellow and
+    # "blue" as the same color.
+    def clear_walk(h, avoid):
+        for _ in range(360):
+            if all(abs(signed_arc(a, h)) >= COOL_MIN_SEP for a in avoid):
+                return h % 360
+            h = (h + 1) % 360
+        return h % 360
+
+    sems = [sem["danger"], sem["ok"], sem["warning"]]
+    blue = clear_walk(dom, sems) if chromatic else dom
+    magenta = clear_walk((dom - COOL_SPREAD) % 360, sems + [blue]) if chromatic else dom
+    cyan = clear_walk((dom + COOL_SPREAD) % 360, sems + [blue, magenta]) if chromatic else dom
+
+    hues = [sem["danger"], sem["ok"], sem["warning"], blue, magenta, cyan]
+    voice, light = band(VOICE_CONTRAST, bg, VOICE_WIDTH), band(LIGHT_CONTRAST, bg, LIGHT_WIDTH)
+
+    def slot(h_deg, band_t, semantic):
+        if semantic:
+            s = sat_cap(h_deg, SEMANTIC_SAT)      # statuses stay colored on grey walls
+        else:
+            s = sat_cap(h_deg, ACC_SAT_CAP) * ramp if chromatic else 0.05
+        c = snap_to_band(tint_deg(h_deg, s, 0.55), band_t)
+        return clamp_light(c, ANSI_FLOOR, bg)
+
+    normals = [slot(h, voice, i < 3) for i, h in enumerate(hues)]
+    brights = [slot(h, light, i < 3) for i, h in enumerate(hues)]
+
+    # No selection-safety pass: foot and ghostty both draw
+    # selection-foreground over whatever was selected, so an ANSI color never
+    # renders on the selection background — and matugen's base02 runs light
+    # enough that a 3.0 floor against it would lift every slot out of its
+    # band and flatten normals and brights together.
+    ansi = [bg] + normals
+    ansi.append(clamp_light(fg, ANSI_FLOOR, bg))                # 7: white
+    ansi.append(clamp_light(b["base03"], ANSI_FLOOR_MUTED, bg))  # 8: bright black
+    ansi += brights                                             # 9-14
+    ansi.append(clamp_light(fg, LIGHT_CONTRAST, bg))             # 15: bright white
+
+    # orange keeps its own hue but joins the bands and floors
+    o_hue = hue_sat_of(b["base09"])[0]
+    o_sat = sat_cap(o_hue, ACC_SAT_CAP) * ramp if chromatic else 0.05
+
+    b["base08"], b["base0a"], b["base0b"] = ansi[1], ansi[3], ansi[2]
+    b["base0c"], b["base0d"], b["base0e"] = ansi[6], ansi[4], ansi[5]
+    b["base09"] = clamp_light(snap_to_band(tint_deg(o_hue, o_sat, 0.55), voice),
+                              ANSI_FLOOR, bg)
+    return ansi
 
 
 def render_fastfetch(pill):
@@ -252,8 +497,10 @@ def current_wallpaper():
 
 def generate_dynamic(wallpaper, variant, smart):
     """The wallpaper-driven path: histogram analysis into the HSL pill palette,
-    with the resolved matugen variant riding along."""
-    hue, sat, mean_l = analyze(wallpaper)
+    with the resolved matugen variant and the wallpaper's chroma share (the
+    fraction of pixels that are chromatic at all — the terminal's cool slots
+    scale their saturation with it) riding along."""
+    hue, sat, mean_l, share = analyze(wallpaper)
     chromatic = hue is not None
     if not chromatic:
         hue, sat = 0.09, 0.0
@@ -281,7 +528,7 @@ def generate_dynamic(wallpaper, variant, smart):
         pill[key] = tint(hue, st, lit)
 
     seed = tint(hue, sat, 0.45) if chromatic else "#787878"
-    return pill, seed, variant
+    return pill, seed, variant, share
 
 
 def generate_manual(hue, mode, sat, variant):
@@ -317,12 +564,14 @@ def generate_manual(hue, mode, sat, variant):
     return pill, seed, variant
 
 
-def render_foot(pill, b):
+def render_foot(pill, b, ansi):
     """foot's entire color section lives in the include (foot.ini never
     reopens [colors-dark]), so writing the file is enough: every terminal
     opened afterwards opens in the current scheme. Modern foot splits the
     palette into [colors-dark]/[colors-light]; the pipeline always drives the
-    dark theme, which is also foot's default."""
+    dark theme, which is also foot's default. The 16 slots are the semantic
+    ANSI list — matugen's raw base16 would leave the regular colors on its
+    grey ramp."""
     foot = _tool_dir("foot")
     if foot is None:
         return
@@ -337,10 +586,114 @@ def render_foot(pill, b):
         "selection-foreground=%s" % b["base07"].lstrip("#"),
     ]
     for i in range(8):
-        lines.append("regular%d=%s" % (i, b["base%02x" % i].lstrip("#")))
+        lines.append("regular%d=%s" % (i, ansi[i].lstrip("#")))
     for i in range(8):
-        lines.append("bright%d=%s" % (i, b["base%02x" % (i + 8)].lstrip("#")))
+        lines.append("bright%d=%s" % (i, ansi[i + 8].lstrip("#")))
     (foot / "colors.ini").write_text("\n".join(lines) + "\n")
+
+
+def osc_sequence(code, hex_color):
+    """One OSC color sequence with the ST terminator, e.g. \\e]11;rgb:1a/2b/3c\\e\\\\"""
+    c = hex_color.lstrip("#")
+    return "\x1b]%s;rgb:%s/%s/%s\x1b\\" % (code, c[0:2], c[2:4], c[4:6])
+
+
+def broadcast_terminal(pill, b, ansi):
+    """caelestia's live retheme: push the palette into every open pty as OSC
+    color sequences (10 foreground, 11 background, 12 cursor, 17 selection
+    background, 4 the sixteen palette slots), so running terminals and the
+    TUIs inside them recolor the moment the wallpaper changes — no restart,
+    no reload, and it reaches terminals that never read a config file. The
+    same bytes are persisted to sequences.txt and replayed by config.fish at
+    shell start, which themes those terminals' fresh sessions too. New
+    foot/ghostty windows are covered by colors.ini/ghostty-colors as before.
+    A pty that is busy, closed or not ours is skipped, never fatal."""
+    seq = (osc_sequence(10, b["base07"]) + osc_sequence(11, b["base00"])
+           + osc_sequence(12, pill["primary"]) + osc_sequence(17, b["base02"]))
+    for i, hex_color in enumerate(ansi):
+        c = hex_color.lstrip("#")
+        seq += "\x1b]4;%d;rgb:%s/%s/%s\x1b\\" % (i, c[0:2], c[2:4], c[4:6])
+    (CACHE / "sequences.txt").write_text(seq)
+    data = seq.encode()
+    try:
+        entries = list(Path("/dev/pts").iterdir())
+    except OSError:
+        return
+    for pt in entries:
+        if not pt.name.isdigit():
+            continue
+        try:
+            fd = os.open(str(pt), os.O_WRONLY | os.O_NONBLOCK | os.O_NOCTTY)
+            try:
+                os.write(fd, data)
+            finally:
+                os.close(fd)
+        except OSError:
+            continue
+
+
+def render_starship(pill):
+    """The prompt follows the pill: the shipped starship.toml.in carries
+    tokens, this fills them with the current palette and writes the real
+    config next to it. config.fish points STARSHIP_CONFIG at the rendered
+    file, so every new shell opens in the current scheme."""
+    fish = _tool_dir("fish")
+    if fish is None:
+        return
+    tmpl = fish / "starship.toml.in"
+    if not tmpl.is_file():
+        print("wallcolors: starship.toml.in missing in ~/.config/fish, skipping "
+              "starship recolour (apply the xiu update or re-run the installer)",
+              file=sys.stderr)
+        return
+    repl = {
+        "__CHAR_OK__": pill["primary"],
+        "__CHAR_ERR__": pill["bright"],
+        "__DIR__": pill["cream"],
+        "__BRANCH__": pill["subtle"],
+        "__STATUS__": pill["dim"],
+        "__DURATION__": pill["faint"],
+    }
+    out = tmpl.read_text()
+    for key, val in repl.items():
+        out = out.replace(key, val)
+    (fish / "starship.toml").write_text(out)
+
+
+def render_fish(pill, ansi):
+    """fish's syntax colors, regenerated on every palette change and sourced
+    by config.fish before the user's own file, so a hand override still wins.
+    Commands take the accent and the quote family the warm text ramp; errors
+    and escapes reuse the terminal's own bent red and yellow, so the shell
+    and the terminal agree on what a mistake looks like."""
+    fish = _tool_dir("fish")
+    if fish is None:
+        return
+    # NB: every value is quoted — a bare #hex reads as a comment in fish
+    q = lambda hex_color: '"%s"' % hex_color
+    lines = [
+        "# Written by wallcolors.py on every palette change; sourced by config.fish.",
+        "set -g fish_color_command %s" % q(pill["primary"]),
+        "set -g fish_color_param %s" % q(pill["cream"]),
+        "set -g fish_color_option %s" % q(pill["subtle"]),
+        "set -g fish_color_quote %s" % q(pill["on_primary_container"]),
+        "set -g fish_color_escape %s" % q(ansi[3]),
+        "set -g fish_color_redirection %s" % q(pill["subtle"]),
+        "set -g fish_color_comment %s" % q(pill["faint"]),
+        "set -g fish_color_error %s" % q(ansi[1]),
+        "set -g fish_color_operator %s" % q(pill["on_primary_container"]),
+        "set -g fish_color_autosuggestion %s" % q(pill["faint"]),
+        "set -g fish_color_cancel %s" % q(pill["dim"]),
+        "set -g fish_color_search_match --background=%s" % q(pill["primary_container"]),
+        "set -g fish_color_selection --background=%s" % q(pill["surface_container_high"]),
+        "set -g fish_pager_color_prefix %s" % q(pill["primary"]),
+        "set -g fish_pager_color_completion %s" % q(pill["cream"]),
+        "set -g fish_pager_color_description %s" % q(pill["subtle"]),
+        "set -g fish_pager_color_progress %s" % q(pill["dim"]),
+        "set -g fish_pager_color_selected_background --background=%s"
+            % q(pill["surface_container_high"]),
+    ]
+    (fish / "syntax.fish").write_text("\n".join(lines) + "\n")
 
 
 def _tool_dir(name):
@@ -1194,18 +1547,26 @@ def render_qt(pill):
         }, indent=4) + "\n")
 
 
-def fan_out(pill, seed, variant):
+def fan_out(pill, seed, variant, share=None):
     """Write the pill JSON, recolour fastfetch, and build the terminal/border
-    base16 through matugen with the resolved scheme type."""
+    base16 through matugen with the resolved scheme type — then run the
+    semantic layer over it, so the terminal's 16 slots and every TUI renderer
+    read a scheme with fixed luminance bands, chroma ceilings, WCAG floors
+    and hue-bent statuses instead of matugen's raw dump."""
     CACHE.mkdir(parents=True, exist_ok=True)
     (CACHE / "colors.json").write_text(json.dumps(pill, indent=2) + "\n")
     render_fastfetch(pill)
+    render_starship(pill)
 
     try:
         b = {k: v["dark"]["color"] for k, v in
              matugen(seed, variant)["base16"].items()}
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         return 0
+
+    ansi = semantic_terminal(pill, b, seed, share)
+    render_fish(pill, ansi)
+    broadcast_terminal(pill, b, ansi)
 
     (CACHE / "hypr-colors.lua").write_text(
         'return {\n    active = "%s",\n    inactive = "%s",\n}\n'
@@ -1218,10 +1579,10 @@ def fan_out(pill, seed, variant):
         f'selection-background = {b["base02"]}',
         f'selection-foreground = {b["base07"]}',
     ]
-    for i in range(16):
-        lines.append(f'palette = {i}={b["base%02x" % i]}')
+    for i, hex_color in enumerate(ansi):
+        lines.append(f'palette = {i}={hex_color}')
     (CACHE / "ghostty-colors").write_text("\n".join(lines) + "\n")
-    render_foot(pill, b)
+    render_foot(pill, b, ansi)
     render_btop(pill, b)
     render_htop(pill, b)
     render_nvtop(pill, b)
@@ -1261,7 +1622,7 @@ def main():
         if len(args) < 2:
             print("wallcolors: --preview needs a wallpaper", file=sys.stderr)
             return 1
-        pill, seed, variant = generate_dynamic(args[1], "auto", True)
+        pill, seed, variant, _share = generate_dynamic(args[1], "auto", True)
         pill["_variant"] = variant
         pill["_seed"] = seed
         print(json.dumps(pill, indent=2))
@@ -1327,8 +1688,8 @@ def main():
     elif not Path(wallpaper).is_file():
         return 0
 
-    pill, seed, resolved = generate_dynamic(wallpaper, variant, smart)
-    return fan_out(pill, seed, resolved)
+    pill, seed, resolved, share = generate_dynamic(wallpaper, variant, smart)
+    return fan_out(pill, seed, resolved, share)
 
 
 if __name__ == "__main__":
