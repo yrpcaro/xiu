@@ -9,6 +9,15 @@ import "Singletons"
  * hairline. `control` is the default slot for the toggle, segmented control or
  * chevron. `surface` wires hover and activation back to the owning settings
  * surface so the soul seam tracks the focused row; scale derives from it.
+ *
+ * A row also claims its own place in the surface's keyboard navigation: name the
+ * `settingId` it edits and Schema supplies the control kind and the segments to
+ * cycle while Store does the reading and writing, so the page no longer restates
+ * any of it in a hand-written registry. The claim lasts exactly as long as the
+ * row is visible, which folds a collapsed group's lines out of the arrow keys on
+ * its own. The `nav*` overrides cover the rest: a row that opens a sub-surface
+ * (`navTarget`), a row Schema does not describe (`navKind`), and the handful
+ * whose writes need more than a bare `Store.set` (`navSet`).
  */
 Item {
     id: srow
@@ -18,9 +27,37 @@ Item {
     property string icon: ""
     property string name: ""
     property string sub: ""
+    /**
+     * Caption colour. Faint is the caption's usual job — it explains, it does
+     * not speak — but a row carrying a two-step confirm has to say "Tap again
+     * to confirm" in the caption's slot and be believed, so the danger rows
+     * tint it. Nothing else overrides it.
+     */
+    property color subColor: Theme.faint
     property bool last: false
     property bool captionOnFocus: false
     default property alias control: controlSlot.data
+
+    property string settingId: ""
+    property string navKind: ""
+    property string navTarget: ""
+    property var navVals: undefined
+    property var navGet: null
+    property var navSet: null
+    property var navBump: null
+
+    property QtObject nav: SettingsNav {
+        item: srow
+        surface: srow.surface
+        settingId: srow.settingId
+        navKind: srow.navKind
+        navTarget: srow.navTarget
+        navVals: srow.navVals
+        navGet: srow.navGet
+        navSet: srow.navSet
+        navBump: srow.navBump
+        bumpHost: controlSlot
+    }
 
     readonly property real s: srow.surface ? srow.surface.s : 1
     readonly property bool focused: srow.surface ? srow.surface.focusRowItem === srow : false
@@ -37,7 +74,7 @@ Item {
         anchors.fill: parent
         anchors.topMargin: 3 * srow.s
         anchors.bottomMargin: 3 * srow.s
-        radius: 9 * srow.s
+        radius: Metrics.rCard * srow.s
         color: (srowHover.hovered || srow.focused) ? Theme.frameBg : "transparent"
         Behavior on color { ColorAnimation { duration: Motion.fast } }
     }
@@ -57,7 +94,7 @@ Item {
         text: srow.glyph
         color: Theme.iconDim
         font.family: Theme.fontJp
-        font.pixelSize: 15 * srow.s
+        font.pixelSize: Metrics.iconRow * srow.s
     }
 
     GlyphIcon {
@@ -66,11 +103,11 @@ Item {
         anchors.leftMargin: 14 * srow.s
         anchors.verticalCenter: parent.verticalCenter
         visible: srow.icon.length > 0
-        width: 17 * srow.s
-        height: 17 * srow.s
+        width: Metrics.iconRow * srow.s
+        height: Metrics.iconRow * srow.s
         name: srow.icon
         color: srow.focused ? Theme.cream : Theme.subtle
-        stroke: 1.8
+        stroke: Metrics.iconStroke
     }
 
     Column {
@@ -86,18 +123,21 @@ Item {
             text: srow.name
             color: Theme.cream
             font.family: Theme.font
-            font.pixelSize: 12.5 * srow.s
+            font.pixelSize: Metrics.tTitle * srow.s
             font.weight: Font.DemiBold
         }
         Text {
             width: parent.width
-            visible: srow.sub.length > 0 && (!srow.captionOnFocus || srow.focused || srowHover.hovered)
+            visible: srow.sub.length > 0
+            opacity: !srow.captionOnFocus || srow.focused || srowHover.hovered ? 1 : 0
             text: srow.sub
-            color: Theme.faint
+            color: srow.subColor
             font.family: Theme.font
-            font.pixelSize: 10.5 * srow.s
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            font.pixelSize: Metrics.tBody * srow.s
             wrapMode: Text.WordWrap
             lineHeight: 1.2
+            Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
         }
     }
 

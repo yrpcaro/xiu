@@ -1,20 +1,37 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import "Singletons"
 
 /**
  * Shared base for the morphing settings surfaces: the category index and each
  * sub-surface. Carries the keyboard-navigable row registry and the glowing
- * row-soul seam, and morphs back to the parent index when empty space is clicked
- * on a sub-surface. The deriving surface sets `rows`, optionally `backSurface`,
- * and lays out its own content column (header, section labels, SettingsRow lines).
+ * row-soul seam. The deriving surface lays out its own content column (header,
+ * section labels, SettingsRow lines) and nothing else: which page a
+ * `requestSurface` lands on, and which page back returns to, are the pill's
+ * settings stack to decide — a page no longer names its own parent, so the
+ * same page reached from two places pops to the one it was actually opened
+ * from.
  *
- * Each `rows` entry pairs a row item with its control kind and the backing getter
+ * `rows` is derived, not written: each row lodges a SettingsNav claim while it
+ * is on screen, and this surface orders the live claims by where they sit on
+ * the page. Pages used to hand-write the same list a second time — kinds,
+ * getters, setters and a mirror of every visibility condition — and keep it in
+ * sync with `Connections` and conditional sub-arrays; a row that folds away
+ * now simply stops claiming its slot.
+ *
+ * Each entry pairs a row item with its control kind and the backing getter
  * and setter: `seg` cycles a segmented choice (wrapping), `toggle` flips a
  * boolean, `scrub` bumps a numeric scrub through its `bump(dir)`, `nav` morphs
  * to another surface. The host routes arrow keys through `kbMove`,
  * `kbAdjust` and `kbActivate`; hover and clicks route through `reportRowHover`
  * and `activateRow`, keeping `kbIndex` and the seam in sync.
+ *
+ * Every derived page also gets write-error surfacing for free: a refused or
+ * failed `Store.set` used to vanish into an early return, so a value that
+ * never landed still looked like it had. The strip below listens to
+ * `Store.writeFailed` and shows the message over the foot of the page for
+ * four seconds.
  */
 PillSurface {
     id: root
@@ -24,17 +41,114 @@ PillSurface {
     mRight: 19
     mBottom: 14
 
-    property string backSurface: ""
     signal requestSurface(string name)
+
+    /** The page a back chevron returns to; the pill's settings stack may override. */
+    property string backSurface: ""
 
     property Item focusRowItem: null
     property int kbIndex: -1
+
+    /**
+     * The hand-written row registry, for the pages that have not migrated onto
+     * the SettingsNav claim system yet: entries are
+     * `{ item, kind, get, set, vals, surface }` with `surface` naming the nav
+     * target. A page that assigns this drives its keyboard navigation from it,
+     * exactly as before; a page that leaves it empty gets the derived list
+     * below. Deleting the assignment is the whole migration.
+     */
     property var rows: []
 
+    /** Live SettingsNav claims in the order they lodged, i.e. creation order. */
+    property var navClaims: []
+    /** The claims that are on screen, ordered down the page. Derived; never assigned by a page. */
+    property var liveRows: []
+    /** Set when the claim set changes; the list re-sorts on next use, once layout has settled. */
+    property bool navStale: true
+
+    function registerNav(n) {
+        if (root.navClaims.indexOf(n) < 0) {
+            root.navClaims.push(n);
+            root.navStale = true;
+        }
+    }
+
+    function unregisterNav(n) {
+        var i = root.navClaims.indexOf(n);
+        if (i >= 0) {
+            root.navClaims.splice(i, 1);
+            root.navStale = true;
+        }
+    }
+
+    /**
+     * Rebuilds `rows` from the visible claims, ordered by where each row lands
+     * in surface coordinates — so the arrow keys walk the page exactly as the
+     * eye does, whatever order the rows happened to lodge their claims in. No
+     * two rows share a height today; should any ever do so, they fall back to
+     * lodge order, which is creation order only until the first fold cycle
+     * reshuffles a group's claims to the end of `navClaims`.
+     *
+     * The sort is deliberately lazy: a group folding open changes the claim set
+     * long before the positioner has settled, and every consumer below reaches
+     * for the list only on a real hover or key press, by which time
+     * `mapToItem` tells the truth.
+     */
+    function rebuildNav() {
+        var live = [];
+        for (var i = 0; i < root.navClaims.length; i++) {
+            var n = root.navClaims[i];
+            if (n && n.item && n.item.visible)
+                live.push({ claim: n, y: n.item.mapToItem(root, 0, 0).y, born: i });
+        }
+        live.sort(function (a, b) {
+            return a.y !== b.y ? a.y - b.y : a.born - b.born;
+        });
+
+        var out = [];
+        for (var j = 0; j < live.length; j++)
+            out.push(live[j].claim);
+        root.liveRows = out;
+        root.navStale = false;
+
+        // Keep the seam on the row it was already on. If that row just folded
+        // away, clamp back into range and move the seam onto whatever now holds
+        // that slot — index and seam have to name the same row, or the arrow
+        // keys would adjust one line while the glow sits on another.
+        var idx = -1;
+        for (var k = 0; k < out.length; k++)
+            if (out[k].item === root.focusRowItem) {
+                idx = k;
+                break;
+            }
+        if (idx >= 0) {
+            root.kbIndex = idx;
+        } else {
+            root.kbIndex = Math.min(root.kbIndex, out.length - 1);
+            root.focusRowItem = root.kbIndex >= 0 ? out[root.kbIndex].item : null;
+        }
+    }
+
+    /** The hand-written registry when a page still carries one, else the claims. */
+    function navRows() {
+        if (root.rows.length > 0)
+            return root.rows;
+        if (root.navStale)
+            root.rebuildNav();
+        return root.liveRows;
+    }
+
+    /**
+     * The lookup runs first because it may rebuild the list, and a rebuild moves
+     * the seam off a row that has folded away. Assigning afterwards keeps the
+     * mouse authoritative: hovering a line that claims no nav slot still lights
+     * it, at kbIndex -1, as it always did.
+     */
     function reportRowHover(item, hovered) {
         if (hovered) {
+            var idx = rowIndexOf(item);
             focusRowItem = item;
-            kbIndex = rowIndexOf(item);
+            kbIndex = idx;
         }
     }
     onActiveChanged: if (!active) {
@@ -43,8 +157,9 @@ PillSurface {
     }
 
     function rowIndexOf(item) {
-        for (var i = 0; i < rows.length; i++)
-            if (rows[i].item === item)
+        var list = root.navRows();
+        for (var i = 0; i < list.length; i++)
+            if (list[i].item === item)
                 return i;
         return -1;
     }
@@ -57,20 +172,22 @@ PillSurface {
     }
 
     function kbMove(dir) {
-        if (!rows.length)
+        var list = root.navRows();
+        if (!list.length)
             return;
-        kbIndex = Math.max(0, Math.min(rows.length - 1, (kbIndex < 0 ? 0 : kbIndex + dir)));
-        focusRowItem = rows[kbIndex].item;
+        kbIndex = Math.max(0, Math.min(list.length - 1, (kbIndex < 0 ? 0 : kbIndex + dir)));
+        focusRowItem = list[kbIndex].item;
     }
 
     function kbAdjust(dir) {
-        if (!rows.length)
+        var list = root.navRows();
+        if (!list.length)
             return;
         if (kbIndex < 0) {
             kbIndex = 0;
-            focusRowItem = rows[0].item;
+            focusRowItem = list[0].item;
         }
-        var r = rows[kbIndex];
+        var r = list[kbIndex];
         if (r.kind === "seg")
             segCycle(r, dir);
         else if (r.kind === "toggle")
@@ -80,22 +197,23 @@ PillSurface {
     }
 
     function kbActivate() {
-        if (kbIndex < 0)
+        var list = root.navRows();
+        if (kbIndex < 0 || kbIndex >= list.length)
             return;
-        var r = rows[kbIndex];
+        var r = list[kbIndex];
         if (r.kind === "toggle")
             r.set(!r.get());
         else if (r.kind === "nav")
-            root.requestSurface(r.surface);
+            root.requestSurface(root.navTargetOf(r));
         else if (r.kind === "seg")
             segCycle(r, 1);
     }
 
     /**
-     * A click anywhere on a row drives its control: toggles flip, nav rows open
-     * their surface, and segmented rows step to the next value (wrapping). The
-     * control's own hit areas stay on top, so clicking a specific segment still
-     * picks it directly.
+     * A click anywhere on a row drives its control: toggles flip and nav rows
+     * open their surface. Segmented rows are focus-only on a row-wide click —
+     * their own hit areas (the individual segments) remain the way to change
+     * the value, so a click on the row's label can't silently step the value.
      */
     function activateRow(item) {
         var idx = rowIndexOf(item);
@@ -103,13 +221,17 @@ PillSurface {
             return;
         kbIndex = idx;
         focusRowItem = item;
-        var r = rows[idx];
+        var r = root.navRows()[idx];
         if (r.kind === "toggle")
             r.set(!r.get());
         else if (r.kind === "nav")
-            root.requestSurface(r.surface);
-        else if (r.kind === "seg")
-            segCycle(r, 1);
+            root.requestSurface(root.navTargetOf(r));
+    }
+
+    /** A claim names its target `navTarget`; a hand-written entry calls it `surface`. */
+    function navTargetOf(r) {
+        var t = r.navTarget !== undefined ? r.navTarget : r.surface;
+        return typeof t === "string" ? t : "";
     }
 
     readonly property bool rowFocused: focusRowItem !== null && active
@@ -125,4 +247,60 @@ PillSurface {
 
     ameForm: rowFocused ? "rowseam" : "off"
     amePoint: rowPoint
+
+    /** Last surfaced write error; cleared four seconds after it arrives. */
+    property string errorNote: ""
+
+    Connections {
+        target: Store
+        function onWriteFailed(id, message) {
+            root.errorNote = message;
+            errorTimer.restart();
+        }
+    }
+
+    Timer {
+        id: errorTimer
+        interval: 4000
+        repeat: false
+        onTriggered: root.errorNote = ""
+    }
+
+    /**
+     * Sits over the foot of the page rather than in the content column, so a
+     * page's own layout and height never shift when an error appears. The tinted
+     * plate is what lets it read as a strip on top of the last row; the text
+     * itself carries the same weight, size and colour as the inline notes the
+     * pages already use.
+     */
+    Rectangle {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: errorText.implicitHeight + 14 * root.s
+        radius: Metrics.rCard * root.s
+        color: Qt.alpha(Theme.tileBg, 0.97)
+        border.width: Metrics.hairW(root.s)
+        border.color: Theme.frameBorder
+        z: 20
+        opacity: root.errorNote.length > 0 ? 1 : 0
+        visible: opacity > 0.01
+        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+
+        Text {
+            id: errorText
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 10 * root.s
+            anchors.rightMargin: 10 * root.s
+            text: root.errorNote
+            color: Theme.subtle
+            font.family: Theme.font
+            font.pixelSize: Metrics.tBody * root.s
+            font.weight: Font.Medium
+            wrapMode: Text.WordWrap
+            lineHeight: 1.25
+        }
+    }
 }

@@ -42,6 +42,20 @@ function setEnv(text, key, valueRaw) {
 }
 
 /**
+ * Reads the current value of an `hl.env("KEY", "value")` call. Returns "" when
+ * the call is absent — env.lua is call-shaped, so the field parser cannot see
+ * it and Store would otherwise hand back the Schema default whatever the file
+ * holds.
+ */
+function getEnv(text, key) {
+    var re = new RegExp("hl\\.env\\(\\s*\"" + escapeRe(key) + "\"\\s*,\\s*\"([^\"]*)\"");
+    var m = re.exec(text);
+    if (!m)
+        return "";
+    return m[1].trim();
+}
+
+/**
  * Replaces the theme name and size in a `hyprctl setcursor <theme> <size>` call.
  * Returns `{ text, ok }`; ok is false when the call is absent.
  */

@@ -19,3 +19,6 @@ singleton Players Players.qml
 singleton NightLight NightLight.qml
 singleton GameMode GameMode.qml
 singleton Keymap Keymap.qml
+singleton Metrics Metrics.qml
+singleton Schema Schema.qml
+singleton Store Store.qml
