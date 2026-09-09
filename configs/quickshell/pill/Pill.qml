@@ -1435,6 +1435,34 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 12 * pill.s
 
+                // Order: tray | layout | weather. The tray leads the row so
+                // the icons sit at the row's anchored start; the minimized
+                // collapsed form keeps its divider against the full tray.
+                MinimizedTray {
+                    id: minimized
+                    anchors.verticalCenter: parent.verticalCenter
+                    s: pill.s
+                    screenName: pill.screenName
+                    enabled: hover.live
+                    visible: count > 0
+                }
+
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: minimized.count > 0
+                    width: 1
+                    height: 14 * pill.s
+                    color: Theme.hair
+                    opacity: 0.7
+                }
+
+                Tray {
+                    anchors.verticalCenter: parent.verticalCenter
+                    s: pill.s
+                    barWindow: pill.barWindow
+                    enabled: hover.live
+                }
+
                 Item {
                     id: layoutChip
                     anchors.verticalCenter: parent.verticalCenter
@@ -1497,31 +1525,6 @@ Item {
                         font.weight: Font.Medium
                         font.features: { "tnum": 1 }
                     }
-                }
-
-                MinimizedTray {
-                    id: minimized
-                    anchors.verticalCenter: parent.verticalCenter
-                    s: pill.s
-                    screenName: pill.screenName
-                    enabled: hover.live
-                    visible: count > 0
-                }
-
-                Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: minimized.count > 0
-                    width: 1
-                    height: 14 * pill.s
-                    color: Theme.hair
-                    opacity: 0.7
-                }
-
-                Tray {
-                    anchors.verticalCenter: parent.verticalCenter
-                    s: pill.s
-                    barWindow: pill.barWindow
-                    enabled: hover.live
                 }
 
                 Item {
