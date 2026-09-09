@@ -21,6 +21,14 @@ Item {
     property real s: 1
     property var barWindow
 
+    /**
+     * True while the floating tray menu is up. The menu is a full-screen
+     * overlay that grabs pointer and keyboard, so the pill's hover latch
+     * drains the moment it maps — the pill would collapse to rest under the
+     * open menu. The pill watches this and holds its shape instead.
+     */
+    readonly property alias menuOpen: menu.open
+
     visible: SystemTray.items.values.length > 0
     implicitWidth: visible ? row.implicitWidth : 0
     implicitHeight: 24 * tray.s

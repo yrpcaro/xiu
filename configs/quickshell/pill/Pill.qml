@@ -31,8 +31,13 @@ Item {
     property bool hovered: false
     property bool pinned: false
     property bool forcePinned: false
+    /** The tray's floating menu is up: the overlay steals pointer and
+     *  keyboard, so the hover latch alone would collapse the pill under the
+     *  open menu. The pill holds its shape until the menu closes; after that
+     *  the normal hover decay takes over. */
+    property bool menuPinned: false
 
-    readonly property bool held: pinned || forcePinned
+    readonly property bool held: pinned || forcePinned || menuPinned
     readonly property bool mixerOpen: surface === "mixer"
     readonly property bool calendarOpen: surface === "calendar"
     readonly property bool launcherOpen: surface === "launcher"
@@ -1461,6 +1466,7 @@ Item {
                     s: pill.s
                     barWindow: pill.barWindow
                     enabled: hover.live
+                    onMenuOpenChanged: pill.menuPinned = menuOpen
                 }
 
                 Item {
