@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
+import "Singletons"
 
 /**
  * A power tile for the lock's corner: the pill's Power surface drawn at lock
@@ -56,10 +57,15 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: 10 * s
+        /**
+         * The pill's Power tile exactly: transparent at rest with only the
+         * quiet hairline stroke (no opaque field plate — that was the white
+         * square look), hover or an armed hold lighting the fill and the
+         * border to the frame tones.
+         */
         color: btn.lit ? Theme.frameBg : "transparent"
         border.width: 1
-        /** Resting is the capsule's quiet stroke; a hover or an armed hold lights it. */
-        border.color: btn.lit ? Theme.frameBorder : Theme.fieldBorder
+        border.color: btn.lit ? Theme.frameBorder : Theme.hair
         Behavior on color { ColorAnimation { duration: 200; easing.type: Easing.InOutQuad } }
         Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.InOutQuad } }
     }
