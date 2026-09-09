@@ -72,11 +72,22 @@ SettingsSurface {
             r.push({ item: appGapRow, kind: "scrub", bump: function (d) { appGapScrub.bump(d); } });
             r.push({ item: pillOpRow, kind: "scrub", bump: function (d) { pillOpScrub.bump(d); } });
             r.push({ item: pillBlurRow, kind: "toggle", get: function () { return Flags.pillBlur; }, set: function (v) { Flags.pillBlur = v; root.applyPillBlur(v); } });
+            r.push({ item: autoHideRow, kind: "toggle", get: function () { return Flags.autoHide; }, set: function (v) { Flags.autoHide = v; } });
+            if (Flags.autoHide)
+                r.push({ item: autoHideDelayRow, kind: "seg", vals: root.autoHideDelayOptions.map(function (o) { return o.value; }), get: function () { return Flags.autoHideDelay; }, set: function (v) { Flags.autoHideDelay = v; } });
         }
         return r;
     }
 
     property string note: ""
+
+    /** The auto-hide timing presets, in cycle order. */
+    readonly property var autoHideDelayOptions: [
+        { label: "Off", value: "off" },
+        { label: "Short", value: "short" },
+        { label: "Medium", value: "medium" },
+        { label: "Long", value: "long" }
+    ]
 
     readonly property string decoPath: Quickshell.env("HOME") + "/.config/hypr/modules/decoration.lua"
     readonly property string pillBlurRule: 'hl.layer_rule({ name = "pill-blur", match = { namespace = "pill" }, blur = true, ignore_alpha = 0.5 })\n'
@@ -907,6 +918,30 @@ SettingsSurface {
                         Flags.pillBlur = !Flags.pillBlur;
                         root.applyPillBlur(Flags.pillBlur);
                     }
+                }
+            }
+
+            FieldRow {
+                id: autoHideRow
+                label: "Auto-hide pill"
+                caption: "Retracts off the top edge when idle; dwell the screen edge to bring it back"
+                LinkToggle {
+                    s: root.s
+                    on: Flags.autoHide
+                    onToggled: Flags.autoHide = !Flags.autoHide
+                }
+            }
+
+            FieldRow {
+                id: autoHideDelayRow
+                visible: Flags.autoHide
+                label: "Auto-hide timing"
+                caption: "Reveal dwell and retract linger — Off restores instant in both directions"
+                SettingsSeg {
+                    s: root.s
+                    options: root.autoHideDelayOptions
+                    value: Flags.autoHideDelay
+                    onPicked: v => Flags.autoHideDelay = v
                 }
             }
 
