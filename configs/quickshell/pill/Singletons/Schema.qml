@@ -42,7 +42,8 @@ Singleton {
         { id: "keybinds", title: "Keybinds", caption: "Rebind, add, set commands", icon: "keyboard" },
         { id: "workspaces", title: "Workspaces", caption: "Special spaces and their keys", icon: "layers" },
         { id: "idlelock", title: "Idle / Lock", caption: "Auto-lock, screen off, suspend", icon: "lock" },
-        { id: "updates", title: "Updates", caption: "Version and check for updates", icon: "download" }
+        { id: "updates", title: "Updates", caption: "Version and check for updates", icon: "download" },
+        { id: "defaultapps", title: "Default apps", caption: "Which app opens folders, images and documents", icon: "app-window" }
     ]
 
     /** Named groups per page, in the order they appear on screen. */

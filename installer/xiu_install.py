@@ -510,6 +510,100 @@ return {
 """
 
 
+# Desktop ids for the xdg defaults, keyed the way the wizard names the
+# file managers. yazi has no .desktop of its own (it's a TUI), so the yazi
+# choice leaves the directory default alone — Super+E still opens it in
+# foot via vars.lua — while dolphin/thunar become the system folder handler.
+DESKTOP_IDS = {
+    "dolphin": "org.kde.dolphin.desktop",
+    "thunar": "thunar.desktop",
+}
+
+# The xdg defaults xiu claims. inode/directory routes every folder open
+# (xdg-open, file dialogs' "open containing folder", the portal's fallback)
+# through the file manager; the rest pin the viewers this rice ships.
+# Both lists merge under [Default Applications], never overwriting a key
+# the user already set somewhere else.
+DEFAULT_MIMES = {
+    "imv.desktop": [
+        "image/png", "image/jpeg", "image/gif", "image/bmp", "image/webp",
+        "image/avif", "image/heif", "image/tiff", "image/svg+xml",
+    ],
+    "org.pwmt.zathura.desktop": [
+        "application/pdf", "application/epub+zip", "application/oxps",
+        "application/x-fictionbook", "application/x-mobipocket-ebook",
+    ],
+}
+
+
+def set_xdg_defaults(choices, dry):
+    """
+    Make the shipped apps the xdg defaults: the wizard's file manager owns
+    inode/directory (folder opens — and the file dialogs that delegate to the
+    default handler — land in it), imv owns the images and zathura the
+    documents. Merges into ~/.config/mimeapps.list under
+    [Default Applications] without touching any other key, so a browser or
+    user-set default survives; re-runs only rewrite our own keys. Skipped
+    keys: yazi (a TUI with no .desktop — its Super+E path runs through
+    vars.lua) and imv/zathura when their desktop files are absent on this
+    box (not installed yet — the defaults then wait for the next re-run).
+    """
+    home = Path.home()
+    mimeapps = home / ".config" / "mimeapps.list"
+    if dry:
+        print("  would set xdg defaults (file manager, imv, zathura) -> %s" % mimeapps)
+        return True, ""
+    want = {}
+    fm = DESKTOP_IDS.get(choices.get("file_manager"))
+    if fm and (Path("/usr/share/applications") / fm).is_file():
+        want[fm] = ["inode/directory"]
+    for desktop, mimes in DEFAULT_MIMES.items():
+        if (Path("/usr/share/applications") / desktop).is_file():
+            want.setdefault(desktop, []).extend(mimes)
+    if not want:
+        print("  no xdg defaults to set (none of the desktop files present)")
+        return True, ""
+    try:
+        # Parse the existing file into sections, preserving everything we
+        # do not own. configparser would mangle ordering and case; a hand
+        # walk keeps the file byte-stable apart from our keys.
+        sections = {}
+        order = []
+        if mimeapps.is_file():
+            current = None
+            for raw in mimeapps.read_text().splitlines():
+                if raw.startswith("[") and raw.endswith("]"):
+                    current = raw[1:-1]
+                    if current not in sections:
+                        sections[current] = []
+                        order.append(current)
+                elif current is not None:
+                    sections[current].append(raw)
+        if "Default Applications" not in sections:
+            sections["Default Applications"] = []
+            order.append("Default Applications")
+        ours = {m for mimes in want.values() for m in mimes}
+        sections["Default Applications"] = [
+            l for l in sections["Default Applications"]
+            if l.split("=")[0].strip() not in ours
+        ]
+        for desktop, mimes in want.items():
+            for m in mimes:
+                sections["Default Applications"].append("%s=%s" % (m, desktop))
+        lines = []
+        for name in order:
+            lines.append("[%s]" % name)
+            lines.extend(sections[name])
+        mimeapps.parent.mkdir(parents=True, exist_ok=True)
+        tmp = mimeapps.with_suffix(".list.new")
+        tmp.write_text("\n".join(lines) + "\n")
+        tmp.replace(mimeapps)
+        print("  set xdg defaults -> %s (%d keys)" % (mimeapps, sum(len(v) for v in want.values())))
+        return True, ""
+    except OSError as exc:
+        return False, f"{exc}: set xdg defaults"
+
+
 def seed_vars(choices, dry):
     """
     Land the wizard's file-manager choice where Super+E reads it:
@@ -1121,6 +1215,12 @@ def run(args):
         record(ok, detail, "Seed vars.lua",
                "Create ~/.config/xiu/vars.lua yourself "
                "(see ~/.config/hypr/modules/vars.lua for the keys).")
+
+        # l2. xdg defaults: the file manager owns folders, imv the images,
+        #     zathura the documents — merged, never clobbering a user's own.
+        ok, detail = set_xdg_defaults(choices, dry)
+        record(ok, detail, "Set xdg default apps",
+               "Edit ~/.config/mimeapps.list [Default Applications] yourself.")
 
         ok, detail = seed_wallpapers(dry)
         record(ok, detail, "Seed wallpapers",
