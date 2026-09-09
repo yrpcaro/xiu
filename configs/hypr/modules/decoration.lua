@@ -7,12 +7,8 @@ local function border(hex, fallback)
     return "rgb(" .. hex:gsub("#", "") .. ")"
 end
 
--- Only the active window carries a border: the inactive color is fully
--- transparent (Hyprland's parser takes rgba(0,0,0,0) — a bare rgb() has no
--- alpha), so focus reads at a glance from the single hairline accent and
--- inactive windows sit quietly against the wallpaper.
 local active   = border(wc and wc.active, "#e0563b")
-local inactive = "rgba(0,0,0,0)"
+local inactive = border(wc and wc.inactive, "#313a4d")
 
 --[[
     Splash rendering SEGVs Hyprland (pango free in renderSplash) when a monitor
@@ -27,7 +23,7 @@ hl.config({
     general = {
         gaps_in     = 6,
         gaps_out    = 12,
-        border_size = 1,
+        border_size = 2,
         layout      = "dwindle",
         resize_on_border = true,
         ["col.active_border"]   = active,
