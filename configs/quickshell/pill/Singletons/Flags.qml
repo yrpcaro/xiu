@@ -45,6 +45,8 @@ Singleton {
     property alias idleScreenOffMin: adapter.idleScreenOffMin
     property alias idleSuspendMin: adapter.idleSuspendMin
     property alias weatherCity: adapter.weatherCity
+    property alias weatherBackend: adapter.weatherBackend
+    property alias weatherKey: adapter.weatherKey
     property alias musicViz: adapter.musicViz
     property alias gameMode: adapter.gameMode
     property alias gamePrevDnd: adapter.gamePrevDnd
@@ -131,6 +133,10 @@ Singleton {
             property int idleScreenOffMin: 6
             property int idleSuspendMin: 0
             property string weatherCity: ""
+            /** Weather source: "open-meteo" (keyless default) or "accuweather". */
+            property string weatherBackend: "open-meteo"
+            /** AccuWeather API key; empty leaves the backend on Open-Meteo. */
+            property string weatherKey: ""
             property bool musicViz: true
             property bool gameMode: false
             property bool gamePrevDnd: false
