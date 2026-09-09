@@ -216,7 +216,15 @@ Rectangle {
             anchors.rightMargin: 42 * root.s
             verticalAlignment: TextInput.AlignVCenter
             horizontalAlignment: TextInput.AlignHCenter
-            echoMode: TextInput.Normal
+            /**
+             * Masked mode must be TextInput.Password, never Normal with a
+             * transparent text color: a selection (Ctrl+A, mouse drag) paints
+             * the selected run in the selection foreground and reveals the
+             * real glyphs on screen — the lock fixed this exact pattern. Password
+             * echoes the mask character per char; the bullet overlay drawn
+             * beside this is the visual indicator.
+             */
+            echoMode: root.reveal ? TextInput.Normal : TextInput.Password
             color: root.reveal ? root.bright : "transparent"
             font.family: root.uiFont
             font.pixelSize: 14 * root.s
