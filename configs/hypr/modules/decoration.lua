@@ -7,10 +7,11 @@ local function border(hex, fallback)
     return "rgb(" .. hex:gsub("#", "") .. ")"
 end
 
--- Only the active window carries a border: the inactive color is fully
--- transparent (Hyprland's parser takes rgba(0,0,0,0) — a bare rgb() has no
--- alpha), so focus reads at a glance from the single hairline accent and
--- inactive windows sit quietly against the wallpaper.
+-- Only the active window carries a visible border: the inactive color is
+-- fully transparent (Hyprland's parser takes rgba(0,0,0,0) — a bare rgb()
+-- has no alpha), so focus reads at a glance from the single accent line and
+-- inactive windows sit quietly against the wallpaper. The border size stays
+-- 2px as shipped — only the inactive color changes.
 local active   = border(wc and wc.active, "#e0563b")
 local inactive = "rgba(0,0,0,0)"
 
@@ -27,7 +28,7 @@ hl.config({
     general = {
         gaps_in     = 6,
         gaps_out    = 12,
-        border_size = 1,
+        border_size = 2,
         layout      = "dwindle",
         resize_on_border = true,
         ["col.active_border"]   = active,
