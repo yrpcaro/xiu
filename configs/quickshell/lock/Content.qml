@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Mpris
 import Quickshell.Services.UPower
 import Quickshell.Networking
@@ -80,6 +81,12 @@ Item {
     function clearPower(name) {
         if (powerLabel === name)
             powerLabel = "";
+    }
+
+    /** The lock chip's layout switch, the same command the locked binds fire. */
+    Process {
+        id: layoutProc
+        command: ["hyprctl", "switchxkblayout", "current", "next"]
     }
 
     Connections {
@@ -736,9 +743,11 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: height / 2
-                color: Theme.fieldBg
+                color: layoutArea.containsMouse ? Theme.frameBg : Theme.fieldBg
                 border.width: 1
-                border.color: Theme.fieldBorder
+                border.color: layoutArea.containsMouse ? Theme.frameBorder : Theme.fieldBorder
+                Behavior on color { ColorAnimation { duration: 200 } }
+                Behavior on border.color { ColorAnimation { duration: 200 } }
             }
 
             Text {
@@ -750,6 +759,22 @@ Item {
                 font.weight: 600
                 font.pixelSize: 10.5 * content.s
                 font.letterSpacing: 1.2 * content.s
+            }
+
+            /**
+             * Clickable on the lock, like the pill's chip: fires the same
+             * switchxkblayout command the locked binds use, and the Keymap
+             * singleton follows the change event so the label updates on its
+             * own. Nothing else on the lock is interactive — the locked-bind
+             * flag means only the layout binds can fire while locked.
+             */
+            MouseArea {
+                id: layoutArea
+                anchors.fill: parent
+                anchors.margins: -6 * content.s
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: layoutProc.running = true
             }
         }
 

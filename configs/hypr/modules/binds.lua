@@ -78,17 +78,21 @@ end
 hl.bind(mod .. " + code:65", hl.dsp.exec_cmd("xiu open launcher")) -- launcher
 
 -- Keyboard layout: us <-> ir(winkeys), Alt+Shift like the classic DE toggle.
--- The pill's layout chip fires the same command and follows along on the
--- event. Hyprland matches binds against the modifier state from before the
--- key event is applied, so a release bind must carry the released key's own
--- modifier in its mask: these four fire the moment either key of the pair
--- lifts, whichever went down first and whichever side of the keyboard it is
--- on. Holding Ctrl or Super alongside breaks the exact mask match, so
--- Ctrl+Alt+Shift combos and Super shortcuts never trip the toggle.
-hl.bind("ALT + SHIFT + code:50", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (left shift)
-hl.bind("ALT + SHIFT + code:62", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (right shift)
-hl.bind("ALT + SHIFT + code:64", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (left alt)
-hl.bind("ALT + SHIFT + code:108", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), release) -- switch keyboard layout (right alt)
+-- The pill's layout chip, the lock's chip and the lock-screen binds all fire
+-- the same command. These are PRESS binds, each on the second key of the
+-- pair: the toggle fires the moment the pair completes, whichever key went
+-- down first and whichever side of the keyboard it is on. The exact-modmask
+-- match keeps combos safe — holding Ctrl or Super alongside breaks it, so
+-- Ctrl+Alt+Shift and Super shortcuts never trip the toggle. (Release binds
+-- were tried first; mod-key release binds proved not dependable on this
+-- rice's live Hyprland build.)
+-- These carry the `locked` flag: while the session is locked, Hyprland fires
+-- ONLY locked binds — so the layout stays switchable at the lock screen and
+-- nothing else can dispatch while locked.
+hl.bind("ALT + code:50", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), locked) -- switch keyboard layout (left shift completes the pair)
+hl.bind("ALT + code:62", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), locked) -- switch keyboard layout (right shift completes the pair)
+hl.bind("SHIFT + code:64", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), locked) -- switch keyboard layout (left alt completes the pair)
+hl.bind("SHIFT + code:108", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), locked) -- switch keyboard layout (right alt completes the pair)
 
 -- Session, notifications, lock
 hl.bind("CTRL + ALT + code:119", hl.dsp.exec_cmd("xiu open power")) -- session menu
