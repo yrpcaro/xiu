@@ -36,12 +36,6 @@ hl.window_rule({
 })
 
 hl.window_rule({
-    name  = "float-spotify",
-    match = { class = "[Ss]potify" },
-    float = true,
-})
-
-hl.window_rule({
     name  = "float-qalculate",
     match = { class = "io.github.Qalculate.qalculate-qt" },
     float = true,
