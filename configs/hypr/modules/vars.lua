@@ -29,6 +29,8 @@ local vars = {
     -- swipe and for the vertical special-workspace pair.
     gestureWorkspaceFingers = 3,
     gestureFingers          = 4,
+    -- Pixels of 4-finger vertical travel per volume step (±volumeStep each).
+    gestureVolumeStep       = 60,
 }
 
 local ok, user = pcall(dofile, config_dir .. "/xiu/vars.lua")
