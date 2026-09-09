@@ -635,6 +635,67 @@ def seed_vars(choices, dry):
         return False, f"{exc}: seed vars.lua"
 
 
+# The yazi plugins the shipped yazi.toml keymap binds. ya pkg add is
+# idempotent — an already-added package is a no-op — so this list is also the
+# upgrade path: `ya pkg upgrade` refreshes them all.
+YAZI_PLUGINS = [
+    "yazi-rs/plugins:smart-enter",
+    "yazi-rs/plugins:smart-paste",
+    "yazi-rs/plugins:smart-filter",
+    "yazi-rs/plugins:full-border",
+    "yazi-rs/plugins:mime-ext",
+    "yazi-rs/plugins:git",
+    "yazi-rs/plugins:vcs-files",
+    "yazi-rs/plugins:chmod",
+    "yazi-rs/plugins:diff",
+    "yazi-rs/plugins:mount",
+    "yazi-rs/plugins:toggle-pane",
+    "yazi-rs/plugins:zoom",
+    "Rolv-Apneseth/bypass",
+    "KKV9/compress",
+    "dedukun/bookmarks",
+    "ourongxing/fast-enter",
+    "imsi32/yatline",
+    "boydaihungst/restore",
+    "Lil-Dank/lazygit",
+    "TD-Sky/sudo",
+    "h-hg/yamb",
+]
+
+
+def install_yazi_plugins(dry):
+    """
+    Add the plugins the shipped yazi.toml keymap binds, through yazi's own
+    package manager. Idempotent: `ya pkg add` is a no-op for an already-added
+    package, so re-runs only fetch what's missing. Skipped entirely when yazi
+    isn't installed on this box (the group is optional) or has no `ya` CLI —
+    the keymap degrades to yazi's own keys and the next re-run installs the
+    plugins once yazi is present.
+    """
+    if shutil.which("yazi") is None or shutil.which("ya") is None:
+        print("  yazi not installed here — plugins wait for the next re-run")
+        return True, ""
+    if dry:
+        print("  would ya pkg add %d plugins" % len(YAZI_PLUGINS))
+        return True, ""
+    argv = ["ya", "pkg", "add"] + YAZI_PLUGINS
+    try:
+        r = subprocess.run(argv, capture_output=True, text=True)
+    except OSError as exc:
+        return False, f"{exc}: ya pkg add"
+    if r.returncode != 0:
+        out = (r.stderr or "") + (r.stdout or "")
+        # "already exists" is the re-run answer: everything we bind is
+        # present, which is the success condition, not a failure.
+        if "already exists" in out:
+            print("  yazi plugins already installed")
+            return True, ""
+        tail = out.strip().splitlines()
+        return False, "ya pkg add: " + (tail[-1] if tail else "failed")
+    print("  yazi plugins installed (%d)" % len(YAZI_PLUGINS))
+    return True, ""
+
+
 def bridge_wallpaper_binary(dry):
     """
     Point the rice's awww binary at swww. The wallpaper scripts call awww and
@@ -1221,6 +1282,12 @@ def run(args):
         ok, detail = set_xdg_defaults(choices, dry)
         record(ok, detail, "Set xdg default apps",
                "Edit ~/.config/mimeapps.list [Default Applications] yourself.")
+
+        # l3. yazi plugins, through yazi's own package manager (no-op when
+        #     yazi isn't installed — the group is optional).
+        ok, detail = install_yazi_plugins(dry)
+        record(ok, detail, "Install yazi plugins",
+               "Run: ya pkg add <plugins> (see installer/xiu_install.py YAZI_PLUGINS).")
 
         ok, detail = seed_wallpapers(dry)
         record(ok, detail, "Seed wallpapers",

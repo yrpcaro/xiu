@@ -209,6 +209,9 @@
     { "id": "yazi", "group": "full", "required": false, "desc": "TUI file manager (keyboard-driven, image previews)", "aur": false,
       "names": { "arch": "yazi", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 
+    { "id": "simple-mtpfs", "group": "full", "required": false, "desc": "FUSE MTP filesystem — Android phones under ~/mnt/phone (mount-phone.sh)", "aur": true,
+      "names": { "arch": "simple-mtpfs", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
     { "id": "thunar", "group": "full", "required": false, "desc": "Xfce file manager (themed through the palette pipeline)", "aur": false,
       "names": { "arch": "thunar", "debian": "thunar", "fedora": "thunar", "suse": "thunar" }, "fallback": null },
 
