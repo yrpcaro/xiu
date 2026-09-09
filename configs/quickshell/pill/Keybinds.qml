@@ -75,13 +75,23 @@ PillSurface {
 
     /**
      * Display form of a combo: mouse tokens are spelled out so a scroll or button
-     * gesture reads clearly. These binds are shown read-only.
+     * gesture reads clearly (these binds are shown read-only), and code:NNN
+     * keycodes show the us-layout letter for that physical key — code:46 reads
+     * "code:46 (L)" so the row says what the key actually is while staying honest
+     * about being a keycode bind.
      */
     function comboPretty(c) {
-        return c.replace("mouse_up", "Scroll ↑")
+        var shown = c.replace("mouse_up", "Scroll ↑")
                 .replace("mouse_down", "Scroll ↓")
                 .replace("mouse:272", "LMB")
                 .replace("mouse:273", "RMB");
+        var m = shown.match(/^(.*?)(code:\d+)(.*)$/);
+        if (m) {
+            var letter = Chord.letterForScanCode(parseInt(m[2].slice(5), 10) - 8);
+            if (letter)
+                shown = m[1] + m[2] + " (" + letter.toUpperCase() + ")" + m[3];
+        }
+        return shown;
     }
 
     function refresh() {
@@ -159,12 +169,12 @@ PillSurface {
      * Apply a captured chord to the form state (not the file). A bare modifier is
      * ignored so capture keeps waiting for the final key; Escape ends capture.
      */
-    function capture(key, modifiers) {
+    function capture(key, modifiers, scanCode) {
         if (key === Qt.Key_Escape) {
             root.listening = false;
             return;
         }
-        var combo = Chord.chord(key, modifiers);
+        var combo = Chord.chord(key, modifiers, scanCode);
         if (combo === null)
             return;
         root.formCombo = combo;
@@ -314,7 +324,10 @@ PillSurface {
             if (!root.listening)
                 return;
             e.accepted = true;
-            root.capture(e.key, e.modifiers);
+            // nativeScanCode is the raw evdev code (xkb = evdev + 8), the
+            // same numbering binds.lua's code:NNN uses, so a captured letter
+            // records the physical key rather than its us-layout keysym.
+            root.capture(e.key, e.modifiers, e.nativeScanCode);
         }
     }
 

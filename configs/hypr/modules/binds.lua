@@ -96,25 +96,25 @@ hl.bind("SHIFT + code:108", hl.dsp.exec_cmd("hyprctl switchxkblayout current nex
 
 -- Session, notifications, lock
 hl.bind("CTRL + ALT + code:119", hl.dsp.exec_cmd("xiu open power")) -- session menu
-hl.bind(mod .. " + code:57", hl.dsp.exec_cmd("xiu open link")) -- notifications
-hl.bind("CTRL + ALT + code:54", hl.dsp.exec_cmd("qs -c pill ipc call notifs clear")) -- clear notifications
-hl.bind(mod .. " + code:45", hl.dsp.exec_cmd('qs -c pill ipc call pill peek ""')) -- peek the pill
-hl.bind(mod .. " + code:46", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/lock.sh")) -- lock
-hl.bind(mod .. " + ALT + code:46", hl.dsp.exec_cmd("sh -c 'qs -c pill kill; $HOME/.config/hypr/scripts/lock.sh'")) -- restart shell and lock
-hl.bind(mod .. " + SHIFT + code:46", hl.dsp.exec_cmd(vars.sleepCmd)) -- sleep
-hl.bind("CTRL + SUPER + SHIFT + code:27", hl.dsp.exec_cmd("pkill -f watchdog.sh; qs -c pill kill; qs -c lock kill"), release) -- stop shells (no auto-restart)
-hl.bind("CTRL + SUPER + ALT + code:27", hl.dsp.exec_cmd("qs -c pill kill; qs -c lock kill"), release) -- restart shells (watchdogs respawn them)
+hl.bind(mod .. " + code:57", hl.dsp.exec_cmd("xiu open link")) -- notifications [N]
+hl.bind("CTRL + ALT + code:54", hl.dsp.exec_cmd("qs -c pill ipc call notifs clear")) -- clear notifications [C]
+hl.bind(mod .. " + code:45", hl.dsp.exec_cmd('qs -c pill ipc call pill peek ""')) -- peek the pill [K]
+hl.bind(mod .. " + code:46", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/lock.sh")) -- lock [L]
+hl.bind(mod .. " + ALT + code:46", hl.dsp.exec_cmd("sh -c 'qs -c pill kill; $HOME/.config/hypr/scripts/lock.sh'")) -- restart shell and lock [L]
+hl.bind(mod .. " + SHIFT + code:46", hl.dsp.exec_cmd(vars.sleepCmd)) -- sleep [L]
+hl.bind("CTRL + SUPER + SHIFT + code:27", hl.dsp.exec_cmd("pkill -f watchdog.sh; qs -c pill kill; qs -c lock kill"), release) -- stop shells (no auto-restart) [R]
+hl.bind("CTRL + SUPER + ALT + code:27", hl.dsp.exec_cmd("qs -c pill kill; qs -c lock kill"), release) -- restart shells (watchdogs respawn them) [R]
 
 -- Window actions
-hl.bind(mod .. " + code:24", hl.dsp.window.close()) -- close window
-hl.bind(mod .. " + code:41", hl.dsp.window.fullscreen()) -- fullscreen
-hl.bind(mod .. " + ALT + code:41", hl.dsp.window.fullscreen({ mode = "maximized" })) -- maximize window
+hl.bind(mod .. " + code:24", hl.dsp.window.close()) -- close window [Q]
+hl.bind(mod .. " + code:41", hl.dsp.window.fullscreen()) -- fullscreen [F]
+hl.bind(mod .. " + ALT + code:41", hl.dsp.window.fullscreen({ mode = "maximized" })) -- maximize window [F]
 hl.bind(mod .. " + ALT + code:65", hl.dsp.window.float()) -- toggle floating
-hl.bind(mod .. " + code:52", hl.dsp.window.drag()) -- move window (keyboard)
-hl.bind(mod .. " + code:53", hl.dsp.window.resize()) -- resize window (keyboard)
+hl.bind(mod .. " + code:52", hl.dsp.window.drag()) -- move window (keyboard) [Z]
+hl.bind(mod .. " + code:53", hl.dsp.window.resize()) -- resize window (keyboard) [X]
 hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), mouse) -- drag window
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), mouse) -- resize window
-hl.bind(mod .. " + code:33", hl.dsp.window.pin()) -- pin window
+hl.bind(mod .. " + code:33", hl.dsp.window.pin()) -- pin window [P]
 hl.bind("CTRL + SUPER + code:51", hl.dsp.window.center()) -- center window
 hl.bind("CTRL + SUPER + ALT + code:51", normalize_window()) -- normalize window
 hl.bind(mod .. " + ALT + code:51", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/xiu-resizer pip")) -- picture-in-picture
@@ -142,55 +142,55 @@ hl.bind("CTRL + ALT + code:23", hl.dsp.group.next(), repeating) -- cycle window 
 hl.bind("CTRL + SHIFT + ALT + code:23", hl.dsp.group.prev(), repeating) -- cycle window group back
 hl.bind(mod .. " + code:59", hl.dsp.group.toggle()) -- toggle window group
 hl.bind(mod .. " + SHIFT + code:59", hl.dsp.group.lock_active()) -- lock into window group
-hl.bind(mod .. " + code:30", hl.dsp.window.move({ out_of_group = true })) -- ungroup window
+hl.bind(mod .. " + code:30", hl.dsp.window.move({ out_of_group = true })) -- ungroup window [U]
 
 -- Workspaces 1-10, the slot in the current group
-hl.bind(mod .. " + code:10", goto_slot(1)) -- workspace 1
-hl.bind(mod .. " + code:11", goto_slot(2)) -- workspace 2
-hl.bind(mod .. " + code:12", goto_slot(3)) -- workspace 3
-hl.bind(mod .. " + code:13", goto_slot(4)) -- workspace 4
-hl.bind(mod .. " + code:14", goto_slot(5)) -- workspace 5
-hl.bind(mod .. " + code:15", goto_slot(6)) -- workspace 6
-hl.bind(mod .. " + code:16", goto_slot(7)) -- workspace 7
-hl.bind(mod .. " + code:17", goto_slot(8)) -- workspace 8
-hl.bind(mod .. " + code:18", goto_slot(9)) -- workspace 9
-hl.bind(mod .. " + code:19", goto_slot(10)) -- workspace 10
+hl.bind(mod .. " + code:10", goto_slot(1)) -- workspace 1 [1]
+hl.bind(mod .. " + code:11", goto_slot(2)) -- workspace 2 [2]
+hl.bind(mod .. " + code:12", goto_slot(3)) -- workspace 3 [3]
+hl.bind(mod .. " + code:13", goto_slot(4)) -- workspace 4 [4]
+hl.bind(mod .. " + code:14", goto_slot(5)) -- workspace 5 [5]
+hl.bind(mod .. " + code:15", goto_slot(6)) -- workspace 6 [6]
+hl.bind(mod .. " + code:16", goto_slot(7)) -- workspace 7 [7]
+hl.bind(mod .. " + code:17", goto_slot(8)) -- workspace 8 [8]
+hl.bind(mod .. " + code:18", goto_slot(9)) -- workspace 9 [9]
+hl.bind(mod .. " + code:19", goto_slot(10)) -- workspace 10 [0]
 
 -- Move the window to the slot in the current group
-hl.bind("SUPER + ALT + code:10", move_slot(1)) -- move window to workspace 1
-hl.bind("SUPER + ALT + code:11", move_slot(2)) -- move window to workspace 2
-hl.bind("SUPER + ALT + code:12", move_slot(3)) -- move window to workspace 3
-hl.bind("SUPER + ALT + code:13", move_slot(4)) -- move window to workspace 4
-hl.bind("SUPER + ALT + code:14", move_slot(5)) -- move window to workspace 5
-hl.bind("SUPER + ALT + code:15", move_slot(6)) -- move window to workspace 6
-hl.bind("SUPER + ALT + code:16", move_slot(7)) -- move window to workspace 7
-hl.bind("SUPER + ALT + code:17", move_slot(8)) -- move window to workspace 8
-hl.bind("SUPER + ALT + code:18", move_slot(9)) -- move window to workspace 9
-hl.bind("SUPER + ALT + code:19", move_slot(10)) -- move window to workspace 10
+hl.bind("SUPER + ALT + code:10", move_slot(1)) -- move window to workspace 1 [1]
+hl.bind("SUPER + ALT + code:11", move_slot(2)) -- move window to workspace 2 [2]
+hl.bind("SUPER + ALT + code:12", move_slot(3)) -- move window to workspace 3 [3]
+hl.bind("SUPER + ALT + code:13", move_slot(4)) -- move window to workspace 4 [4]
+hl.bind("SUPER + ALT + code:14", move_slot(5)) -- move window to workspace 5 [5]
+hl.bind("SUPER + ALT + code:15", move_slot(6)) -- move window to workspace 6 [6]
+hl.bind("SUPER + ALT + code:16", move_slot(7)) -- move window to workspace 7 [7]
+hl.bind("SUPER + ALT + code:17", move_slot(8)) -- move window to workspace 8 [8]
+hl.bind("SUPER + ALT + code:18", move_slot(9)) -- move window to workspace 9 [9]
+hl.bind("SUPER + ALT + code:19", move_slot(10)) -- move window to workspace 10 [0]
 
 -- Workspace groups: the digit picks the group, keeping the current slot
-hl.bind("CTRL + SUPER + code:10", goto_group(1)) -- workspace group 1
-hl.bind("CTRL + SUPER + code:11", goto_group(2)) -- workspace group 2
-hl.bind("CTRL + SUPER + code:12", goto_group(3)) -- workspace group 3
-hl.bind("CTRL + SUPER + code:13", goto_group(4)) -- workspace group 4
-hl.bind("CTRL + SUPER + code:14", goto_group(5)) -- workspace group 5
-hl.bind("CTRL + SUPER + code:15", goto_group(6)) -- workspace group 6
-hl.bind("CTRL + SUPER + code:16", goto_group(7)) -- workspace group 7
-hl.bind("CTRL + SUPER + code:17", goto_group(8)) -- workspace group 8
-hl.bind("CTRL + SUPER + code:18", goto_group(9)) -- workspace group 9
-hl.bind("CTRL + SUPER + code:19", goto_group(10)) -- workspace group 10
+hl.bind("CTRL + SUPER + code:10", goto_group(1)) -- workspace group 1 [1]
+hl.bind("CTRL + SUPER + code:11", goto_group(2)) -- workspace group 2 [2]
+hl.bind("CTRL + SUPER + code:12", goto_group(3)) -- workspace group 3 [3]
+hl.bind("CTRL + SUPER + code:13", goto_group(4)) -- workspace group 4 [4]
+hl.bind("CTRL + SUPER + code:14", goto_group(5)) -- workspace group 5 [5]
+hl.bind("CTRL + SUPER + code:15", goto_group(6)) -- workspace group 6 [6]
+hl.bind("CTRL + SUPER + code:16", goto_group(7)) -- workspace group 7 [7]
+hl.bind("CTRL + SUPER + code:17", goto_group(8)) -- workspace group 8 [8]
+hl.bind("CTRL + SUPER + code:18", goto_group(9)) -- workspace group 9 [9]
+hl.bind("CTRL + SUPER + code:19", goto_group(10)) -- workspace group 10 [0]
 
 -- Move the window to the group, keeping the current slot
-hl.bind("CTRL + SUPER + ALT + code:10", move_group(1)) -- move window to group 1
-hl.bind("CTRL + SUPER + ALT + code:11", move_group(2)) -- move window to group 2
-hl.bind("CTRL + SUPER + ALT + code:12", move_group(3)) -- move window to group 3
-hl.bind("CTRL + SUPER + ALT + code:13", move_group(4)) -- move window to group 4
-hl.bind("CTRL + SUPER + ALT + code:14", move_group(5)) -- move window to group 5
-hl.bind("CTRL + SUPER + ALT + code:15", move_group(6)) -- move window to group 6
-hl.bind("CTRL + SUPER + ALT + code:16", move_group(7)) -- move window to group 7
-hl.bind("CTRL + SUPER + ALT + code:17", move_group(8)) -- move window to group 8
-hl.bind("CTRL + SUPER + ALT + code:18", move_group(9)) -- move window to group 9
-hl.bind("CTRL + SUPER + ALT + code:19", move_group(10)) -- move window to group 10
+hl.bind("CTRL + SUPER + ALT + code:10", move_group(1)) -- move window to group 1 [1]
+hl.bind("CTRL + SUPER + ALT + code:11", move_group(2)) -- move window to group 2 [2]
+hl.bind("CTRL + SUPER + ALT + code:12", move_group(3)) -- move window to group 3 [3]
+hl.bind("CTRL + SUPER + ALT + code:13", move_group(4)) -- move window to group 4 [4]
+hl.bind("CTRL + SUPER + ALT + code:14", move_group(5)) -- move window to group 5 [5]
+hl.bind("CTRL + SUPER + ALT + code:15", move_group(6)) -- move window to group 6 [6]
+hl.bind("CTRL + SUPER + ALT + code:16", move_group(7)) -- move window to group 7 [7]
+hl.bind("CTRL + SUPER + ALT + code:17", move_group(8)) -- move window to group 8 [8]
+hl.bind("CTRL + SUPER + ALT + code:18", move_group(9)) -- move window to group 9 [9]
+hl.bind("CTRL + SUPER + ALT + code:19", move_group(10)) -- move window to group 10 [0]
 
 -- Relative workspace movement
 hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "r+1" })) -- next workspace
@@ -209,40 +209,40 @@ hl.bind("CTRL + SUPER + SHIFT + code:114", hl.dsp.window.move({ workspace = "r+1
 hl.bind("CTRL + SUPER + SHIFT + code:113", hl.dsp.window.move({ workspace = "r-1" }), repeating) -- move window to previous workspace
 
 -- Special workspaces
-hl.bind(mod .. " + code:39", hl.dsp.workspace.toggle_special("stash")) -- stash workspace
-hl.bind(mod .. " + SHIFT + code:39", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh stash")) -- send window to stash
+hl.bind(mod .. " + code:39", hl.dsp.workspace.toggle_special("stash")) -- stash workspace [S]
+hl.bind(mod .. " + SHIFT + code:39", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh stash")) -- send window to stash [S]
 hl.bind("CTRL + SUPER + SHIFT + code:111", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh stash")) -- send window to stash
 hl.bind("CTRL + SUPER + SHIFT + code:116", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh stash")) -- take window back from stash
-hl.bind(mod .. " + ALT + code:33", hl.dsp.workspace.toggle_special("private")) -- private workspace
-hl.bind(mod .. " + SHIFT + code:33", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh private")) -- send window to private
-hl.bind(mod .. " + ALT + code:58", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/minimize-toggle.sh")) -- minimize toggle
-hl.bind("CTRL + SUPER + code:58", hl.dsp.workspace.toggle_special("minimized")) -- minimized stash
+hl.bind(mod .. " + ALT + code:33", hl.dsp.workspace.toggle_special("private")) -- private workspace [P]
+hl.bind(mod .. " + SHIFT + code:33", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh private")) -- send window to private [P]
+hl.bind(mod .. " + ALT + code:58", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/minimize-toggle.sh")) -- minimize toggle [M]
+hl.bind("CTRL + SUPER + code:58", hl.dsp.workspace.toggle_special("minimized")) -- minimized stash [M]
 
 -- App-category workspaces (see modules/toggles.lua)
 hl.bind("CTRL + SHIFT + code:9", toggles.toggle("sysmon")) -- system monitor workspace
-hl.bind(mod .. " + code:58", toggles.toggle("music")) -- music workspace
-hl.bind(mod .. " + code:40", toggles.toggle("communication")) -- communication workspace
-hl.bind(mod .. " + code:27", toggles.toggle("todo")) -- todo workspace
+hl.bind(mod .. " + code:58", toggles.toggle("music")) -- music workspace [M]
+hl.bind(mod .. " + code:40", toggles.toggle("communication")) -- communication workspace [D]
+hl.bind(mod .. " + code:27", toggles.toggle("todo")) -- todo workspace [R]
 
 -- Apps
 hl.bind(mod .. " + code:36", hl.dsp.exec_cmd(vars.terminal)) -- terminal
-hl.bind(mod .. " + code:25", hl.dsp.exec_cmd(vars.browser)) -- browser
-hl.bind(mod .. " + code:54", hl.dsp.exec_cmd(vars.editor)) -- editor
-hl.bind(mod .. " + code:26", hl.dsp.exec_cmd(vars.fileManager)) -- file manager
-hl.bind(mod .. " + code:38", hl.dsp.exec_cmd(vars.telegram)) -- telegram
-hl.bind(mod .. " + code:32", hl.dsp.exec_cmd(vars.musicPlayer)) -- spotify
-hl.bind("CTRL + ALT + code:55", hl.dsp.exec_cmd("xiu open mixer")) -- mixer
+hl.bind(mod .. " + code:25", hl.dsp.exec_cmd(vars.browser)) -- browser [W]
+hl.bind(mod .. " + code:54", hl.dsp.exec_cmd(vars.editor)) -- editor [C]
+hl.bind(mod .. " + code:26", hl.dsp.exec_cmd(vars.fileManager)) -- file manager [E]
+hl.bind(mod .. " + code:38", hl.dsp.exec_cmd(vars.telegram)) -- telegram [A]
+hl.bind(mod .. " + code:32", hl.dsp.exec_cmd(vars.musicPlayer)) -- spotify [O]
+hl.bind("CTRL + ALT + code:55", hl.dsp.exec_cmd("xiu open mixer")) -- mixer [V]
 
 -- Wallpaper, capture, record
-hl.bind(mod .. " + code:56", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/wallpaper.sh")) -- random wallpaper
-hl.bind(mod .. " + SHIFT + code:56", hl.dsp.exec_cmd("xiu open wallpaper")) -- wallpaper picker
-hl.bind(mod .. " + SHIFT + code:54", hl.dsp.exec_cmd("hyprpicker -a")) -- color picker
-hl.bind(mod .. " + code:42", hl.dsp.exec_cmd("xiu open gameMode")) -- game mode
-hl.bind("CTRL + ALT + code:27", hl.dsp.exec_cmd("xiu record")) -- screen record
+hl.bind(mod .. " + code:56", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/wallpaper.sh")) -- random wallpaper [B]
+hl.bind(mod .. " + SHIFT + code:56", hl.dsp.exec_cmd("xiu open wallpaper")) -- wallpaper picker [B]
+hl.bind(mod .. " + SHIFT + code:54", hl.dsp.exec_cmd("hyprpicker -a")) -- color picker [C]
+hl.bind(mod .. " + code:42", hl.dsp.exec_cmd("xiu open gameMode")) -- game mode [G]
+hl.bind("CTRL + ALT + code:27", hl.dsp.exec_cmd("xiu record")) -- screen record [R]
 
 -- Clipboard
-hl.bind(mod .. " + code:55", hl.dsp.exec_cmd("xiu clipboard")) -- clipboard history
-hl.bind("CTRL + SHIFT + ALT + code:55", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/paste-latest.sh"), locked) -- paste latest clipboard
+hl.bind(mod .. " + code:55", hl.dsp.exec_cmd("xiu clipboard")) -- clipboard history [V]
+hl.bind("CTRL + SHIFT + ALT + code:55", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/paste-latest.sh"), locked) -- paste latest clipboard [V]
 hl.bind(mod .. " + code:60", hl.dsp.exec_cmd("xiu emoji -p")) -- emoji picker
 
 -- Media keys (Quickshell globals registered by the pill's Players singleton)
@@ -254,7 +254,7 @@ hl.bind("CTRL + SUPER + code:20", hl.dsp.global("quickshell:mediaPrev"), locked)
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"), locked_repeating) -- volume up
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), locked_repeating) -- volume down
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), locked) -- mute audio
-hl.bind(mod .. " + SHIFT + code:58", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), locked) -- mute audio
+hl.bind(mod .. " + SHIFT + code:58", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), locked) -- mute audio [M]
 hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl set 5%+"), locked_repeating) -- brightness up
 hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%-"), locked_repeating) -- brightness down
 hl.bind("XF86AudioPlay", hl.dsp.global("quickshell:mediaToggle"), locked) -- play / pause

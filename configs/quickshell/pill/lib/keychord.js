@@ -60,15 +60,49 @@ function modNames(modifiers) {
 }
 
 /**
- * Turn a captured Qt keypress (key code + modifier bitmask) into the combo
- * string Binds.rebind/inUse expect, e.g. "SUPER + K". Returns null for a bare
- * modifier press (Super/Ctrl/Alt/Shift alone) so the caller keeps listening for
- * the final key.
+ * xkb keycode -> the us-layout character on that physical key, read straight
+ * from /usr/share/X11/xkb/keycodes/evdev (that file's numbers are already xkb
+ * keycodes = raw evdev + 8: KEY_Q=16 -> <AD01>=24). binds.lua writes its
+ * letter binds on these codes so every bind hits the same physical key on the
+ * us and ir(winkeys) layouts; the editor needs the reverse map to show a
+ * letter next to a captured code. Qt's nativeScanCode is the raw evdev code —
+ * add 8 for the xkb keycode.
  */
-function chord(key, modifiers) {
+var US_LETTERS = {
+    24: "q", 25: "w", 26: "e", 27: "r", 28: "t", 29: "y", 30: "u", 31: "i", 32: "o", 33: "p",
+    38: "a", 39: "s", 40: "d", 41: "f", 42: "g", 43: "h", 44: "j", 45: "k", 46: "l",
+    52: "z", 53: "x", 54: "c", 55: "v", 56: "b", 57: "n", 58: "m",
+    10: "1", 11: "2", 12: "3", 13: "4", 14: "5", 15: "6", 16: "7", 17: "8", 18: "9", 19: "0"
+};
+
+/** The us-layout character for a raw evdev scan code, or null. */
+function letterForScanCode(scan) {
+    return US_LETTERS[scan + 8] || null;
+}
+
+/**
+ * Turn a captured Qt keypress into the combo string Binds.rebind/inUse
+ * expect. Letters, digits and punctuation capture as code:NNN — the raw
+ * keycode binds.lua uses, so a bind recorded on the us layout hits the same
+ * physical key on ir(winkeys). Named keys (Print, F-rows, arrows, space)
+ * stay symbolic: their keycodes are identical across xkb layouts, so the
+ * readable name loses nothing. Returns null for a bare modifier press so
+ * the caller keeps listening for the final key.
+ */
+function chord(key, modifiers, scanCode) {
     var k = keyName(key);
     if (k === null) return null;
+    // The keyName result for letters/digits is the KEYSYM's character; when
+    // a scan code is available and that key sits in the letter/digit zone,
+    // prefer the raw keycode. Punctuation keys stay symbolic (their
+    // keycodes differ across xkb layouts but the names stay parseable).
+    if (scanCode !== undefined && scanCode > 0 && US_LETTERS[scanCode + 8])
+        k = "code:" + (scanCode + 8);
     var parts = modNames(modifiers);
     parts.push(k);
     return parts.join(" + ");
+}
+
+if (typeof module !== "undefined" && module.exports) {
+    module.exports = { chord, keyName, letterForScanCode, US_LETTERS };
 }
