@@ -706,6 +706,13 @@ def _tool_dir(name):
 
 
 def _reload(binary):
+    """The USR2 hot-reload poke — btop only (verified in its source:
+    btop.cpp registers SIGUSR2 for the same reload CTRL+R does). The other
+    TUIs either document a different signal (cava: USR1, poked inline in
+    its renderer) or read their config once and have no signal path at all
+    (htop, nvtop, yazi, helix, micro, bottom — those pick the new palette
+    up on next launch; the terminal's own colors follow live through the
+    OSC broadcast)."""
     subprocess.run(["killall", "-USR2", binary], stderr=subprocess.DEVNULL)
 
 
@@ -800,7 +807,10 @@ def render_htop(pill, b):
         "color_process_sleeping=%s" % pill["dim"],
     ]
     (d / "htoprc").write_text("\n".join(lines) + "\n")
-    _reload("htop")
+    # No poke: htop reads its config once at start and watches nothing —
+    # running instances keep the old colors and the next launch picks the
+    # new palette up. (killall -USR2 was a no-op here: htop has no signal
+    # handler for it.)
 
 
 def render_nvtop(pill, b):
@@ -869,7 +879,10 @@ def render_cava(pill, b):
         "monstercat = 1",
     ]
     (d / "config").write_text("\n".join(lines) + "\n")
-    _reload("cava")
+    # cava's documented live-reload signal is SIGUSR1 (README: "Sending cava
+    # a SIGUSR1 signal will force cava to reload its configuration file") —
+    # USR2 did nothing, so a running visualizer kept its old bars.
+    subprocess.run(["killall", "-USR1", "cava"], stderr=subprocess.DEVNULL)
 
 
 def render_micro(pill, b):
