@@ -1434,6 +1434,19 @@ def render_gtk(pill):
         subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", key, value],
                        stderr=subprocess.DEVNULL)
 
+    # Live reload: GTK apps watch the theme SETTING, not the css file — a
+    # rewritten gtk.css alone never notifies them. Toggling gtk-theme to a
+    # stub and back fires the settings-changed notification, and every
+    # running GTK app re-reads the new css in place. caelestia's users see
+    # the same effect through their scheme-change flow.
+    if shutil.which("gsettings"):
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface",
+                        "gtk-theme", "adw-gtk3"],
+                       stderr=subprocess.DEVNULL)
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface",
+                        "gtk-theme", "adw-gtk3-dark"],
+                       stderr=subprocess.DEVNULL)
+
 
 def render_qt(pill):
     """Qt via qtengine + Darkly: a palette-derived KDE color scheme plus the
@@ -1491,6 +1504,15 @@ def render_qt(pill):
                 "singleClickActivate": False,
             },
         }, indent=4) + "\n")
+
+    # Live reload: qtengine apps watch their config for changes, so touching
+    # it (rewriting the same content) fires the notification that makes every
+    # running Qt app re-read xiu.colors. Without it only apps started after
+    # the palette change pick the new scheme up.
+    try:
+        config.write_text(config.read_text())
+    except OSError:
+        pass
 
 
 def fan_out(pill, seed, variant, share=None):
