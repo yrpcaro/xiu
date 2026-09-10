@@ -1199,10 +1199,25 @@ def run(args):
                     ["sudo", "systemctl", "enable", "--now", "bluetooth.service"], dry)
                 record(ok, detail, "Enable bluetooth", "Enable bluetooth.service yourself.")
                 if shutil.which("hyprsunset"):
-                    ok, detail = _run(
-                        ["systemctl", "--user", "enable", "--now", "hyprsunset.service"], dry)
-                    record(ok, detail, "Enable night light",
-                           "Run: systemctl --user enable --now hyprsunset.service")
+                    # A --user systemctl needs the user's session bus; from a
+                    # bare TTY (the usual curl|bash fresh install) there is
+                    # none — DBUS_SESSION_BUS_ADDRESS/XDG_RUNTIME_DIR unset —
+                    # and systemctl refuses with the bus-connect error. Only
+                    # try when the bus is actually there, and defer to the
+                    # first login otherwise.
+                    user_bus = (
+                        os.environ.get("DBUS_SESSION_BUS_ADDRESS")
+                        or (Path(os.environ.get("XDG_RUNTIME_DIR", "")) / "bus").exists()
+                    ) if os.environ.get("XDG_RUNTIME_DIR") else False
+                    if user_bus:
+                        ok, detail = _run(
+                            ["systemctl", "--user", "enable", "--now", "hyprsunset.service"], dry)
+                        record(ok, detail, "Enable night light",
+                               "Run: systemctl --user enable --now hyprsunset.service")
+                    else:
+                        notes.append("No user session bus yet (installed from a console?) — "
+                                     "night light starts on first login: "
+                                     "systemctl --user enable --now hyprsunset.service")
                 else:
                     notes.append("hyprsunset is not installed, night light left off. "
                                  "Install it and run: systemctl --user enable --now hyprsunset.service")
