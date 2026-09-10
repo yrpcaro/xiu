@@ -97,36 +97,43 @@ end
 hl.gesture({
     fingers   = vars.gestureFingers,
     direction = "vertical",
-    start     = function(_e)
-        vol_accum = 0
-        vol_pole = 0
-    end,
-    update    = function(e)
-        if not e or not e.delta then
-            return
-        end
-        local dy = e.delta.y or 0
-        if vol_pole == 0 and dy ~= 0 then
-            -- up is negative y on Wayland; the pole remembers which way
-            -- this swipe is going so the accumulator only counts its own
-            -- direction and a wobble never double-steps.
-            vol_pole = dy > 0 and 1 or -1
-        end
-        -- only travel along the pole's axis accumulates
-        local along = dy * vol_pole
-        if along <= 0 then
-            return
-        end
-        vol_accum = vol_accum + along
-        local threshold = vars.gestureVolumeStep or 60
-        while vol_accum >= threshold do
-            -- swipe up raises volume, the natural deck-fader direction
-            volume_step(vol_pole < 0 and 1 or -1)
-            vol_accum = vol_accum - threshold
-        end
-    end,
-    ["end"]   = function(_e)
-        vol_accum = 0
-        vol_pole = 0
-    end,
+    -- The callbacks live INSIDE the action table (Hyprland 0.56's contract:
+    -- action = fn, or action = { start, update, finish } — "finish", not
+    -- "end", which is a Lua keyword). Top-level start/update fields are
+    -- silently not read and the gesture dies at config load with
+    -- 'missing required field "action"'.
+    action = {
+        start = function(_e)
+            vol_accum = 0
+            vol_pole = 0
+        end,
+        update = function(e)
+            if not e or not e.delta then
+                return
+            end
+            local dy = e.delta.y or 0
+            if vol_pole == 0 and dy ~= 0 then
+                -- up is negative y on Wayland; the pole remembers which way
+                -- this swipe is going so the accumulator only counts its own
+                -- direction and a wobble never double-steps.
+                vol_pole = dy > 0 and 1 or -1
+            end
+            -- only travel along the pole's axis accumulates
+            local along = dy * vol_pole
+            if along <= 0 then
+                return
+            end
+            vol_accum = vol_accum + along
+            local threshold = vars.gestureVolumeStep or 60
+            while vol_accum >= threshold do
+                -- swipe up raises volume, the natural deck-fader direction
+                volume_step(vol_pole < 0 and 1 or -1)
+                vol_accum = vol_accum - threshold
+            end
+        end,
+        finish = function(_e)
+            vol_accum = 0
+            vol_pole = 0
+        end,
+    },
 })
