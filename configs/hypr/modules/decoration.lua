@@ -28,7 +28,7 @@ hl.config({
     general = {
         gaps_in     = 6,
         gaps_out    = 12,
-        border_size = 2,
+        border_size = 1,
         layout      = "dwindle",
         resize_on_border = true,
         ["col.active_border"]   = active,
