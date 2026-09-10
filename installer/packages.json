@@ -278,7 +278,7 @@
     { "id": "spotify", "group": "full", "required": false, "desc": "Spotify client (spotify-launcher: the official binary via Spotify's apt repo)", "aur": false,
       "names": { "arch": "spotify-launcher", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 
-    { "id": "spicetify-cli", "group": "full", "required": false, "desc": "Spotify customization; installed vanilla, no theme applied", "aur": true,
+    { "id": "spicetify-cli", "group": "full", "required": false, "desc": "Spotify theming; carries the xiu palette into spotify-launcher's client", "aur": true,
       "names": { "arch": "spicetify-cli", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 
     { "id": "telegram-desktop", "group": "full", "required": false, "desc": "Telegram; import the generated xiu .attheme once", "aur": false,

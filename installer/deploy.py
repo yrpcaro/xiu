@@ -52,6 +52,7 @@ DEPLOY_SET = [
     ("helix",      "helix",                                 "helix"),
     ("bottom",     "bottom",                                "bottom"),
     ("yazi",       "yazi",                                  "yazi"),
+    ("spicetify",  "spicetify",                             "spicetify"),
     ("portals",    "portals",                               "xdg-desktop-portal"),
     ("uwsm",       "uwsm",                                  "uwsm"),
     ("browser",    "browser-integration",                   "xiu/browser-integration"),

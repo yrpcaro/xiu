@@ -1392,11 +1392,37 @@ def run(args):
                              "installer after their first launch to wire the theme in.")
 
         # n2. chosen extras that need one activation step past the package:
+        #     spicetify is pointed at spotify-launcher's install layout
+        #     (~/.local/share/spotify-launcher/install/usr/share/spotify —
+        #     spicetify's documented path for the launcher) and the xiu theme
+        #     applied; spotify-launcher downloads the Spotify binary on its
+        #     FIRST RUN, so on a fresh box the apply is deferred with a note,
+        #     and re-running the installer after that first launch lands it.
         #     vesktop's themes dir is created so the palette pipeline has
         #     somewhere to drop the xiu CSS (vesktop normally creates it on
         #     first run, which may be after the first wallpaper change).
-        #     spicetify stays deliberately vanilla — installed, never themed.
         if not dry:
+            if "spicetify-cli" in choices["optional_ids"] and shutil.which("spicetify"):
+                spotify_dir = (Path.home() / ".local" / "share" / "spotify-launcher"
+                               / "install" / "usr" / "share" / "spotify")
+                ok, detail = _run([
+                    "spicetify", "config",
+                    "spotify_path", str(spotify_dir),
+                    "prefs_path", str(Path.home() / ".config" / "spotify" / "prefs"),
+                    "current_theme", "xiu",
+                    "color_scheme", "xiu",
+                ], False)
+                record(ok, detail, "Configure spicetify",
+                       "Run: spicetify config spotify_path '%s' prefs_path '%s' "
+                       "current_theme xiu color_scheme xiu"
+                       % (spotify_dir, Path.home() / ".config" / "spotify" / "prefs"))
+                if spotify_dir.is_dir():
+                    ok, detail = _run(["spicetify", "backup", "apply"], False)
+                    record(ok, detail, "Apply spicetify theme",
+                           "Run: spicetify backup apply")
+                else:
+                    notes.append("spotify-launcher hasn't downloaded Spotify yet — "
+                                 "launch it once, then: spicetify backup apply")
             if "vesktop" in choices["optional_ids"]:
                 try:
                     (Path.home() / ".config" / "vesktop" / "themes").mkdir(
