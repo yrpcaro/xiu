@@ -7,7 +7,7 @@
 
         return {
             music = {
-                spotify = { match = { { class = "Spotify" } }, command = { "spotify" } },
+                spotify = { match = { { class = "Spotify" } }, command = { "spotify-launcher" } },
             },
         }
 
@@ -24,7 +24,7 @@ local defaults = {
                  command = { "foot", "-a", "btop", "-T", "btop", "fish", "-C", "exec", "btop" } },
     },
     music = {
-        spotify = { match = { { class = "[Ss]potify" } }, command = { "spotify" } },
+        spotify = { match = { { class = "[Ss]potify" } }, command = { "spotify-launcher" } },
     },
     communication = {
         telegram = { match = { { class = "org.telegram.desktop" } }, command = { "telegram-desktop" } },
