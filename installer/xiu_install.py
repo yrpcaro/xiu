@@ -275,6 +275,14 @@ def _build_plan(manifest, info, choices, cli_local):
     rows = distro.plan(manifest, family, ("core", "full"), choices["aur_choice"])
     keep = set(choices["optional_ids"]) | _choice_ids(choices)
     rows = [r for r in rows if r["group"] == "core" or r["id"] in keep]
+    # The clean swap never installs what it is about to retire: ghostty and
+    # cliphist stay in the package list as the fallback choice's alternatives,
+    # but installing them just to pacman -Rns them a minute later wastes a
+    # build (ghostty drags its own shell-integration/terminfo/gtk4-layer-shell
+    # deps in with it). The removal pass stays for boxes that already had
+    # them installed.
+    if choices.get("legacy_swap") == "clean":
+        rows = [r for r in rows if r["id"] not in ("ghostty", "cliphist")]
 
     repos, native, aur, fb, skipped = [], [], [], [], []
     optional_native = set()
