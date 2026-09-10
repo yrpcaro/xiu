@@ -244,6 +244,21 @@ def main():
     print("M3 stale clone origin repointed at the fork: ok")
     os.environ["XDG_DATA_HOME"] = str(share)
 
+    # M4: an orphaned syncedSha (a rewritten remote history dropped the
+    # commit the manifest recorded) must read as unknown, never crash the
+    # range math with git's raw 'invalid revision' fatal.
+    assert ru._sha_known(ru.data_dir(), ru.origin_head(ru.data_dir()))
+    assert not ru._sha_known(ru.data_dir(),
+                             "deadbeef0123456789abcdef0123456789abcdef")
+    assert not ru._sha_known(ru.data_dir(), "")
+    # and origin_head returns a sha even when origin has no xiu branch
+    # (the M1 fixture's origin is main-only — plain rev-parse would echo
+    # the missing ref back and exit 0, which is the exact trap --verify
+    # exists to close).
+    head = ru.origin_head(ru.data_dir())
+    assert head and not head.startswith("origin/"), head
+    print("M4 orphaned syncedSha and missing-branch head handled: ok")
+
     print("\nALL TESTS PASSED")
 
 

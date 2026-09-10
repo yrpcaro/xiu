@@ -215,7 +215,28 @@ def ensure_clone(remote, do_fetch):
 
 
 def origin_head(clone):
-    return git(clone, "rev-parse", "origin/main").strip()
+    """The remote's actual head: xiu is the working branch and the remote's
+    default, but main exists as its mirror — resolve xiu first and fall back
+    to main, so a remote that reorders its defaults keeps updating.
+    --verify matters: a plain rev-parse on a missing ref echoes the ref back
+    and exits 0 (git's filename-guessing), which would hand every later
+    caller a string like 'origin/xiu' where a sha belongs."""
+    for ref in ("origin/xiu", "origin/main"):
+        sha = git(clone, "rev-parse", "--verify", f"{ref}^{{commit}}", check=False).strip()
+        if sha:
+            return sha
+    return git(clone, "rev-parse", "HEAD").strip()
+
+
+def _sha_known(clone, sha):
+    """Whether the clone holds the commit — a rewritten history orphans the
+    recorded syncedSha, and every range built on a missing object dies with
+    git's raw 'invalid revision' fatal."""
+    if not sha:
+        return False
+    return subprocess.run(
+        ["git", "-C", str(clone), "cat-file", "-e", f"{sha}^{{commit}}"],
+        capture_output=True).returncode == 0
 
 
 def commit_date(clone, sha):
@@ -674,6 +695,13 @@ def run(mode, remote, config_root, take, install_ids):
     manifest = load_manifest()
     head = origin_head(clone)
     base = manifest.get("syncedSha")
+    # A rewritten remote history orphans the recorded sha (cat-file misses
+    # it) and every range built on it dies with git's raw 'invalid revision'
+    # fatal — the same fetch already brought the whole new history down, so
+    # treat the miss as a first run: full changelog from HEAD, everything
+    # after a clean apply.
+    if base and not _sha_known(clone, base):
+        base = None
     first_run = base is None
 
     changelog = extract_changelog(clone, base, head)
