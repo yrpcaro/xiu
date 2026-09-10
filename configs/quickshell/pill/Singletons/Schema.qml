@@ -43,7 +43,6 @@ Singleton {
         { id: "workspaces", title: "Workspaces", caption: "Special spaces and their keys", icon: "layers" },
         { id: "idlelock", title: "Idle / Lock", caption: "Auto-lock, screen off, suspend", icon: "lock" },
         { id: "updates", title: "Updates", caption: "Version and check for updates", icon: "download" },
-        { id: "weather", title: "Weather", caption: "Forecast, city, and the source behind it", icon: "cloud" },
         { id: "defaultapps", title: "Default apps", caption: "Which app opens folders, images and documents", icon: "app-window" }
     ]
 

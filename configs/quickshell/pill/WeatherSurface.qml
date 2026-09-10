@@ -45,6 +45,10 @@ SettingsSurface {
             s: root.s
             glyph: "天"
             title: "WEATHER"
+            // The weather surface opens from the pill's weather glance, not
+            // the settings index, but it still steps back to the index like
+            // every other sub-surface — the chevron, not the settings cog.
+            showBack: true
         }
 
         // ── city + backend ────────────────────────────────────────────────
