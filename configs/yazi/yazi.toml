@@ -51,8 +51,3 @@ prepend_keymap = [
 [preview]
 # image preview max dimensions — large photos stay snappy
 image_filter = "triangle"
-
-[opener]
-# MTP mounts live under ~/mnt/phone — the mtp keybind mounts there when
-# simple-mtpfs is present (see the installer's mount-phone script)
-phone = { run = 'xdg-open "$@"', block = false, for = "dir" }
