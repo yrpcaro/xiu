@@ -519,12 +519,15 @@ return {
 
 
 # Desktop ids for the xdg defaults, keyed the way the wizard names the
-# file managers. yazi has no .desktop of its own (it's a TUI), so the yazi
-# choice leaves the directory default alone — Super+E still opens it in
-# foot via vars.lua — while dolphin/thunar become the system folder handler.
+# file managers. yazi is a TUI with no runnable graphical entry of its own —
+# the installer drops a foot-wrapping xiu-yazi.desktop into the user's local
+# applications dir (see set_xdg_defaults) and routes folder opens to it, so
+# xdg-open and the file dialogs that delegate reach yazi in the terminal
+# instead of whatever GUI manager happens to be installed.
 DESKTOP_IDS = {
     "dolphin": "org.kde.dolphin.desktop",
     "thunar": "thunar.desktop",
+    "yazi": "xiu-yazi.desktop",
 }
 
 # The xdg defaults xiu claims. inode/directory routes every folder open
@@ -551,22 +554,56 @@ def set_xdg_defaults(choices, dry):
     default handler — land in it), imv owns the images and zathura the
     documents. Merges into ~/.config/mimeapps.list under
     [Default Applications] without touching any other key, so a browser or
-    user-set default survives; re-runs only rewrite our own keys. Skipped
-    keys: yazi (a TUI with no .desktop — its Super+E path runs through
-    vars.lua) and imv/zathura when their desktop files are absent on this
-    box (not installed yet — the defaults then wait for the next re-run).
+    user-set default survives; re-runs only rewrite our own keys. A yazi
+    choice first installs xiu-yazi.desktop (the foot wrapper from the repo's
+    configs/yazi/applications) into the user's local applications dir, since
+    a TUI cannot be launched without a terminal; imv/zathura skip their keys
+    when their desktop files are absent (not installed yet — the defaults
+    then wait for the next re-run).
     """
     home = Path.home()
     mimeapps = home / ".config" / "mimeapps.list"
     if dry:
         print("  would set xdg defaults (file manager, imv, zathura) -> %s" % mimeapps)
         return True, ""
+    # The yazi wrapper lands first so the folder default points at a desktop
+    # file that exists; the source is the repo checkout the installer runs
+    # from, and a missing source (source tree without it) just skips the
+    # yazi default rather than failing the step.
+    if choices.get("file_manager") == "yazi":
+        # The wrapper ships in the repo at configs/yazi/applications; this
+        # module lives in installer/, so walk up to the checkout root first
+        # and fall back to a sibling-of-installer layout for safety.
+        root = Path(__file__).resolve().parent.parent
+        src = next((
+            p for p in (
+                root / "configs" / "yazi" / "applications" / "xiu-yazi.desktop",
+                Path(__file__).resolve().parent / "yazi" / "applications" / "xiu-yazi.desktop",
+            ) if p.is_file()
+        ), None)
+        if src is not None:
+            try:
+                local_apps = home / ".local" / "share" / "applications"
+                local_apps.mkdir(parents=True, exist_ok=True)
+                dest = local_apps / "xiu-yazi.desktop"
+                dest.write_text(src.read_text())
+                print(f"  installed yazi desktop wrapper -> {dest}")
+            except OSError:
+                pass
+
+    def desktop_exists(desktop_id):
+        # The yazi wrapper lives in the user's local dir, not /usr/share.
+        return (
+            (Path("/usr/share/applications") / desktop_id).is_file()
+            or (home / ".local" / "share" / "applications" / desktop_id).is_file()
+        )
+
     want = {}
     fm = DESKTOP_IDS.get(choices.get("file_manager"))
-    if fm and (Path("/usr/share/applications") / fm).is_file():
+    if fm and desktop_exists(fm):
         want[fm] = ["inode/directory"]
     for desktop, mimes in DEFAULT_MIMES.items():
-        if (Path("/usr/share/applications") / desktop).is_file():
+        if desktop_exists(desktop):
             want.setdefault(desktop, []).extend(mimes)
     if not want:
         print("  no xdg defaults to set (none of the desktop files present)")

@@ -42,7 +42,7 @@ SettingsSurface {
         var seen = {};
         var candidates = [];
         if (cat.key === "inode/directory")
-            candidates = ["org.kde.dolphin.desktop", "thunar.desktop", "yazi.desktop"];
+            candidates = ["xiu-yazi.desktop", "org.kde.dolphin.desktop", "thunar.desktop"];
         else if (cat.key === "image/png")
             candidates = ["imv.desktop", "imv-dir.desktop", "org.gnome.Loupe.desktop", "feh.desktop"];
         else

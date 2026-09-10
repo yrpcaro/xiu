@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Yazi (xiu)
+Icon=yazi
+Comment=The file manager in foot, xiu's terminal
+TryExec=foot
+Exec=foot -e yazi %f
+MimeType=inode/directory;
+Categories=System;FileManager;FileTools;
+Keywords=File;Manager;Explorer;
