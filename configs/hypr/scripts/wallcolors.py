@@ -29,6 +29,7 @@ import json
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -1437,13 +1438,29 @@ def render_zed(pill):
 
 
 def render_browser(pill):
-    """Brave/Chromium pick their toolbar color up from a managed policy.
-    The payload lands in xiu's own config dir; `xiu browser` (or the
-    installer) copies it into /etc, which needs root."""
+    """Brave/Chromium pick their toolbar color up from a managed policy,
+    caelestia's trick: BrowserThemeColor tints the chrome, BrowserColorScheme
+    makes dark-mode follow the device rather than a manual flag, and the
+    --refresh-platform-policy poke makes a RUNNING browser re-read the policy
+    with no restart. The payload lands in xiu's own config dir; `xiu browser`
+    (or the installer) copies it into /etc, which needs root."""
     d = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "xiu"
     d.mkdir(parents=True, exist_ok=True)
     (d / "browser-theme.json").write_text(
-        json.dumps({"BrowserThemeColor": pill["surface"]}, indent=2) + "\n")
+        json.dumps({
+            "BrowserThemeColor": pill["surface"],
+            "BrowserColorScheme": "device",
+        }, indent=2) + "\n")
+    # Best-effort poke: it only matters when the browser runs, and a fresh
+    # install applies the policy at first launch anyway. Detached with a
+    # short timeout — Brave's --no-startup-window still lingers as a live
+    # process, and wallcolors runs at boot where a hang would be fatal.
+    for cmd in ("brave", "chromium"):
+        if shutil.which(cmd):
+            subprocess.Popen(
+                ["timeout", "10", cmd, "--refresh-platform-policy", "--no-startup-window"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True)
 
 
 def _rgb(hex_str):
@@ -1600,7 +1617,36 @@ def fan_out(pill, seed, variant, share=None):
     render_browser(pill)
     render_gtk(pill)
     render_qt(pill)
+    render_user_templates(pill, b)
     return 0
+
+
+def render_user_templates(pill, b):
+    """caelestia's escape hatch: every file in ~/.config/xiu/templates/ gets
+    `{{ $token }}` filled from the pill (and `{{ $baseNN }}` from the
+    terminal's base16) and lands beside the template with its extension kept
+    minus `.in`. Whatever app config the user points here follows the palette
+    with zero code — the last mile for apps this pipeline does not know. The
+    directory is absent by default and never created by the pipeline: it is
+    purely the user's own.
+    """
+    src = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "xiu" / "templates"
+    if not src.is_dir():
+        return
+    tokens = dict(pill)
+    for k, v in b.items():
+        tokens[k] = v
+    for f in src.iterdir():
+        if not f.is_file() or not f.name.endswith(".in"):
+            continue
+        try:
+            text = f.read_text()
+            for k, v in tokens.items():
+                text = text.replace("{{ $%s }}" % k, v.lstrip("#"))
+            out = f.with_name(f.name[:-3])
+            out.write_text(text)
+        except OSError:
+            continue
 
 
 def main():
