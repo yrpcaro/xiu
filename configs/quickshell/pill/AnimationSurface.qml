@@ -129,7 +129,7 @@ SettingsSurface {
         reloadTimer.restart();
     }
 
-    FileView { id: animFile; path: root.animPath; blockLoading: true; printErrors: false }
+    FileView { id: animFile; path: root.animPath; blockLoading: true; blockAllReads: true; printErrors: false }
     FileView { id: animWriter; path: root.animPath; atomicWrites: true; printErrors: false }
     Process { id: reloadProc; command: ["setsid", "-f", "sh", "-c", "sleep 0.3; hyprctl reload"] }
     Timer { id: reloadTimer; interval: 250; repeat: false; onTriggered: reloadProc.running = true }

@@ -298,6 +298,7 @@ SettingsSurface {
         id: decoFile
         path: root.decoPath
         blockLoading: true
+        blockAllReads: true
         printErrors: false
     }
 

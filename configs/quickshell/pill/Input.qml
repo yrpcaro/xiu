@@ -246,6 +246,7 @@ SettingsSurface {
         id: inputFile
         path: root.inputPath
         blockLoading: true
+        blockAllReads: true
         printErrors: false
     }
 
@@ -270,6 +271,7 @@ SettingsSurface {
         id: envFile
         path: root.envPath
         blockLoading: true
+        blockAllReads: true
         printErrors: false
     }
 
