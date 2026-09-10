@@ -229,7 +229,7 @@ hl.bind(mod .. " + code:36", hl.dsp.exec_cmd(vars.terminal)) -- terminal
 hl.bind(mod .. " + code:25", hl.dsp.exec_cmd(vars.browser)) -- browser [W]
 hl.bind(mod .. " + code:54", hl.dsp.exec_cmd(vars.editor)) -- editor [C]
 hl.bind(mod .. " + code:26", hl.dsp.exec_cmd(vars.fileManager)) -- file manager [E]
-hl.bind(mod .. " + code:38", hl.dsp.exec_cmd(vars.telegram)) -- telegram [A]
+hl.bind(mod .. " + code:38", toggles.toggle("communication")) -- communication workspace (telegram + discord) [A]
 hl.bind(mod .. " + code:32", hl.dsp.exec_cmd(vars.musicPlayer)) -- spotify [O]
 hl.bind("CTRL + ALT + code:55", hl.dsp.exec_cmd("xiu open mixer")) -- mixer [V]
 
