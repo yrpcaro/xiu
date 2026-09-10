@@ -455,7 +455,10 @@ Item {
             ldWorkspaces.item.closeForm();
             return;
         }
-        if (pill.appearanceOpen || pill.updatesOpen || pill.displayOpen || pill.inputOpen || pill.lookOpen || pill.idlelockOpen || pill.animationOpen || pill.workspacesOpen || pill.defaultappsOpen || pill.weatherOpen) {
+        // The weather surface is not a settings page — its entry point is the
+        // pill's weather glance — so its back target is the fallthrough below:
+        // close to the pill, never the settings index.
+        if (pill.appearanceOpen || pill.updatesOpen || pill.displayOpen || pill.inputOpen || pill.lookOpen || pill.idlelockOpen || pill.animationOpen || pill.workspacesOpen || pill.defaultappsOpen) {
             pill.requestSurface("settings");
             return;
         }
