@@ -126,3 +126,17 @@ set -g fish_greeting
 if test -f ~/.config/xiu/user-config.fish
     source ~/.config/xiu/user-config.fish
 end
+
+# Hyprland through uwsm at the tty1 login shell. uwsm's own `check may-start`
+# is the whole gate: it is true only on a real login shell at VT1 with no
+# graphical session already active, so a terminal inside the session never
+# re-triggers it and a noninteractive shell never sees this block (the
+# interactive exit above keeps scripts out). uwsm stages configs/uwsm/env
+# into the systemd user session and its picker offers every installed
+# desktop entry; a bare `uwsm start` with no compositor argument shows that
+# menu. Set UWSM_AUTOSTART_OFF anywhere to disable.
+if status is-login; and type -q uwsm; and uwsm check may-start -q
+    if not set -q UWSM_AUTOSTART_OFF
+        exec uwsm start
+    end
+end
