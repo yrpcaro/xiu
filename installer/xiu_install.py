@@ -1392,19 +1392,11 @@ def run(args):
                              "installer after their first launch to wire the theme in.")
 
         # n2. chosen extras that need one activation step past the package:
-        #     spicetify gets pointed at the xiu theme and applied once, and
         #     vesktop's themes dir is created so the palette pipeline has
         #     somewhere to drop the xiu CSS (vesktop normally creates it on
         #     first run, which may be after the first wallpaper change).
+        #     spicetify stays deliberately vanilla — installed, never themed.
         if not dry:
-            if "spicetify-cli" in choices["optional_ids"] and shutil.which("spicetify"):
-                ok, detail = _run(["spicetify", "config", "current_theme", "xiu",
-                                   "color_scheme", "xiu"], dry)
-                record(ok, detail, "Select spicetify theme",
-                       "Run: spicetify config current_theme xiu color_scheme xiu")
-                ok, detail = _run(["spicetify", "backup", "apply"], dry)
-                record(ok, detail, "Apply spicetify theme",
-                       "Run: spicetify backup apply")
             if "vesktop" in choices["optional_ids"]:
                 try:
                     (Path.home() / ".config" / "vesktop" / "themes").mkdir(

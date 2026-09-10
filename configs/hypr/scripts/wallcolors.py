@@ -1097,49 +1097,6 @@ def render_yazi(pill, b):
     (d / "theme.toml").write_text("\n".join(lines) + "\n")
 
 
-def render_spicetify(pill, b):
-    """Spotify through spicetify: the xiu theme's color.ini is regenerated on
-    every palette change; `spicetify refresh` pushes it into the client, run
-    only when the theme is the configured current one (opt-in through the
-    installer) so a vanilla spicetify setup is never touched."""
-    d = _tool_dir("spicetify")
-    if d is None:
-        return
-    theme = d / "Themes" / "xiu"
-    if not theme.is_dir():
-        return
-    p = pill
-    h = lambda c: c.lstrip("#").upper()
-    lines = [
-        "; Xiu Spotify theme — colors kept fresh by wallcolors.py on every",
-        "; palette change. Selected with: spicetify config current_theme xiu",
-        "[xiu]",
-        "text               = %s" % h(p["bright"]),
-        "subtext            = %s" % h(p["subtle"]),
-        "main               = %s" % h(p["surface"]),
-        "main-elevated      = %s" % h(p["surface_container_high"]),
-        "highlight          = %s" % h(p["surface_container"]),
-        "highlight-elevated = %s" % h(p["surface_container_highest"]),
-        "sidebar            = %s" % h(p["surface_container"]),
-        "player             = %s" % h(p["surface_container"]),
-        "card               = %s" % h(p["primary_container"]),
-        "shadow             = %s" % h(p["surface_container"]),
-        "selected-row       = %s" % h(p["bright"]),
-        "button             = %s" % h(p["primary"]),
-        "button-active      = %s" % h(p["primary_container"]),
-        "button-disabled    = %s" % h(p["outline_variant"]),
-        "tab-active         = %s" % h(p["surface_container_high"]),
-        "notification       = %s" % h(p["primary"]),
-        "notification-error = %s" % h(b["base08"]),
-        "misc               = %s" % h(p["subtle"]),
-    ]
-    theme.mkdir(parents=True, exist_ok=True)
-    (theme / "color.ini").write_text("\n".join(lines) + "\n")
-    prefs = d / "config-xpui.ini"
-    if prefs.is_file() and "current_theme = xiu" in prefs.read_text():
-        subprocess.run(["spicetify", "refresh"], stderr=subprocess.DEVNULL)
-
-
 def render_userchrome(pill):
     """Recolor the xiu palette block inside every deployed userChrome.css
     (Firefox and Zen profiles the installer wired), so the browser chrome
@@ -1216,77 +1173,6 @@ def render_discord(pill):
         tdir = Path.home() / ".config" / client / "themes"
         if tdir.is_dir():
             (tdir / "xiu.css").write_text(css)
-
-
-def render_telegram(pill):
-    """Telegram Desktop themes are .attheme files — one `key: #AARRGGBB` line
-    per palette slot. There is no live-reload hook, so the theme is kept fresh
-    at a stable path; import it once (Settings > Chat settings > ... > Import
-    custom theme) and re-import whenever you want to pull a new palette."""
-    d = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "xiu"
-    d.mkdir(parents=True, exist_ok=True)
-    p = pill
-
-    def argb(c, a="ff"):
-        return "#" + a + c.lstrip("#")
-
-    keys = [
-        ("windowBg", argb(p["surface"])),
-        ("windowFg", argb(p["cream"])),
-        ("windowBgOver", argb(p["surface_container"])),
-        ("windowBgRipple", argb(p["surface_container_high"])),
-        ("windowSubTextFg", argb(p["dim"])),
-        ("windowBoldFg", argb(p["bright"])),
-        ("windowActiveTextFg", argb(p["primary"])),
-        ("titleBg", argb(p["surface_container"])),
-        ("titleFg", argb(p["subtle"])),
-        ("dialogsBg", argb(p["surface"])),
-        ("dialogsBgOver", argb(p["surface_container"])),
-        ("dialogsBgActive", argb(p["surface_container_high"])),
-        ("dialogsNameFg", argb(p["cream"])),
-        ("dialogsDateFg", argb(p["dim"])),
-        ("dialogsTextFg", argb(p["subtle"])),
-        ("dialogsUnreadBg", argb(p["primary"])),
-        ("dialogsUnreadFg", argb(p["bright"])),
-        ("msgInBg", argb(p["surface_container"])),
-        ("msgInBgSelected", argb(p["surface_container_high"])),
-        ("msgOutBg", argb(p["surface_container_high"])),
-        ("msgOutBgSelected", argb(p["surface_container_highest"])),
-        ("historyTextInFg", argb(p["cream"])),
-        ("historyTextOutFg", argb(p["bright"])),
-        ("msgInServiceFg", argb(p["subtle"])),
-        ("msgOutServiceFg", argb(p["subtle"])),
-        ("msgInDateFg", argb(p["dim"])),
-        ("msgOutDateFg", argb(p["dim"])),
-        ("boxBg", argb(p["surface_container"])),
-        ("boxTitleFg", argb(p["bright"])),
-        ("boxTextFg", argb(p["cream"])),
-        ("menuBg", argb(p["surface_container"])),
-        ("menuBgOver", argb(p["surface_container_high"])),
-        ("menuIconFg", argb(p["subtle"])),
-        ("menuFgDisabled", argb(p["faint"])),
-        ("scrollBarBg", argb(p["outline_variant"])),
-        ("activeButtonBg", argb(p["primary"])),
-        ("activeButtonFg", argb(p["on_primary_container"])),
-        ("lightButtonBg", argb(p["surface_container"])),
-        ("lightButtonFg", argb(p["cream"])),
-        ("attentionButtonFg", argb(p["primary"])),
-        ("sliderBgActive", argb(p["primary"])),
-        ("sliderBgInactive", argb(p["surface_container_high"])),
-        ("placeholderFg", argb(p["faint"])),
-        ("inputBorderFg", argb(p["outline_variant"])),
-        ("tooltipBg", argb(p["surface_container_highest"])),
-        ("tooltipFg", argb(p["subtle"])),
-        ("radialFg", argb(p["primary"])),
-    ]
-    lines = [
-        "// xiu Telegram theme — written by wallcolors.py on every palette change.",
-        "// Import: Settings > Chat settings > (…) > Import custom theme,",
-        "// then pick this file. Re-import to pull a later palette.",
-        "",
-    ]
-    lines += ["%s: %s;" % (k, val) for k, val in keys]
-    (d / "telegram-xiu.attheme").write_text("\n".join(lines) + "\n")
 
 
 def render_vscode(pill):
@@ -1608,9 +1494,7 @@ def fan_out(pill, seed, variant, share=None):
     render_helix(pill, b)
     render_bottom(pill, b)
     render_yazi(pill, b)
-    render_spicetify(pill, b)
     render_discord(pill)
-    render_telegram(pill)
     render_userchrome(pill)
     render_vscode(pill)
     render_zed(pill)
