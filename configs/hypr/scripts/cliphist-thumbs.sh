@@ -17,8 +17,11 @@ for f in "$cache"/*.png; do
 done
 
 printf '%s\n' "$snapshot" | while IFS= read -r line; do
+    # clipvault's metadata always carries dimensions after the mime
+    # ("image/png 400x300 ]]"), so the pattern must not pin the mime against
+    # the closing bracket.
     case "$line" in
-        *"$tab[[ binary data"*image/" ]]"*)
+        *"$tab[[ binary data"*image/*"]]"*)
             id=$(printf '%s' "$line" | cut -f1)
             thumb="$cache/$id.png"
             if [ ! -s "$thumb" ]; then
