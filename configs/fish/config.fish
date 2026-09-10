@@ -87,8 +87,10 @@ end
 
 # Terminals that never read a config file still open in the current palette:
 # replay the wallcolors OSC sequences, guarded so piped shells stay clean.
+# `command cat` is the real cat: the interactive alias is bat, which would
+# frame the raw escape sequences as a pretty-printed "file" on every open.
 if test -t 1; and test -f ~/.cache/ricelin/sequences.txt
-    cat ~/.cache/ricelin/sequences.txt
+    command cat ~/.cache/ricelin/sequences.txt
 end
 
 # Prompt marks (OSC 133) so the terminal can jump between prompts in scrollback
