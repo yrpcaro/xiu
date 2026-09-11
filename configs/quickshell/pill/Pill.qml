@@ -634,8 +634,18 @@ Item {
             soulWsIndex = -1;
         }
     }
+    onHoverSoulGateChanged: if (hoverSoulGate) kanjiFlashAnim.restart()
+
     property string soulTarget: ""
     property int soulWsIndex: -1
+
+    property real kanjiFlash: 0
+
+    SequentialAnimation {
+        id: kanjiFlashAnim
+        NumberAnimation { target: pill; property: "kanjiFlash"; to: 1; duration: 90; easing.type: Easing.OutCubic }
+        NumberAnimation { target: pill; property: "kanjiFlash"; to: 0; duration: 320; easing.type: Easing.OutCubic }
+    }
 
     Behavior on width { NumberAnimation { id: morphAnimW; duration: pill.hoverHop ? Motion.glide : Motion.morph; easing.type: Motion.easeMorph; easing.bezierCurve: Motion.morphCurve } }
     Behavior on height { NumberAnimation { id: morphAnimH; duration: pill.hoverHop ? Motion.glide : Motion.morph; easing.type: Motion.easeMorph; easing.bezierCurve: Motion.morphCurve } }
@@ -751,14 +761,13 @@ Item {
     }
 
     /**
-     * Rest anchor for Ame: the centre of the resting pill — with the clock
-     * glyph gone, the time itself is the resting face. The idle outline
-     * condenses into the bead here before it moves.
+     * Rest anchor for Ame: the 時 kanji centre. The idle outline condenses into
+     * the bead here before it moves.
      */
     readonly property point wakePoint: {
         void pill.width;
         void pill.height;
-        return Qt.point(pill.width / 2, pill.height / 2);
+        return restKanji.mapToItem(pill, restKanji.width / 2, restKanji.height / 2);
     }
 
     /**
@@ -1286,9 +1295,61 @@ Item {
             id: restRow
             anchors.centerIn: parent
             spacing: 9 * pill.s
-            // No glyph beside the time — the clock owns the resting face
-            // alone (the kanji/clock-icon/MusicBars block it used to share
-            // the row with is gone; the hover pill keeps its full face).
+            Item {
+                id: restKanji
+                visible: pill.specialView === ""
+                anchors.verticalCenter: parent.verticalCenter
+                width: kanjiFill.implicitWidth
+                height: kanjiFill.implicitHeight
+
+                /** Audio leaving the speakers flips the clock glyph over to the live waveform. */
+                readonly property bool barsOn: Flags.musicViz && Cava.active
+
+                Text {
+                    anchors.fill: parent
+                    opacity: (Flags.showGlyphs && !restKanji.barsOn) ? 1 : 0
+                    text: kanjiFill.text
+                    color: "transparent"
+                    font: kanjiFill.font
+                    style: Text.Outline
+                    styleColor: Qt.alpha(Theme.vermLit,
+                        Math.min(1, (pill.mode === "rest" || !pill.hoverSoulGate ? 0.5 : 0) + pill.kanjiFlash))
+                    Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                }
+
+                Text {
+                    id: kanjiFill
+                    opacity: (Flags.showGlyphs && !restKanji.barsOn) ? 1 : 0
+                    text: "時"
+                    color: Theme.cream
+                    font.family: Theme.fontJp
+                    font.weight: Font.Medium
+                    font.pixelSize: 15 * pill.s
+                    Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                }
+
+                GlyphIcon {
+                    anchors.centerIn: parent
+                    opacity: (!Flags.showGlyphs && !restKanji.barsOn) ? 1 : 0
+                    width: 17 * pill.s
+                    height: 17 * pill.s
+                    name: "clock"
+                    color: Theme.cream
+                    stroke: 1.7
+                    Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                }
+
+                MusicBars {
+                    id: musicBars
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: kanjiFill.baseline
+                    s: pill.s
+                    opacity: restKanji.barsOn ? 1 : 0
+                    scale: restKanji.barsOn ? 1 : 0.7
+                    Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                    Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                }
+            }
             Text {
                 visible: pill.specialView === ""
                 anchors.verticalCenter: parent.verticalCenter
@@ -1329,7 +1390,6 @@ Item {
             font.weight: Font.DemiBold
             font.letterSpacing: 2 * pill.s
             opacity: 0
-            property bool armed: false
             Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
 
             Connections {
