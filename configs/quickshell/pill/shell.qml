@@ -177,6 +177,7 @@ ShellRoot {
         function battery(mon: string): void { root.toggleSurface(mon, "battery"); }
         function settings(mon: string): void { root.toggleSurface(mon, "settings"); }
         function keybinds(mon: string): void { root.toggleSurface(mon, "keybinds"); }
+        function emoji(mon: string): void { root.toggleSurface(mon, "emoji"); }
         function recorder(mon: string): void { root.toggleSurface(mon, "recorder"); }
         function screenrec(mon: string): void { root.toggleSurface(mon, "recorder"); }
         function record(mon: string): void { root.toggleSurface(mon, "recorder"); }

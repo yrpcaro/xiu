@@ -65,10 +65,11 @@ Item {
     readonly property bool animationOpen: surface === "animation"
     readonly property bool defaultappsOpen: surface === "defaultapps"
     readonly property bool weatherOpen: surface === "weather"
+    readonly property bool emojiOpen: surface === "emoji"
     readonly property bool fontpickerOpen: surface === "fontpicker"
     readonly property bool settingsLike: settingsOpen || appearanceOpen || updatesOpen
         || lookOpen || inputOpen || displayOpen || animationOpen || idlelockOpen
-        || defaultappsOpen || weatherOpen || fontpickerOpen
+        || defaultappsOpen || weatherOpen || emojiOpen || fontpickerOpen
     readonly property bool hasMedia: Players.list.length > 0
 
     readonly property var netDevices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
@@ -183,6 +184,7 @@ Item {
     readonly property real animationW: 392 * s
     readonly property real defaultappsW: 392 * s
     readonly property real weatherW: 392 * s
+    readonly property real emojiW: 360 * s
     readonly property real fontpickerW: 360 * s
     readonly property real toastW: 342 * s
     readonly property real quickChooseW: 344 * s
@@ -247,6 +249,7 @@ Item {
         idlelock:   { size: () => Qt.size(idlelockW, surfaceItem(ldIdlelock).implicitHeight + 29 * s), ame: () => surfaceItem(ldIdlelock) },
         defaultapps: { size: () => Qt.size(defaultappsW, surfaceItem(ldDefaultapps).implicitHeight + 29 * s), ame: () => surfaceItem(ldDefaultapps) },
         weather:    { size: () => Qt.size(weatherW, surfaceItem(ldWeather).implicitHeight + 29 * s), ame: () => surfaceItem(ldWeather) },
+        emoji:      { size: () => Qt.size(emojiW, Math.min(420 * s, surfaceItem(ldEmoji).implicitHeight + 29 * s)), ame: () => surfaceItem(ldEmoji) },
         animation:  { size: () => Qt.size(animationW, surfaceItem(ldAnimation).implicitHeight + 29 * s), ame: () => surfaceItem(ldAnimation) },
         fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) }
     })
@@ -320,6 +323,8 @@ Item {
             return ldDefaultapps.item;
         if (pill.weatherOpen)
             return ldWeather.item;
+        if (pill.emojiOpen)
+            return ldEmoji.item;
         if (pill.fontpickerOpen)
             return ldFontpicker.item;
         return null;
@@ -2219,6 +2224,18 @@ Item {
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
             onRequestSurface: (name) => pill.requestSurface(name)
+        }
+    }
+
+    Loader {
+        id: ldEmoji
+        active: false
+        anchors.fill: parent
+        sourceComponent: Emoji {
+            s: pill.s
+            open: pill.emojiOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
         }
     }
 
