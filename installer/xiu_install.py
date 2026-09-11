@@ -708,6 +708,37 @@ YAZI_PLUGINS = [
 ]
 
 
+def wire_portal_chooser(dry):
+    """
+    Point the termfilechooser portal at the rice's yazi wrapper, so every
+    app's file dialog opens yazi in foot. The backend reads
+    ~/.config/xdg-desktop-portal-termfilechooser/config.toml for its cmd; our
+    wrapper ships in configs/hypr/scripts and the portals.conf (deployed with
+    the rest of the configs) routes FileChooser to the backend. Skipped when
+    the backend is not installed — the config file would sit unused and the
+    portal would fall back to gtk.
+    """
+    home = Path.home()
+    cfg = home / ".config" / "xdg-desktop-portal-termfilechooser" / "config.toml"
+    wrapper = home / ".config" / "hypr" / "scripts" / "yazi-chooser.sh"
+    if dry:
+        print(f"  would wire the portal chooser -> {cfg}")
+        return True, ""
+    if not wrapper.is_file():
+        print("  yazi-chooser.sh not deployed yet; portal chooser waits for the next re-run")
+        return True, ""
+    try:
+        cfg.parent.mkdir(parents=True, exist_ok=True)
+        cfg.write_text(
+            "[filechooser]\n"
+            f"cmd={wrapper}\n"
+            "default_dir={}\n".replace("{}", str(home)) + "\n")
+        print(f"  wired portal FileChooser -> yazi ({cfg})")
+        return True, ""
+    except OSError as exc:
+        return False, f"{exc}: wire portal chooser"
+
+
 def install_yazi_plugins(dry):
     """
     Add the plugins the shipped yazi.toml keymap binds, through yazi's own
@@ -1348,6 +1379,12 @@ def run(args):
         ok, detail = install_yazi_plugins(dry)
         record(ok, detail, "Install yazi plugins",
                "Run: ya pkg add <plugins> (see installer/xiu_install.py YAZI_PLUGINS).")
+
+        # l4. the portal FileChooser backend, pointed at the yazi wrapper.
+        ok, detail = wire_portal_chooser(dry)
+        record(ok, detail, "Wire portal file chooser",
+               "Write ~/.config/xdg-desktop-portal-termfilechooser/config.toml "
+               "pointing cmd= at ~/.config/hypr/scripts/yazi-chooser.sh.")
 
         ok, detail = seed_wallpapers(dry)
         record(ok, detail, "Seed wallpapers",

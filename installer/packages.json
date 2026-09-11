@@ -230,6 +230,9 @@
     { "id": "uwsm", "group": "full", "required": false, "desc": "Universal Wayland Session Manager (env files ship in configs/uwsm)", "aur": false,
       "names": { "arch": "uwsm", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 
+    { "id": "termfilechooser", "group": "full", "required": false, "desc": "Portal FileChooser backend: apps' file dialogs open yazi in foot (yazi-chooser.sh)", "aur": true,
+      "names": { "arch": "xdg-desktop-portal-termfilechooser", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
     { "id": "adw-gtk-theme", "group": "full", "required": false, "desc": "GTK theme the palette pipeline recolors", "aur": false,
       "names": { "arch": "adw-gtk-theme", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 
