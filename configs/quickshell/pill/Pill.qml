@@ -1289,10 +1289,12 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: clock.hhmm
                 color: Theme.cream
+                opacity: layoutFlash.opacity === 0 ? 1 : 1 - layoutFlash.opacity
                 font.family: Theme.font
                 font.pixelSize: 16 * pill.s
                 font.weight: Font.DemiBold
                 font.features: { "tnum": 1 }
+                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
             }
             Text {
                 visible: pill.specialView !== ""
@@ -1302,6 +1304,41 @@ Item {
                 font.family: Theme.font
                 font.pixelSize: 16 * pill.s
                 font.weight: Font.DemiBold
+            }
+        }
+
+        /**
+         * Layout-change flash: a keybind switch (Alt+Shift, the chips) flips
+         * the layout and the resting pill answers by showing the new code
+         * centered, over the time, for ~1.5s — then the time fades back.
+         * Purely an overlay on the fixed rest size; nothing measures it, so
+         * the pill never resizes. Re-arms on every change tick.
+         */
+        Text {
+            id: layoutFlash
+            anchors.centerIn: parent
+            text: Keymap.code
+            color: Theme.vermLit
+            font.family: Theme.font
+            font.pixelSize: 15 * pill.s
+            font.weight: Font.DemiBold
+            font.letterSpacing: 2 * pill.s
+            opacity: 0
+            property bool armed: false
+            Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
+
+            Connections {
+                target: Keymap
+                function onChangedChanged() {
+                    layoutFlash.opacity = 1;
+                    layoutFlashHide.restart();
+                }
+            }
+
+            Timer {
+                id: layoutFlashHide
+                interval: 1500
+                onTriggered: layoutFlash.opacity = 0
             }
         }
     }

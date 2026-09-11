@@ -18,6 +18,14 @@ Singleton {
     readonly property string code: (keymap.indexOf("Persian") >= 0 || keymap.indexOf("Farsi") >= 0) ? "FA" : (keymap.length > 0 ? "US" : "")
 
     /**
+     * A monotonically increasing tick each time the layout actually changes
+     * past the initial read — the pill's rest-state flash binds to this so
+     * it can re-arm its timer on every switch without watching keymap
+     * strings itself.
+     */
+    property int changed: 0
+
+    /**
      * How many layouts are configured, from `hyprctl getoption input:kb_layout`.
      * The pill's layout chip (and the layout toggle's whole point) only exist
      * when there is more than one to switch between.
@@ -76,8 +84,12 @@ Singleton {
             if (event.name !== "activelayout")
                 return;
             var parts = String(event.data || "").split(",");
-            if (parts.length >= 2)
-                root.keymap = parts[parts.length - 1];
+            if (parts.length >= 2) {
+                var next = parts[parts.length - 1];
+                if (next !== root.keymap)
+                    root.changed += 1;
+                root.keymap = next;
+            }
         }
     }
 }
