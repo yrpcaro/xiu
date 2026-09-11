@@ -27,26 +27,41 @@ SettingsSurface {
     readonly property string mimeappsPath: Quickshell.env("HOME") + "/.config/mimeapps.list"
     /** One representative mime per category — the one xdg-mime asks about. */
     readonly property var categories: [
+        { label: "Browser", key: "x-scheme-handler/http", mimes: ["x-scheme-handler/http", "x-scheme-handler/https"], icon: "ethernet", discover: "x-scheme-handler/http" },
+        { label: "Terminal", key: "x-scheme-handler/terminal", mimes: ["x-scheme-handler/terminal"], icon: "keyboard", discover: "terminal" },
         { label: "Folders", key: "inode/directory", mimes: ["inode/directory"], icon: "app-window" },
         { label: "Images", key: "image/png", mimes: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"], icon: "palette" },
-        { label: "Documents", key: "application/pdf", mimes: ["application/pdf", "application/epub+zip"], icon: "layers" }
+        { label: "Documents", key: "application/pdf", mimes: ["application/pdf", "application/epub+zip"], icon: "layers" },
+        { label: "Media", key: "video/x-matroska", mimes: ["video/x-matroska", "audio/mpeg", "audio/ogg", "video/mp4"], icon: "music", discover: "audio/" }
     ]
 
+    /** The rice's curated picks per category, offered first when installed. */
+    readonly property var preferred: {
+        var p = {
+            "inode/directory": ["xiu-yazi.desktop", "org.kde.dolphin.desktop", "thunar.desktop"],
+            "image/png": ["imv.desktop", "imv-dir.desktop", "org.gnome.Loupe.desktop", "feh.desktop"],
+            "application/pdf": ["org.pwmt.zathura.desktop", "org.pwmt.zathura-pdf-mupdf.desktop", "org.gnome.Papers.desktop"],
+            "x-scheme-handler/http": [],
+            "x-scheme-handler/terminal": [],
+            "video/x-matroska": []
+        };
+        return p;
+    }
+
     /**
-     * The apps offered per category. The rice's own picks plus whatever the
-     * file already names, so an existing default is always selectable. Only
-     * entries whose .desktop exists are offered.
+     * The apps offered per category. Curated picks first, then discovery:
+     * categories with a `discover` token scan the installed .desktop files
+     * for entries that declare the token (a mime prefix like audio/, or
+     * terminal for the Terminal=true class), so every installed browser,
+     * terminal and player is offered without hardcoding a single id. The
+     * current handler joins even when nothing else found it.
      */
     function appsFor(cat) {
         var out = [];
         var seen = {};
-        var candidates = [];
-        if (cat.key === "inode/directory")
-            candidates = ["xiu-yazi.desktop", "org.kde.dolphin.desktop", "thunar.desktop"];
-        else if (cat.key === "image/png")
-            candidates = ["imv.desktop", "imv-dir.desktop", "org.gnome.Loupe.desktop", "feh.desktop"];
-        else
-            candidates = ["org.pwmt.zathura.desktop", "org.pwmt.zathura-pdf-mupdf.desktop", "org.gnome.Papers.desktop"];
+        var candidates = (preferred[cat.key] || []).slice();
+        if (cat.discover)
+            candidates = candidates.concat(discoverApps(cat.discover));
         // the current handler joins the list even when not a shipped candidate
         var cur = handlerFor(cat.key);
         if (cur.length > 0 && candidates.indexOf(cur) < 0)
@@ -57,6 +72,46 @@ SettingsSurface {
                 continue;
             seen[id] = true;
             out.push({ label: desktopLabel(id), value: id });
+        }
+        return out;
+    }
+
+    /**
+     * Installed .desktop ids declaring a discovery token: browsers and media
+     * players through their MimeType= line, terminals through Terminal=true.
+     * The desktop probe's ls gives us the ids; a second pass over the files'
+     * own text (same cat, cheap on the settings open) gives the declarations.
+     */
+    function discoverApps(token) {
+        var out = [];
+        if (token === "terminal") {
+            var lines = desktopCollected.text.split("\n");
+            var current = "";
+            var isTerminal = false;
+            for (var i = 0; i < lines.length; i++) {
+                var l = lines[i];
+                if (l.indexOf("=== ") === 0) {
+                    if (current && isTerminal)
+                        out.push(current);
+                    current = l.slice(4).trim();
+                    isTerminal = false;
+                } else if (l.indexOf("Terminal=true") === 0) {
+                    isTerminal = true;
+                }
+            }
+            if (current && isTerminal)
+                out.push(current);
+            return out;
+        }
+        // mime-token discovery: the probe carries "id: mime-list" lines
+        var decls = desktopCollected.text.split("\n");
+        for (var j = 0; j < decls.length; j++) {
+            var d = decls[j];
+            var c = d.indexOf(": ");
+            if (c < 1)
+                continue;
+            if (d.slice(c + 2).indexOf(token) >= 0)
+                out.push(d.slice(0, c));
         }
         return out;
     }
@@ -108,23 +163,33 @@ SettingsSurface {
     }
 
     /**
-     * The .desktop availability probe: the file names under
-     * /usr/share/applications and the user's local overrides dir. Offered
-     * apps gate on this so the page never offers a handler that cannot run.
+     * The .desktop probe, one pass over both applications dirs: it emits
+     * "id: mimetypes" for every entry (Terminal=true entries get the
+     * terminal token), which feeds both the existence check and the
+     * category discovery — browsers and media players are found by their
+     * declared mimes, terminals by their class. Offered apps gate on the
+     * existence list so the page never offers a handler that cannot run.
      */
     Process {
         id: desktopProc
         property var exists: []
         command: ["sh", "-c",
-            "ls /usr/share/applications \"$HOME/.local/share/applications\" 2>/dev/null || true"]
+            "for f in /usr/share/applications/*.desktop "
+            + "\"$HOME\"/.local/share/applications/*.desktop; do "
+            + "[ -f \"$f\" ] || continue; "
+            + "id=$(basename \"$f\"); "
+            + "mimes=$(grep -h '^MimeType=' \"$f\" | cut -d= -f2); "
+            + "grep -q -e '^Terminal=true' -e 'TerminalEmulator' \"$f\" && term=\" terminal\" || term=\"\"; "
+            + "echo \"$id: $mimes$term\"; done"]
         stdout: StdioCollector { id: desktopCollected }
         onExited: {
-            var names = desktopCollected.text.split("\n");
+            var lines = desktopCollected.text.split("\n");
             var out = [];
-            for (var i = 0; i < names.length; i++) {
-                var n = names[i].trim();
-                if (n.length > 0 && n.indexOf(".desktop") === n.length - 8)
-                    out.push(n);
+            for (var i = 0; i < lines.length; i++) {
+                var l = lines[i];
+                var c = l.indexOf(": ");
+                if (c > 0)
+                    out.push(l.slice(0, c));
             }
             desktopProc.exists = out;
         }
