@@ -27,7 +27,7 @@ fn main() {
 
 fn dispatch(cli: &cli::Cli) -> i32 {
     use cli::Commands;
-    use commands::{check, control, emoji, shell};
+    use commands::{check, control, shell};
     match &cli.command {
         Commands::Shell { kill, target, args } => shell::shell(*kill, target.as_deref(), args),
         Commands::Open { surface } => shell::open(surface),
@@ -40,7 +40,6 @@ fn dispatch(cli: &cli::Cli) -> i32 {
         Commands::Gamemode { action } => shell::gamemode(action),
         Commands::Scheme { action, value, variant } => shell::scheme(action, value.as_deref(), variant.as_deref()),
         Commands::Browser => shell::browser(),
-        Commands::Emoji { pick, list, query } => emoji::emoji(*pick, *list, query),
         Commands::Check => check::check(),
         Commands::Restart { target } => control::restart(target.as_deref()),
         Commands::Start { target } => control::start(target.as_deref()),

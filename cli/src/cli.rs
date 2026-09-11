@@ -93,17 +93,6 @@ pub enum Commands {
     },
     /// Apply the palette policy to Brave/Chromium
     Browser,
-    /// Copy the matching emoji (-p: ask, -l: list)
-    Emoji {
-        /// Pick from the matches instead of taking the first
-        #[arg(short, long)]
-        pick: bool,
-        /// List the matches instead of copying
-        #[arg(short, long)]
-        list: bool,
-        /// The search query
-        query: Vec<String>,
-    },
     /// Drift and health report for the install
     Check,
     /// Cycle a surface (default: pill)

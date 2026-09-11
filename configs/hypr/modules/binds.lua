@@ -76,6 +76,7 @@ end
 -- mod-only release shadowing is not dependable across versions — so the
 -- launcher moved to an ordinary combo.
 hl.bind(mod .. " + code:65", hl.dsp.exec_cmd("xiu open launcher")) -- launcher
+hl.bind(mod .. " + code:61", hl.dsp.exec_cmd("xiu open emoji")) -- emoji picker
 
 -- Keyboard layout: us <-> ir(winkeys), Alt+Shift like the classic DE toggle.
 -- The pill's layout chip, the lock's chip and the lock-screen binds all fire

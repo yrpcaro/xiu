@@ -3,5 +3,4 @@
 
 pub mod check;
 pub mod control;
-pub mod emoji;
 pub mod shell;

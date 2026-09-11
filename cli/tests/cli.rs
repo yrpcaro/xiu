@@ -47,30 +47,6 @@ fn unknown_subcommand_is_a_usage_error() {
 }
 
 #[test]
-fn emoji_lists_its_table() {
-    Command::cargo_bin("xiu")
-        .unwrap()
-        .args(["emoji", "-l"])
-        .assert()
-        .success()
-        .stdout(contains("shrug").and(contains("tableflip")));
-}
-
-#[test]
-fn emoji_query_words_join_with_spaces() {
-    // Multi-word queries join into one search string: "thumbs up" matches
-    // the "thumbsup" entry only through single-word names — this multi-word
-    // phrase is the honest contract (no match), same as the old CLI.
-    Command::cargo_bin("xiu")
-        .unwrap()
-        .args(["emoji", "thumbs", "up"])
-        .assert()
-        .failure()
-        .code(1)
-        .stderr(contains("no match for 'thumbs up'"));
-}
-
-#[test]
 fn check_reports_config_state() {
     // check reads the real HOME; it must print its three sections and exit
     // 0/1 (this box is not a live xiu install, so 1 is expected).
