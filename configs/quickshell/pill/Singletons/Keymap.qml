@@ -15,7 +15,31 @@ Singleton {
     id: root
 
     property string keymap: ""
-    readonly property string code: (keymap.indexOf("Persian") >= 0 || keymap.indexOf("Farsi") >= 0) ? "FA" : (keymap.length > 0 ? "US" : "")
+    /**
+     * Fold a verbose keymap name into the short code the chips show, for any
+     * configured layout: the parenthetical country code when the name carries
+     * one ("English (US)" -> "US", "German (DE)" -> "DE"), a small name map
+     * for the languages whose xkb names have no parentheses (Persian -> FA),
+     * else the first two letters of the name — never a hardcoded layout set.
+     */
+    function codeFor(name) {
+        if (!name || name.length === 0)
+            return "";
+        var m = /\(([^)]+)\)\s*$/.exec(name);
+        if (m)
+            return m[1].toUpperCase();
+        var named = {
+            "persian": "FA", "arabic": "AR", "russian": "RU", "polish": "PL",
+            "ukrainian": "UA", "greek": "GR", "turkish": "TR", "hebrew": "HE",
+            "thai": "TH", "japanese": "JA", "korean": "KO", "chinese": "ZH"
+        };
+        var n = name.toLowerCase();
+        if (named[n] !== undefined)
+            return named[n];
+        return name.substring(0, 2).toUpperCase();
+    }
+
+    readonly property string code: codeFor(keymap)
 
     /**
      * A monotonically increasing tick each time the layout actually changes

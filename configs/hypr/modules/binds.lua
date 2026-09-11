@@ -78,7 +78,8 @@ end
 hl.bind(mod .. " + code:65", hl.dsp.exec_cmd("xiu open launcher")) -- launcher
 hl.bind(mod .. " + code:61", hl.dsp.exec_cmd("xiu open emoji")) -- emoji picker
 
--- Keyboard layout: us <-> ir(winkeys), Alt+Shift like the classic DE toggle.
+-- Keyboard layout: cycles through whichever layouts input.lua configures,
+-- Alt+Shift like the classic DE toggle.
 -- The pill's layout chip, the lock's chip and the lock-screen binds all fire
 -- the same command. These are PRESS binds, each on the second key of the
 -- pair: the toggle fires the moment the pair completes, whichever key went
