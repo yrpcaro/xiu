@@ -147,7 +147,7 @@ def _default_choices(args, info, manifest):
         "sddm_theme": "torii",
         "browser_theme": True,
         "fresh_configs": False,
-        "legacy_swap": "fallback",
+        "legacy_swap": "clean",
         "grub": False,
         "fish": True,
         "brave": args.brave,
@@ -204,10 +204,10 @@ def _wizard(args, info, manifest):
         sddm_theme = ("washi", "torii")[tidx]
 
     lidx = tui.select_one("Legacy tools", [
-        ("Fallback", "ghostty and cliphist stay available as the optional terminal and clipboard backends", True),
-        ("Clean swap", "remove ghostty and cliphist once foot and clipvault are in", False),
+        ("Clean swap", "remove ghostty and cliphist once foot and clipvault are in (Recommended)", True),
+        ("Fallback", "ghostty and cliphist stay available as optional terminal and clipboard backends", False),
     ], default=0)
-    legacy_swap = ("fallback", "clean")[lidx]
+    legacy_swap = ("clean", "fallback")[lidx]
 
     keep = tui.confirm("Keep your existing configs", [
         "Your fish config, keybinds and Settings changes are carried across",

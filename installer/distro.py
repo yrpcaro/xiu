@@ -235,9 +235,9 @@ def _selftest():
     # plan covers core, skips full, marks fallbacks
     core = plan(m, "debian", groups=("core",))
     ids = {r["id"] for r in core}
-    assert "ghostty" in ids and "dolphin" not in ids
-    ghostty = next(r for r in core if r["id"] == "ghostty")
-    assert ghostty["action"] == "fallback" and ghostty["target"] == "ghostty"
+    assert "matugen" in ids and "dolphin" not in ids
+    matugen = next(r for r in core if r["id"] == "matugen")
+    assert matugen["action"] == "fallback" and matugen["target"] == "cargo"
 
     _check_token_mirrors()
 

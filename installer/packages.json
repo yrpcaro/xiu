@@ -68,7 +68,7 @@
     { "id": "foot", "group": "core", "required": true, "desc": "The terminal", "aur": false,
       "names": { "arch": "foot", "debian": "foot", "fedora": "foot", "suse": "foot", "gentoo": "gui-apps/foot" }, "fallback": null },
 
-    { "id": "ghostty", "group": "core", "required": false, "desc": "Alternative terminal (foot is the default)", "aur": false,
+    { "id": "ghostty", "group": "full", "required": false, "desc": "Alternative terminal (foot is the default)", "aur": false,
       "names": { "arch": "ghostty", "debian": null, "fedora": null, "suse": "ghostty", "gentoo": "x11-terms/ghostty" },
       "fallback": "ghostty" },
 
@@ -117,7 +117,7 @@
     { "id": "clipvault", "group": "core", "required": true, "desc": "Clipboard history behind the pill surface", "aur": true,
       "names": { "arch": "clipvault", "debian": null, "fedora": null, "suse": null, "gentoo": null }, "fallback": "cargo" },
 
-    { "id": "cliphist", "group": "core", "required": false, "desc": "Alternative clipboard history (clipvault is the default)", "aur": false,
+    { "id": "cliphist", "group": "full", "required": false, "desc": "Alternative clipboard history (clipvault is the default)", "aur": false,
       "names": { "arch": "cliphist", "debian": "cliphist", "fedora": "cliphist", "suse": "cliphist", "gentoo": "app-misc/cliphist" }, "repo": { "gentoo": "overlay:guru" }, "fallback": null },
 
     { "id": "wl-clipboard", "group": "core", "required": true, "desc": "Wayland clipboard plumbing", "aur": false,
