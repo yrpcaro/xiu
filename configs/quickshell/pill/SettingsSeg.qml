@@ -49,41 +49,15 @@ Rectangle {
         Repeater {
             model: seg.options
 
-            Rectangle {
+            SegPill {
                 id: opt
                 required property var modelData
-                readonly property bool current: seg.value === modelData.value
-                readonly property bool armed: seg.armedValue !== undefined && seg.armedValue === modelData.value
-                property bool hovered: false
+                option: modelData
+                current: seg.value === modelData.value
+                armed: seg.armedValue !== undefined && seg.armedValue === modelData.value
+                s: seg.s
 
-                width: optLabel.implicitWidth + 18 * seg.s
-                height: optLabel.implicitHeight + 12 * seg.s
-                radius: Metrics.rCard * seg.s
-                color: opt.armed ? Qt.alpha(Theme.verm, 0.42)
-                    : (opt.current ? Qt.alpha(Theme.onGlow, 0.16) : (opt.hovered ? Theme.frameBg : "transparent"))
-                border.width: opt.armed ? Metrics.hairW(seg.s) : 0
-                border.color: Qt.alpha(Theme.vermLit, 0.7)
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-
-                Text {
-                    id: optLabel
-                    anchors.centerIn: parent
-                    text: opt.modelData.label
-                    color: (opt.current || opt.armed) ? Theme.cream : Theme.subtle
-                    font.family: Theme.font
-                    font.pixelSize: Metrics.tBody * seg.s
-                    font.weight: Font.Bold
-                    font.letterSpacing: 0.3 * seg.s
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onEntered: opt.hovered = true
-                    onExited: opt.hovered = false
-                    onClicked: seg.picked(opt.modelData.value)
-                }
+                onPicked: value => seg.picked(value)
             }
         }
     }

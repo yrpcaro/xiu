@@ -238,22 +238,91 @@ SettingsSurface {
         Repeater {
             model: root.categories
 
-            delegate: SettingsRow {
+            // Each category is a full-width two-line row: the title line
+            // (icon, name, the current handler as the caption) and the
+            // choices beneath it as a wrapping flow — a category with more
+            // apps than fit one line simply grows another, so the discovered
+            // browser/terminal/media lists never overflow the pill.
+            delegate: Item {
                 id: catRow
                 required property var modelData
-                surface: root
+                required property int index
+                width: parent.width
+                height: titleRow.height + choices.implicitHeight + 16 * root.s
 
-                icon: catRow.modelData.icon
-                name: catRow.modelData.label
-                sub: root.handlerFor(catRow.modelData.key).length > 0
-                    ? "Currently " + root.desktopLabel(root.handlerFor(catRow.modelData.key))
-                    : "No default set"
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 1
+                    color: Theme.hairSoft
+                    visible: catRow.index < root.categories.length - 1
+                }
 
-                SettingsSeg {
-                    s: root.s
-                    options: root.appsFor(catRow.modelData)
-                    value: root.handlerFor(catRow.modelData.key)
-                    onPicked: v => root.apply(catRow.modelData, v)
+                Item {
+                    id: titleRow
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 26 * root.s
+
+                    GlyphIcon {
+                        id: catIcon
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14 * root.s
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Metrics.iconRow * root.s
+                        height: Metrics.iconRow * root.s
+                        name: catRow.modelData.icon
+                        color: Theme.subtle
+                        stroke: Metrics.iconStroke
+                    }
+
+                    Text {
+                        anchors.left: catIcon.right
+                        anchors.leftMargin: 13 * root.s
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: catRow.modelData.label
+                        color: Theme.cream
+                        font.family: Theme.font
+                        font.pixelSize: Metrics.tTitle * root.s
+                        font.weight: Font.DemiBold
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 14 * root.s
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.handlerFor(catRow.modelData.key).length > 0
+                            ? "currently " + root.desktopLabel(root.handlerFor(catRow.modelData.key))
+                            : "no default set"
+                        color: Theme.faint
+                        font.family: Theme.font
+                        font.pixelSize: Metrics.tBody * root.s
+                    }
+                }
+
+                Flow {
+                    id: choices
+                    anchors.top: titleRow.bottom
+                    anchors.topMargin: 4 * root.s
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14 * root.s
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14 * root.s
+                    spacing: 4 * root.s
+
+                    Repeater {
+                        model: root.appsFor(catRow.modelData)
+
+                        delegate: SegPill {
+                            required property var modelData
+                            s: root.s
+                            option: modelData
+                            current: root.handlerFor(catRow.modelData.key) === modelData.value
+                            onPicked: v => root.apply(catRow.modelData, v)
+                        }
+                    }
                 }
             }
         }
