@@ -282,6 +282,8 @@ def _choice_ids(choices):
     fm = choices.get("file_manager")
     if fm and fm != "none":
         ids.add(fm)
+        if fm == "yazi":
+            ids.add("termfilechooser")
     if choices.get("greeter") == "sddm":
         ids.add("sddm")
     elif choices.get("greeter") == "greetd":
@@ -770,26 +772,74 @@ def wire_portal_chooser(dry):
     Point the termfilechooser portal at the rice's yazi wrapper, so every
     app's file dialog opens yazi in foot. The backend reads
     ~/.config/xdg-desktop-portal-termfilechooser/config.toml for its cmd; our
-    wrapper ships in configs/hypr/scripts and the portals.conf (deployed with
-    the rest of the configs) routes FileChooser to the backend. Skipped when
-    the backend is not installed — the config file would sit unused and the
-    portal would fall back to gtk.
+    wrapper ships in configs/hypr/scripts and the deployed portals.conf
+    routes FileChooser to the backend.
+
+    When the backend is not installed (e.g. on a box without the AUR package),
+    the FileChooser routing is removed from the deployed portals.conf so that
+    file dialogs fall back cleanly to GTK. If termfilechooser is present, we
+    wire config.toml, ensure portals.conf routes FileChooser to termfilechooser,
+    and restart xdg-desktop-portal.
     """
     home = Path.home()
     cfg = home / ".config" / "xdg-desktop-portal-termfilechooser" / "config.toml"
     wrapper = home / ".config" / "hypr" / "scripts" / "yazi-chooser.sh"
-    if dry:
-        print(f"  would wire the portal chooser -> {cfg}")
+    portal_conf = home / ".config" / "xdg-desktop-portal" / "hyprland-portals.conf"
+
+    backend_present = (
+        Path("/usr/share/xdg-desktop-portal/portals/termfilechooser.portal").is_file()
+        or shutil.which("xdg-desktop-portal-termfilechooser") is not None
+        or Path("/usr/lib/xdg-desktop-portal-termfilechooser").is_file()
+        or Path("/usr/libexec/xdg-desktop-portal-termfilechooser").is_file()
+    )
+
+    if not backend_present:
+        if portal_conf.is_file() and not dry:
+            try:
+                text = portal_conf.read_text()
+                lines = [l for l in text.splitlines(keepends=True)
+                         if not l.strip().startswith("org.freedesktop.impl.portal.FileChooser=termfilechooser")]
+                if len(lines) != len(text.splitlines(keepends=True)):
+                    portal_conf.write_text("".join(lines))
+            except OSError:
+                pass
+        print("  xdg-desktop-portal-termfilechooser not installed; file chooser remains GTK")
         return True, ""
+
+    if dry:
+        print(f"  would wire the portal chooser -> {cfg} and route FileChooser in {portal_conf}")
+        return True, ""
+
     if not wrapper.is_file():
         print("  yazi-chooser.sh not deployed yet; portal chooser waits for the next re-run")
         return True, ""
+
     try:
         cfg.parent.mkdir(parents=True, exist_ok=True)
         cfg.write_text(
             "[filechooser]\n"
             f"cmd={wrapper}\n"
-            "default_dir={}\n".replace("{}", str(home)) + "\n")
+            f"default_dir={home}\n"
+        )
+
+        if portal_conf.is_file():
+            text = portal_conf.read_text()
+            if "org.freedesktop.impl.portal.FileChooser=termfilechooser" not in text:
+                if "[preferred]" in text:
+                    text = text.replace(
+                        "[preferred]",
+                        "[preferred]\norg.freedesktop.impl.portal.FileChooser=termfilechooser\n"
+                    )
+                else:
+                    text += "\n[preferred]\norg.freedesktop.impl.portal.FileChooser=termfilechooser\n"
+                portal_conf.write_text(text)
+
+        try:
+            subprocess.run(["systemctl", "--user", "restart", "xdg-desktop-portal"],
+                           capture_output=True, timeout=5)
+        except Exception:
+            pass
+
         print(f"  wired portal FileChooser -> yazi ({cfg})")
         return True, ""
     except OSError as exc:
