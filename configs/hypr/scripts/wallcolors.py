@@ -1436,9 +1436,12 @@ def render_gtk(pill):
         "@define-color theme_selected_fg_color %s;" % pill["primary"],
     ]) + "\n"
     for ver in ("gtk-3.0", "gtk-4.0"):
+        # The dirs are created, not gated: on a fresh box neither exists until
+        # some GTK app makes one, so the old is_dir() guard meant the css
+        # never landed and GTK theming silently never started.
         d = Path.home() / ".config" / ver
-        if d.is_dir():
-            (d / "gtk.css").write_text(css)
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "gtk.css").write_text(css)
 
     # The theme itself and the icon set live in dconf; idempotent and quiet.
     for key, value in (("color-scheme", "prefer-dark"),
@@ -1463,12 +1466,17 @@ def render_gtk(pill):
 
 def render_qt(pill):
     """Qt via qtengine + Darkly: a palette-derived KDE color scheme plus the
-    qtengine config that selects it. Seeded only when qtengine is installed
-    (its config dir exists) and the config is only written when absent, so
-    font and misc choices stay the user's."""
+    qtengine config that selects it. Runs when qtengine is installed —
+    detected by its platformtheme plugin, not by the config dir: the dir only
+    appears after the first run of a Qt app under the plugin, so the old
+    dir-exists gate meant a fresh install never got themed. The config file
+    itself is only written when absent, so font and misc choices stay the
+    user's."""
+    plugin = (Path("/usr/lib/qt6/plugins/platformthemes/libqt6engine-plugin.so"))
     d = Path.home() / ".config" / "qtengine"
-    if not d.is_dir():
+    if not (d.is_dir() or plugin.is_file()):
         return
+    d.mkdir(parents=True, exist_ok=True)
     p = pill
     sections = [
         ("[Colors:View]", {
