@@ -5,7 +5,7 @@
 
 use assert_cmd::Command;
 use predicates::boolean::PredicateBooleanExt;
-use predicates::str::{contains, is_empty, starts_with};
+use predicates::str::{contains, starts_with};
 
 #[test]
 fn version_prints() {

@@ -2,7 +2,6 @@
 //! codes stay consistent (the child's code when it ran, 127 when the binary
 //! is missing) and the IPC call shape is spelled once.
 
-use std::io::Write;
 use std::process::{Command, Stdio};
 
 /// `qs -c pill ipc call <target> <fn> [args...]` — the shell's whole command
@@ -62,32 +61,6 @@ pub fn focused_monitor() -> String {
     String::new()
 }
 
-/// Put text on the Wayland clipboard and say so; the glyph lands wherever the
-/// user pastes next.
-pub fn copy_text(text: &str) -> i32 {
-    match Command::new("wl-copy")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .spawn()
-    {
-        Ok(mut child) => {
-            if let Some(stdin) = child.stdin.as_mut() {
-                let _ = stdin.write_all(text.as_bytes());
-            }
-            match child.wait() {
-                Ok(s) if s.success() => {
-                    println!("{text}");
-                    0
-                }
-                _ => 1,
-            }
-        }
-        Err(e) => {
-            eprintln!("xiu: wl-copy unavailable ({e})");
-            127
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
