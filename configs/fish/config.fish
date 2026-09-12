@@ -135,8 +135,21 @@ end
 # into the systemd user session and its picker offers every installed
 # desktop entry; a bare `uwsm start` with no compositor argument shows that
 # menu. Set UWSM_AUTOSTART_OFF anywhere to disable.
-if status is-login; and type -q uwsm; and uwsm check may-start -q
-    if not set -q UWSM_AUTOSTART_OFF
-        exec uwsm start
+#
+# The DBUS_SESSION_BUS_ADDRESS export is the load-bearing line: uwsm refuses
+# to even check on a plain TTY login because the variable is not exported
+# there (only the socket exists at $XDG_RUNTIME_DIR/bus — pam_systemd does
+# not push it into the login shell's environment), and `check may-start`
+# fails its very first gate. With the variable pointed at the user bus,
+# the remaining gates (login shell, VT1, no active session) all pass on a
+# real TTY login.
+if status is-login
+    if not set -q DBUS_SESSION_BUS_ADDRESS; and test -n "$XDG_RUNTIME_DIR"; and test -S "$XDG_RUNTIME_DIR/bus"
+        set -gx DBUS_SESSION_BUS_ADDRESS "unix:path=$XDG_RUNTIME_DIR/bus"
+    end
+    if type -q uwsm; and uwsm check may-start -q
+        if not set -q UWSM_AUTOSTART_OFF
+            exec uwsm start
+        end
     end
 end
