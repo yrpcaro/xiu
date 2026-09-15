@@ -112,11 +112,17 @@ def _active(unit):
         return False
 
 
+def _root_cmd():
+    """sudo when it is there, else doas (common on Gentoo); the wizard can override."""
+    return "doas" if not shutil.which("sudo") and shutil.which("doas") else "sudo"
+
+
 def detect():
     """Read the whole machine state the flow branches on into one dict."""
     family = distro.detect_family()
     return {
         "family": family,
+        "root_cmd": _root_cmd(),
         "pretty": distro.detect_pretty(),
         "compositor": _compositor(),
         "pm": distro.PM.get(family, "Unknown"),
@@ -145,6 +151,9 @@ def _default_choices(args, info, manifest):
         "grub": False,
         "fish": True,
         "brave": args.brave,
+        "root_cmd": info.get("root_cmd") or _root_cmd(),
+        "overlays": True,
+        "services": True,
     }
 
 
@@ -235,7 +244,26 @@ def _wizard(args, info, manifest):
         ], default=1)
         brave = bidx == 0
 
-    fish = tui.confirm("Login shell", ["Set fish as your login shell. (Recommended)"])
+    root_cmd, overlays = info["root_cmd"], True
+    if family == "gentoo":
+        ridx = tui.select_one("Root command", [
+            ("sudo", "Run the privileged steps through sudo", True),
+            ("doas", "Run the privileged steps through doas", False),
+        ], default=0 if root_cmd == "sudo" else 1)
+        root_cmd = ("sudo", "doas")[ridx]
+        overlays = tui.confirm("Gentoo overlays", [
+            "Enable the GURU and hyproverlay overlays and accept their ~amd64 "
+            "packages. (Recommended)",
+            "Hyprland and quickshell only exist there. This writes two files named "
+            "ricelin under /etc/portage and touches nothing else of yours.",
+        ])
+
+    services = True
+    if info["init"] == "openrc":
+        services = tui.confirm("OpenRC services", [
+            "Add NetworkManager and bluetooth to the default runlevel and start "
+            "them now. (Recommended)",
+        ])
 
     return {
         "profile": profile, "aur_choice": aur_choice, "optional_ids": optional_ids,
@@ -243,6 +271,7 @@ def _wizard(args, info, manifest):
         "sddm_theme": sddm_theme,
         "browser_theme": browser_theme, "fresh_configs": fresh_configs,
         "legacy_swap": legacy_swap, "grub": grub, "fish": fish, "brave": brave,
+        "root_cmd": root_cmd, "overlays": overlays, "services": services,
     }
 
 
@@ -284,10 +313,14 @@ def _build_plan(manifest, info, choices, cli_local):
     if choices.get("legacy_swap") == "clean":
         rows = [r for r in rows if r["id"] not in ("ghostty", "cliphist")]
 
-    repos, native, aur, fb, skipped = [], [], [], [], []
+    repos, native, aur, fb, skipped, manual = [], [], [], [], [], []
     optional_native = set()
+    atom_repos = {}
     for r in rows:
         if r["action"] == "skip":
+            continue
+        if (r["repo"] or "").startswith("overlay:") and not choices.get("overlays", True):
+            manual.append(r["target"])
             continue
         if r["id"] == "xiu" and cli_local:
             continue
@@ -303,10 +336,12 @@ def _build_plan(manifest, info, choices, cli_local):
         if r["repo"] and r["repo"] not in repos:
             repos.append(r["repo"])
         (aur if r["aur"] else native).append(r["target"])
+        atom_repos[r["target"]] = r["repo"]
         if not r["aur"] and not r["required"]:
             optional_native.add(r["target"])
     return {"repos": repos, "native": native, "aur": aur, "fallbacks": fb,
-            "skipped": skipped, "optional_native": optional_native}
+            "skipped": skipped, "optional_native": optional_native,
+            "manual": manual, "atom_repos": atom_repos}
 
 
 def cli_local(source):
@@ -374,12 +409,13 @@ def _aur_install_argv(names, family, aur_choice):
 
 def _service_note(init):
     """The manual service commands for a non-systemd init, printed not run."""
+    su = distro.ROOT
     cmds = {
-        "openrc": ["sudo rc-update add NetworkManager default && sudo rc-service NetworkManager start",
-                   "sudo rc-update add bluetoothd default && sudo rc-service bluetoothd start"],
-        "runit": ["sudo ln -s /etc/sv/NetworkManager /var/service",
-                  "sudo ln -s /etc/sv/bluetoothd /var/service"],
-        "dinit": ["sudo dinitctl enable NetworkManager", "sudo dinitctl enable bluetoothd"],
+        "openrc": [f"{su} rc-update add NetworkManager default && {su} rc-service NetworkManager start",
+                   f"{su} rc-update add bluetooth default && {su} rc-service bluetooth start"],
+        "runit": [f"{su} ln -s /etc/sv/NetworkManager /var/service",
+                  f"{su} ln -s /etc/sv/bluetoothd /var/service"],
+        "dinit": [f"{su} dinitctl enable NetworkManager", f"{su} dinitctl enable bluetoothd"],
         "s6": ["s6-rc -u change NetworkManager", "s6-rc -u change bluetoothd"],
     }
     lines = ["Non-systemd init detected, enable the services yourself:"]
@@ -387,12 +423,25 @@ def _service_note(init):
     return lines
 
 
+def _openrc_service_shell(name):
+    """
+    Enable and start one OpenRC service. bluez names its script bluetooth on
+    Gentoo and bluetoothd on Artix, so the daemon spelling is tried second.
+    """
+    su = distro.ROOT
+    return (f's={name}; [ -e /etc/init.d/$s ] || s={name}d; '
+            f'{su} rc-update add $s default && {su} rc-service $s start')
+
+
 def sudo_keepalive():
     """
     Ask for the password once, then keep the sudo timestamp warm in the
     background so no later step prompts again. Returns a stop callback the runner
-    calls when the install is done.
+    calls when the install is done. doas has no timestamp to refresh, so there it
+    is a no-op and each privileged step prompts on its own unless persist is set.
     """
+    if distro.ROOT != "sudo":
+        return lambda: None
     subprocess.run(["sudo", "-v"])
     stop = threading.Event()
 
@@ -418,6 +467,14 @@ def _summary_lines(info, choices, plan, args, do_pkgs):
         if plan["fallbacks"]:
             names = ", ".join(sorted({h for _, h, _ in plan["fallbacks"]}))
             lines.append("Build via fallback: " + names + ".")
+        if info["family"] == "gentoo":
+            if pkg.portage_config_argv(plan.get("atom_repos", {})):
+                lines.append("Write package.accept_keywords/ricelin and package.use/ricelin "
+                             "under /etc/portage.")
+            if plan.get("manual"):
+                lines.append("Overlays skipped, install yourself: emerge -av "
+                             + " ".join(plan["manual"]) + ".")
+            lines.append("emerge compiles from source; this is the long part.")
     if choices["file_manager"] != "none":
         lines.append(f"Install the {choices['file_manager']} file manager.")
     if cli_local(args.source):
@@ -1033,8 +1090,8 @@ def _report(plan, failures, notes, info, choices, args, do_pkgs, dry):
     steps = []
     if dry:
         steps.append(("dry run", "nothing changed, a real run ends like this"))
-    steps.append(("log back in", "fish and the input group need a fresh session"))
-    if info["init"] != "systemd" and do_pkgs:
+    openrc_done = info["init"] == "openrc" and choices.get("services")
+    if info["init"] != "systemd" and not openrc_done and do_pkgs:
         steps.append(("enable services", "NetworkManager and bluetooth via your init"))
     if do_pkgs or shutil.which("Hyprland"):
         steps.append(("start Hyprland", "from a TTY"))
@@ -1099,7 +1156,7 @@ def run(args):
             why = "This system has a read-only root, so no packages can be installed."
         else:
             why = (f"{info['pretty']} is not a supported distro family "
-                   "(arch, debian, fedora or suse), so no packages will be installed.")
+                   "(arch, debian, fedora, suse or gentoo), so no packages will be installed.")
         warn = [why,
                 "Only the configs will be deployed. The rice needs Hyprland, "
                 "quickshell and its other dependencies installed by hand, "
@@ -1123,6 +1180,7 @@ def run(args):
             tui.info(["No controlling terminal, taking the Quick defaults."])
             choices = _default_choices(args, info, manifest)
 
+    distro.ROOT = choices.get("root_cmd", "sudo")
     plan = _build_plan(manifest, info, choices, cli_local(args.source))
 
     summary = _summary_lines(info, choices, plan, args, do_pkgs)
@@ -1169,6 +1227,17 @@ def run(args):
                     ok, detail = _run(pkg.privileged(argv, family), dry)
                     record(ok, detail, f"Enable repo {repo}",
                            "Enable the repo by hand, then re-run.")
+
+            # c2. gentoo: the per-atom keyword and USE lines, in files of our own.
+            if family == "gentoo":
+                for argv in pkg.portage_config_argv(plan.get("atom_repos", {})):
+                    ok, detail = _run(pkg.privileged(argv, family), dry)
+                    record(ok, detail, "Write portage overrides",
+                           "Make sure /etc/portage/package.accept_keywords and package.use "
+                           "are directories, then re-run.")
+            if plan.get("manual"):
+                notes.append("Overlays skipped, these need one: emerge -av "
+                             + " ".join(plan["manual"]))
 
             # d. the native batch, one install, sudo-wrapped. If the whole
             #    transaction aborts on a single bad name, retry each package
@@ -1260,11 +1329,11 @@ def run(args):
                                  "alone. The Link surface wants NetworkManager.")
                 else:
                     ok, detail = _run(
-                        ["sudo", "systemctl", "enable", "--now", "NetworkManager.service"], dry)
+                        [distro.ROOT, "systemctl", "enable", "--now", "NetworkManager.service"], dry)
                     record(ok, detail, "Enable NetworkManager",
                            "Enable NetworkManager.service yourself.")
                 ok, detail = _run(
-                    ["sudo", "systemctl", "enable", "--now", "bluetooth.service"], dry)
+                    [distro.ROOT, "systemctl", "enable", "--now", "bluetooth.service"], dry)
                 record(ok, detail, "Enable bluetooth", "Enable bluetooth.service yourself.")
                 if shutil.which("hyprsunset"):
                     # A --user systemctl needs the user's session bus; from a
@@ -1289,6 +1358,10 @@ def run(args):
                 else:
                     notes.append("hyprsunset is not installed, night light left off. "
                                  "Install it and run: systemctl --user enable --now hyprsunset.service")
+            elif info["init"] == "openrc" and choices.get("services"):
+                for name in ("NetworkManager", "bluetooth"):
+                    ok, detail = _shell(_openrc_service_shell(name), dry)
+                    record(ok, detail, f"Enable {name}", f"Enable {name} with rc-update yourself.")
             else:
                 notes.extend(_service_note(info["init"]))
 
@@ -1310,7 +1383,7 @@ def run(args):
                 # chsh prompts for the login password through PAM, which a piped
                 # `curl | bash` run has no terminal for, so it always failed. Set
                 # it as root instead; the sudo timestamp is already warm.
-                ok, detail = _run(["sudo", "chsh", "-s", fishbin, getpass.getuser()], dry)
+                ok, detail = _run([distro.ROOT, "chsh", "-s", fishbin, getpass.getuser()], dry)
                 record(ok, detail, "Set fish as login shell",
                        "Run: chsh -s $(command -v fish)")
             elif dry:
@@ -1397,7 +1470,7 @@ def run(args):
                 theme = "torii"
             sddm_installer = os.path.join(args.source, "sddm", "themes", theme, "install.sh")
             if os.path.isfile(sddm_installer):
-                ok, detail = _run(["sh", sddm_installer], dry)
+                ok, detail = _run(["sh", sddm_installer], dry, env={"SUDO": distro.ROOT})
                 record(ok, detail, f"Install SDDM theme ({theme})",
                        "Run the SDDM theme installer by hand.")
             else:
@@ -1569,6 +1642,9 @@ def run_uninstall(args):
         if a["restored"]:
             line += f", restore your backup from {a['restored']}"
         lines.append(line)
+    portage_files = [f for f in pkg.portage_config_files() if os.path.exists(f)]
+    for f in portage_files:
+        lines.append(f"Remove {f} (needs root)")
     lines.append("Installed packages are not touched.")
 
     if dry:
@@ -1589,13 +1665,18 @@ def run_uninstall(args):
             tail = f" (restored {a['restored']})" if a["restored"] else ""
             print(f"  removed: {a['dest']}{tail}")
 
-    link = Path.home() / ".local" / "bin" / "ricelin"
-    if link.is_symlink():
-        try:
-            link.unlink()
-            print(f"  removed: {link}")
-        except OSError:
-            pass
+    for f in portage_files:
+        ok, _ = _run([_root_cmd(), "rm", "-f", f], dry)
+        print(f"  removed: {f}" if ok else f"  could not remove {f}, delete it yourself")
+
+    for name in ("xiu", "ricelin"):
+        link = Path.home() / ".local" / "bin" / name
+        if link.is_symlink():
+            try:
+                link.unlink()
+                print(f"  removed: {link}")
+            except OSError:
+                pass
     tui.info(["The repo clone in ~/.local/share/xiu and your wallpapers in "
               "~/Pictures/xiu/wallpapers are left for you to delete."])
     tui.outro("xiu removed")

@@ -121,8 +121,8 @@ One line, straight through the pipe:
 curl -fsSL https://raw.githubusercontent.com/yrpcaro/xiu/main/install.sh | bash
 ```
 
-`install.sh` is a thin bootstrap: it detects your distro (Arch, Debian, Fedora
-or openSUSE), makes sure git and python3 are there, clones the rice, then hands
+`install.sh` is a thin bootstrap: it detects your distro (Arch, Debian, Fedora,
+openSUSE or Gentoo), makes sure git and python3 are there, clones the rice, then hands
 off to the guided Python installer. The wizard asks the questions that shape
 the install:
 
