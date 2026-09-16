@@ -199,7 +199,7 @@ Item {
     readonly property real animationW: 392 * s
     readonly property real defaultappsW: 392 * s
     readonly property real weatherW: 392 * s
-    readonly property real emojiW: 360 * s
+    readonly property real emojiW: 392 * s
     readonly property real fontpickerW: 360 * s
     readonly property real toastW: 342 * s
     readonly property real quickChooseW: 344 * s
@@ -264,7 +264,7 @@ Item {
         idlelock:   { size: () => Qt.size(idlelockW, surfaceItem(ldIdlelock).implicitHeight + 29 * s), ame: () => surfaceItem(ldIdlelock) },
         defaultapps: { size: () => Qt.size(defaultappsW, surfaceItem(ldDefaultapps).implicitHeight + 29 * s), ame: () => surfaceItem(ldDefaultapps) },
         weather:    { size: () => Qt.size(weatherW, surfaceItem(ldWeather).implicitHeight + 29 * s), ame: () => surfaceItem(ldWeather) },
-        emoji:      { size: () => Qt.size(emojiW, Math.min(420 * s, surfaceItem(ldEmoji).implicitHeight + 29 * s)), ame: () => surfaceItem(ldEmoji) },
+        emoji:      { size: () => Qt.size(emojiW, Math.min(480 * s, surfaceItem(ldEmoji).implicitHeight + 29 * s)), ame: () => surfaceItem(ldEmoji) },
         animation:  { size: () => Qt.size(animationW, surfaceItem(ldAnimation).implicitHeight + 29 * s), ame: () => surfaceItem(ldAnimation) },
         fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) }
     })

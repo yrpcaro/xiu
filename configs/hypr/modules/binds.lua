@@ -245,7 +245,7 @@ hl.bind("CTRL + ALT + code:27", hl.dsp.exec_cmd("xiu record")) -- screen record 
 -- Clipboard
 hl.bind(mod .. " + code:55", hl.dsp.exec_cmd("xiu clipboard")) -- clipboard history [V]
 hl.bind("CTRL + SHIFT + ALT + code:55", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/paste-latest.sh"), locked) -- paste latest clipboard [V]
-hl.bind(mod .. " + code:60", hl.dsp.exec_cmd("xiu emoji -p")) -- emoji picker
+hl.bind(mod .. " + code:60", hl.dsp.exec_cmd("xiu open emoji")) -- emoji picker [.]
 
 -- Media keys (Quickshell globals registered by the pill's Players singleton)
 hl.bind("CTRL + SUPER + code:65", hl.dsp.global("quickshell:mediaToggle"), locked) -- play / pause
