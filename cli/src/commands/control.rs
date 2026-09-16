@@ -406,3 +406,107 @@ pub fn uninstall() -> i32 {
     let _ = Command::new("python3").arg(installer).arg("--uninstall").status();
     0
 }
+
+pub fn session(action: &str) -> i32 {
+    let k = skin();
+    match action {
+        "lock" => {
+            let script = home_path(&[".config", "hypr", "scripts", "lock.sh"]);
+            if script.is_file() {
+                let _ = Command::new("sh").arg(script).status();
+            } else {
+                let _ = Command::new("hyprlock").status();
+            }
+            0
+        }
+        "logout" => {
+            let script = home_path(&[".config", "hypr", "scripts", "session-logout.sh"]);
+            if script.is_file() {
+                let _ = Command::new("sh").arg(script).status();
+            } else {
+                teardown_session();
+            }
+            0
+        }
+        other => ctl_die(&k, &format!("unknown session action '{other}' (logout or lock)")),
+    }
+}
+
+fn teardown_session() {
+    // 1. Stop systemd user session units
+    let _ = Command::new("systemctl")
+        .args(["--user", "stop", "hyprland-session.target"])
+        .status();
+    let _ = Command::new("systemctl")
+        .args([
+            "--user",
+            "stop",
+            "hypridle.service",
+            "hyprpolkitagent.service",
+            "hyprsunset.service",
+        ])
+        .status();
+
+    // 2. Stop watchdogs first to prevent respawning surfaces
+    let _ = Command::new("pkill").args(["-TERM", "-f", "watchdog.sh"]).status();
+
+    // 3. Gracefully terminate session processes and scripts
+    let full_patterns = [
+        "cliphist-watch.sh",
+        "clipboard-watch.sh",
+        "wallpaper.sh",
+        "launch-guard.sh",
+        "xiu-resizer",
+    ];
+    let exact_names = [
+        "clipvault",
+        "wl-paste",
+        "awww-daemon",
+        "swww-daemon",
+        "cava",
+        "quickshell",
+        "qs",
+    ];
+
+    for pat in &full_patterns {
+        let _ = Command::new("pkill").args(["-TERM", "-f", pat]).status();
+    }
+    for name in &exact_names {
+        let _ = Command::new("pkill").args(["-TERM", "-x", name]).status();
+    }
+
+    thread::sleep(Duration::from_millis(150));
+
+    let _ = Command::new("pkill").args(["-KILL", "-f", "watchdog.sh"]).status();
+    for pat in &full_patterns {
+        let _ = Command::new("pkill").args(["-KILL", "-f", pat]).status();
+    }
+    for name in &exact_names {
+        let _ = Command::new("pkill").args(["-KILL", "-x", name]).status();
+    }
+
+    // 4. Clean up session lockfiles and sockets
+    let rt = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_string());
+    if let Ok(entries) = std::fs::read_dir(&rt) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if (name_str.starts_with("xiu-") && name_str.ends_with(".lock"))
+                || name_str.ends_with("-watchdog.lock")
+                || name_str.starts_with("launch-guard.")
+                || name_str == "xiu-resizer.sock"
+                || name_str.starts_with("ricelin-lock-")
+                || name_str.starts_with("xiu-lock-")
+            {
+                let _ = std::fs::remove_file(entry.path());
+            }
+        }
+    }
+
+    // 5. Exit compositor
+    if std::env::var("UWSM_ID").is_ok() {
+        let _ = Command::new("uwsm").arg("stop").status();
+    } else {
+        let _ = Command::new("hyprctl").args(["dispatch", "exit"]).status();
+    }
+}

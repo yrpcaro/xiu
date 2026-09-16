@@ -109,3 +109,14 @@ fn wallpaper_set_takes_a_path() {
         .to_owned();
     assert!(out.status.code().is_some());
 }
+
+#[test]
+fn session_rejects_unknown_action() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["session", "bogus"])
+        .assert()
+        .failure()
+        .code(1)
+        .stderr(contains("unknown session action"));
+}

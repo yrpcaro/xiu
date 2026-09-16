@@ -123,6 +123,12 @@ pub enum Commands {
     Status,
     /// Remove the configs, restore backups
     Uninstall,
+    /// Session control: logout, lock
+    Session {
+        /// The session action (logout, lock)
+        #[arg(default_value = "logout")]
+        action: String,
+    },
 }
 
 // Flat aliases over the enum's struct variants, so the command modules

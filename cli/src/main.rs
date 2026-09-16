@@ -48,5 +48,6 @@ fn dispatch(cli: &cli::Cli) -> i32 {
         Commands::Update => control::update(),
         Commands::Status => control::status(),
         Commands::Uninstall => control::uninstall(),
+        Commands::Session { action } => control::session(action),
     }
 }
