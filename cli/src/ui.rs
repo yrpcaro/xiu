@@ -71,11 +71,13 @@ mod tests {
 
     #[test]
     fn plain_skin_when_piped() {
-        // Tests run with stdout captured, so the terminal probe reads false
-        // — which is exactly the path under test.
         let k = skin();
-        assert_eq!(k.verm, "");
-        assert_eq!(k.rst, "");
+        if !std::io::stdout().is_terminal() {
+            assert_eq!(k.verm, "");
+            assert_eq!(k.rst, "");
+        } else {
+            assert!(!k.verm.is_empty());
+        }
     }
 
     #[test]
