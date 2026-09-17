@@ -27,25 +27,56 @@ fn main() {
 
 fn dispatch(cli: &cli::Cli) -> i32 {
     use cli::Commands;
-    use commands::{check, control, shell};
+    use commands::{check, clipboard, control, keybinds, layout, shell, theme, wallpaper};
     match &cli.command {
         Commands::Shell { kill, target, args } => shell::shell(*kill, target.as_deref(), args),
         Commands::Open { surface } => shell::open(surface),
-        Commands::Wallpaper { print, list, file } => shell::wallpaper(*print, *list, file.as_deref()),
+        Commands::Wallpaper {
+            action,
+            target,
+            print,
+            list,
+            file,
+        } => wallpaper::wallpaper(
+            action.as_deref(),
+            target.as_deref(),
+            *print,
+            *list,
+            file.as_deref(),
+        ),
         Commands::Mpris { action } => shell::mpris(action),
         Commands::Record { stop } => shell::record(*stop),
         Commands::Screenshot { args } => shell::screenshot(args),
-        Commands::Clipboard => shell::clipboard(),
+        Commands::Clipboard { action, target } => {
+            clipboard::clipboard(action.as_deref(), target.as_deref())
+        }
         Commands::Notifs { action } => shell::notifs(action),
         Commands::Gamemode { action } => shell::gamemode(action),
-        Commands::Scheme { action, value, variant } => shell::scheme(action, value.as_deref(), variant.as_deref()),
+        Commands::Scheme {
+            action,
+            value,
+            variant,
+        } => shell::scheme(action, value.as_deref(), variant.as_deref()),
+        Commands::Theme {
+            action,
+            target,
+            preset,
+            variant,
+        } => theme::theme(
+            action,
+            target.as_deref(),
+            preset.as_deref(),
+            variant.as_deref(),
+        ),
+        Commands::Layout { action, target } => layout::layout(action, target.as_deref()),
+        Commands::Keybinds { action, combo } => keybinds::keybinds(action, combo.as_deref()),
         Commands::Browser => shell::browser(),
         Commands::Check => check::check(),
         Commands::Restart { target } => control::restart(target.as_deref()),
         Commands::Start { target } => control::start(target.as_deref()),
         Commands::Stop { target } => control::stop(target.as_deref()),
         Commands::Log { target, args } => control::log(target.as_deref(), args),
-        Commands::Update => control::update(),
+        Commands::Update { action, sha } => control::update(action.as_deref(), sha.as_deref()),
         Commands::Status => control::status(),
         Commands::Uninstall => control::uninstall(),
         Commands::Session { action } => control::session(action),

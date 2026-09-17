@@ -23,18 +23,6 @@ pub fn open(surface: &str) -> i32 {
     ipc_call("pill", &[surface, ""])
 }
 
-pub fn wallpaper(print: bool, list: bool, file: Option<&str>) -> i32 {
-    if list {
-        return ipc_call("wallpaper", &["list"]);
-    }
-    if let Some(path) = &file {
-        return ipc_call("wallpaper", &["set", path]);
-    }
-    if print {
-        return ipc_call("wallpaper", &["get"]);
-    }
-    ipc_call("wallpaper", &["random"])
-}
 
 pub fn mpris(action: &str) -> i32 {
     match action {
@@ -63,9 +51,6 @@ pub fn screenshot(args: &[String]) -> i32 {
     passthrough("rishot", args)
 }
 
-pub fn clipboard() -> i32 {
-    ipc_call("pill", &["clipboard", ""])
-}
 
 pub fn notifs(action: &str) -> i32 {
     match action {

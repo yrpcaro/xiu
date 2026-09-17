@@ -37,8 +37,12 @@ pub enum Commands {
         /// The surface to open
         surface: String,
     },
-    /// Current wallpaper (-p), list (-l), set (-f), random
+    /// Wallpaper operations: init, set, next, prev, query, list (or flags: -p, -l, -f)
     Wallpaper {
+        /// init, set, next, prev, query, list (default: random/next)
+        action: Option<String>,
+        /// Target image or argument
+        target: Option<String>,
         /// Print the current wallpaper
         #[arg(short, long)]
         print: bool,
@@ -66,8 +70,13 @@ pub enum Commands {
         /// Arguments for rishot
         args: Vec<String>,
     },
-    /// Open the pill's clipboard surface
-    Clipboard,
+    /// Clipboard manager: watch, get, thumbs, wipe (default: open clipboard surface)
+    Clipboard {
+        /// watch, get, thumbs, wipe
+        action: Option<String>,
+        /// Target entry ID for get
+        target: Option<String>,
+    },
     /// Clear (default) or mark notifications seen
     Notifs {
         /// clear or seen
@@ -90,6 +99,36 @@ pub enum Commands {
         /// The matugen variant for `set`
         #[arg(short, long)]
         variant: Option<String>,
+    },
+    /// Theme engine: generate, apply, live
+    Theme {
+        /// generate, apply, live
+        #[arg(default_value = "apply")]
+        action: String,
+        /// Wallpaper path or preset name
+        target: Option<String>,
+        /// Preset name override
+        #[arg(short, long)]
+        preset: Option<String>,
+        /// Matugen variant
+        #[arg(short, long)]
+        variant: Option<String>,
+    },
+    /// Keyboard layout: switch, get, format
+    Layout {
+        /// switch, get, format
+        #[arg(default_value = "get")]
+        action: String,
+        /// Target layout or descriptor (for switch or format)
+        target: Option<String>,
+    },
+    /// Keybinds inspector: list, format, export
+    Keybinds {
+        /// list, format, export
+        #[arg(default_value = "list")]
+        action: String,
+        /// Combo to format
+        combo: Option<String>,
     },
     /// Apply the palette policy to Brave/Chromium
     Browser,
@@ -118,14 +157,20 @@ pub enum Commands {
         args: Vec<String>,
     },
     /// Check, show changelog, apply, restart
-    Update,
+    Update {
+        /// check, apply, baseline
+        action: Option<String>,
+        /// Commit SHA for baseline
+        #[arg(short, long)]
+        sha: Option<String>,
+    },
     /// What's running and the installed version
     Status,
     /// Remove the configs, restore backups
     Uninstall,
-    /// Session control: logout, lock
+    /// Session control: logout, lock, stats
     Session {
-        /// The session action (logout, lock)
+        /// logout, lock, stats
         #[arg(default_value = "logout")]
         action: String,
     },

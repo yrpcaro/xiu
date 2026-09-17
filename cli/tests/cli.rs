@@ -120,3 +120,161 @@ fn session_rejects_unknown_action() {
         .code(1)
         .stderr(contains("unknown session action"));
 }
+
+#[test]
+fn session_stats_runs() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["session", "stats"])
+        .assert()
+        .success()
+        .stdout(contains("session").and(contains("compositor")).and(contains("surfaces")));
+}
+
+#[test]
+fn layout_format_resolves_accurately() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["layout", "format", "English (US)"])
+        .assert()
+        .success()
+        .stdout(starts_with("US"));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["layout", "format", "Persian (Windows)"])
+        .assert()
+        .success()
+        .stdout(starts_with("FA"));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["layout", "format", "Russian (phonetic)"])
+        .assert()
+        .success()
+        .stdout(starts_with("RU"));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["layout", "format", "German (DE)"])
+        .assert()
+        .success()
+        .stdout(starts_with("DE"));
+}
+
+#[test]
+fn keybinds_format_resolves_us_labels() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["keybinds", "format", "mod .. \" + code:28\""])
+        .assert()
+        .success()
+        .stdout(starts_with("SUPER + T"));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["keybinds", "format", "mod .. \" + code:60\""])
+        .assert()
+        .success()
+        .stdout(starts_with("SUPER + ."));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["keybinds", "format", "mod .. \" + code:24\""])
+        .assert()
+        .success()
+        .stdout(starts_with("SUPER + Q"));
+}
+
+#[test]
+fn keybinds_list_and_export_run() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["keybinds", "list"])
+        .assert()
+        .success()
+        .stdout(contains("keybinds"));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["keybinds", "export"])
+        .assert()
+        .success()
+        .stdout(starts_with("["));
+}
+
+#[test]
+fn clipboard_wipe_and_rejections() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["clipboard", "wipe"])
+        .assert()
+        .success()
+        .stdout(contains("cleared").or(contains("wiped")));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["clipboard", "bogus"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown action"));
+}
+
+#[test]
+fn wallpaper_query_and_rejections() {
+    let out = Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["wallpaper", "query"])
+        .assert()
+        .get_output()
+        .to_owned();
+    assert!(out.status.code().is_some());
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["wallpaper", "definitely-not-action-or-file"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown action"));
+}
+
+#[test]
+fn theme_live_and_rejections() {
+    let out = Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["theme", "live"])
+        .assert()
+        .get_output()
+        .to_owned();
+    assert!(out.status.code().is_some());
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["theme", "bogus"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown action"));
+}
+
+#[test]
+fn update_check_runs() {
+    let out = Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["update", "check"])
+        .assert()
+        .get_output()
+        .to_owned();
+    assert!(out.status.code().is_some());
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["update", "bogus"])
+        .assert()
+        .failure()
+        .code(1)
+        .stderr(contains("unknown update action"));
+}
+

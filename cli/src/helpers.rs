@@ -60,7 +60,39 @@ pub fn focused_monitor() -> String {
     }
     String::new()
 }
+pub fn home_path(parts: &[&str]) -> std::path::PathBuf {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut path = std::path::PathBuf::from(home);
+    for part in parts {
+        path.push(part);
+    }
+    path
+}
 
+pub fn state_file(name: &str) -> std::path::PathBuf {
+    let base = std::env::var("XDG_STATE_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| home_path(&[".local", "state"]));
+    base.join(name)
+}
+
+pub fn cache_file(name: &str) -> std::path::PathBuf {
+    let base = std::env::var("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| home_path(&[".cache"]));
+    base.join(name)
+}
+
+pub fn config_file(parts: &[&str]) -> std::path::PathBuf {
+    let base = std::env::var("XDG_CONFIG_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| home_path(&[".config"]));
+    let mut path = base;
+    for part in parts {
+        path.push(part);
+    }
+    path
+}
 
 #[cfg(test)]
 mod tests {

@@ -260,47 +260,131 @@ fn engine_call(mode: &str, extra: &[&str]) -> Result<json::Json, String> {
     })
 }
 
-pub fn update() -> i32 {
+pub fn update(action: Option<&str>, sha: Option<&str>) -> i32 {
     let k = skin();
+    match action {
+        None => interactive_update(&k),
+        Some("check") => run_update_check(&k),
+        Some("apply") => run_update_apply(&k),
+        Some("baseline") => run_update_baseline(&k, sha),
+        Some(other) => {
+            ctl_die(&k, &format!("unknown update action '{other}' (check, apply or baseline)"))
+        }
+    }
+}
+
+fn run_update_check(k: &crate::ui::Skin) -> i32 {
     let check = match engine_call("check", &[]) {
         Ok(v) => v,
-        Err(e) => return ctl_die(&k, &e),
+        Err(e) => return ctl_die(k, &e),
     };
     let status = check.get("status").and_then(json::Json::as_str).unwrap_or("error");
     match status {
         "devmode" => {
-            note(&k, "dev install, update with git pull");
+            note(k, "dev install, update with git pull");
+            0
+        }
+        "offline" => ctl_die(k, "offline, can't reach the update remote"),
+        "noclone" => ctl_die(k, "no update clone yet, open the in-app updater once first"),
+        "ok" => {
+            let behind = check.get("behind").and_then(json::Json::as_i64).unwrap_or(0);
+            let version = check.get("version").and_then(json::Json::as_str).unwrap_or("");
+            if behind == 0 {
+                act(k, "up to date", version);
+            } else {
+                sec(k, &format!("{behind} commit(s) behind"));
+                gap(k);
+                if let Some(lines) = check.get("changelog").and_then(json::Json::as_arr) {
+                    for line in lines {
+                        if let Some(text) = line.as_str() {
+                            row(k, &format!("{}·{} {}{}{}", k.flame, k.rst, k.cream, text, k.rst));
+                        }
+                    }
+                }
+                gap(k);
+            }
+            0
+        }
+        other => {
+            let error = check.get("error").and_then(json::Json::as_str).unwrap_or("update check failed");
+            ctl_die(k, &format!("update {other}: {error}"))
+        }
+    }
+}
+
+fn run_update_apply(k: &crate::ui::Skin) -> i32 {
+    let result = match engine_call("apply", &[]) {
+        Ok(v) => v,
+        Err(e) => return ctl_die(k, &format!("apply failed: {e}")),
+    };
+
+    let status = result.get("status").and_then(json::Json::as_str).unwrap_or("ok");
+    let version = result.get("version").and_then(json::Json::as_str).unwrap_or("");
+    act(k, "update apply", &format!("{status} {version}"));
+    if result.get("restartNeeded").and_then(json::Json::as_bool) == Some(true) {
+        let _ = restart(None);
+    }
+    0
+}
+
+fn run_update_baseline(k: &crate::ui::Skin, sha: Option<&str>) -> i32 {
+    let mut args = Vec::new();
+    let flag;
+    if let Some(s) = sha {
+        flag = format!("--sha={s}");
+        args.push(flag.as_str());
+    }
+    let result = match engine_call("baseline", &args) {
+        Ok(v) => v,
+        Err(e) => return ctl_die(k, &format!("baseline failed: {e}")),
+    };
+
+    let status = result.get("status").and_then(json::Json::as_str).unwrap_or("ok");
+    let sha_val = result.get("syncedSha").and_then(json::Json::as_str).unwrap_or("");
+    act(k, "baseline", &format!("{status} {sha_val}"));
+    0
+}
+
+fn interactive_update(k: &crate::ui::Skin) -> i32 {
+    let check = match engine_call("check", &[]) {
+        Ok(v) => v,
+        Err(e) => return ctl_die(k, &e),
+    };
+    let status = check.get("status").and_then(json::Json::as_str).unwrap_or("error");
+    match status {
+        "devmode" => {
+            note(k, "dev install, update with git pull");
             return 0;
         }
-        "offline" => return ctl_die(&k, "offline, can't reach the update remote"),
+        "offline" => return ctl_die(k, "offline, can't reach the update remote"),
         "noclone" => {
-            return ctl_die(&k, "no update clone yet, open the in-app updater once first")
+            return ctl_die(k, "no update clone yet, open the in-app updater once first")
         }
         "ok" => {}
         other => {
             let error = check.get("error").and_then(json::Json::as_str).unwrap_or("update check failed");
-            return ctl_die(&k, &format!("update {other}: {error}"));
+            return ctl_die(k, &format!("update {other}: {error}"));
         }
     }
 
     let behind = check.get("behind").and_then(json::Json::as_i64).unwrap_or(0);
     let version = check.get("version").and_then(json::Json::as_str).unwrap_or("");
     if behind == 0 {
-        act(&k, "up to date", version);
+        act(k, "up to date", version);
         return 0;
     }
 
-    sec(&k, &format!("{behind} commit(s) behind"));
-    gap(&k);
+    sec(k, &format!("{behind} commit(s) behind"));
+    gap(k);
     let from = check.get("fromDate").and_then(json::Json::as_str).unwrap_or("");
     let to = check.get("toDate").and_then(json::Json::as_str).unwrap_or("");
     if !from.is_empty() || !to.is_empty() {
-        row(&k, &format!("{}{from} -> {to}{}", k.faint, k.rst));
+        row(k, &format!("{}{from} -> {to}{}", k.faint, k.rst));
     }
     if let Some(lines) = check.get("changelog").and_then(json::Json::as_arr) {
         for line in lines {
             if let Some(text) = line.as_str() {
-                row(&k, &format!("{}·{} {}{}{}", k.flame, k.rst, k.cream, text, k.rst));
+                row(k, &format!("{}·{} {}{}{}", k.flame, k.rst, k.cream, text, k.rst));
             }
         }
     }
@@ -315,16 +399,16 @@ pub fn update() -> i32 {
         })
         .unwrap_or_default();
     if !deps.is_empty() {
-        row(&k, &format!("{}new packages{}   {}{}{}", k.dim, k.rst, k.cream, deps.join(", "), k.rst));
+        row(k, &format!("{}new packages{}   {}{}{}", k.dim, k.rst, k.cream, deps.join(", "), k.rst));
     }
     let conflicts = check.get("conflicts").and_then(json::Json::as_arr).map(<[json::Json]>::len).unwrap_or(0);
     if conflicts > 0 {
         row(
-            &k,
+            k,
             &format!("{}{conflicts} edited file(s) clash with upstream, kept as you have them{}", k.faint, k.rst),
         );
     }
-    gap(&k);
+    gap(k);
 
     print!("  {}▌{} {}apply update?{} {}[Y/n]{} ", k.verm, k.rst, k.cream, k.rst, k.dim, k.rst);
     let _ = std::io::stdout().flush();
@@ -335,7 +419,7 @@ pub fn update() -> i32 {
     match answer.trim() {
         "" | "y" | "Y" | "yes" | "YES" => {}
         _ => {
-            note(&k, "skipped");
+            note(k, "skipped");
             return 0;
         }
     }
@@ -359,27 +443,24 @@ pub fn update() -> i32 {
     };
     let result = match result {
         Ok(v) => v,
-        Err(e) => return ctl_die(&k, &format!("apply failed: {e}")),
+        Err(e) => return ctl_die(k, &format!("apply failed: {e}")),
     };
 
     if let Some(failures) = result.get("depFailures").and_then(json::Json::as_arr) {
         if !failures.is_empty() {
-            note(&k, "some packages didn't install:");
+            note(k, "some packages didn't install:");
             for failure in failures {
                 let id = failure.get("id").and_then(json::Json::as_str).unwrap_or("?");
                 let error = failure.get("error").and_then(json::Json::as_str).unwrap_or("");
-                row(&k, &format!("{}·{} {}{}: {}{}", k.faint, k.rst, k.dim, id, error, k.rst));
+                row(k, &format!("{}·{} {}{}: {}{}", k.faint, k.rst, k.dim, id, error, k.rst));
             }
         }
     }
 
     if result.get("restartNeeded").and_then(json::Json::as_bool) == Some(true) {
-        // No arg: surface_targets takes its default ("all"), not an empty
-        // name — an empty string used to be rejected as an unknown target so
-        // the post-update restart never ran.
         let _ = restart(None);
     }
-    act(&k, "updated to", version);
+    act(k, "updated to", version);
     0
 }
 
@@ -428,9 +509,106 @@ pub fn session(action: &str) -> i32 {
             }
             0
         }
-        other => ctl_die(&k, &format!("unknown session action '{other}' (logout or lock)")),
+        "stats" => {
+            session_stats(&k);
+            0
+        }
+        other => ctl_die(&k, &format!("unknown session action '{other}' (logout, lock or stats)")),
     }
 }
+
+fn session_stats(k: &crate::ui::Skin) {
+    sec(k, "session");
+    gap(k);
+
+    let rst = k.rst;
+    let is_uwsm = std::env::var("UWSM_ID").is_ok();
+    let hypr_up = Command::new("hyprctl")
+        .arg("version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    let comp_status = if hypr_up {
+        format!("{}running{}", k.flame, rst)
+    } else {
+        format!("{}inactive{}", k.dim, rst)
+    };
+    let mgr = if is_uwsm { " (uwsm)" } else { "" };
+    row(k, &format!("{}compositor{}   {}Hyprland{rst}{mgr}   {comp_status}", k.dim, rst, k.cream));
+
+    let mon_count = Command::new("hyprctl")
+        .args(["monitors", "-j"])
+        .output()
+        .ok()
+        .and_then(|o| crate::json::parse(&String::from_utf8_lossy(&o.stdout)).ok())
+        .and_then(|j| j.as_arr().map(|a| a.len()))
+        .unwrap_or(0);
+    row(k, &format!("{}monitors{}     {}{mon_count} active{}", k.dim, rst, k.cream, rst));
+
+    gap(k);
+    sec(k, "surfaces");
+    gap(k);
+    for surface in SURFACES {
+        let (dot, st) = if surface_up(surface) {
+            (format!("{}●{}", k.flame, rst), format!("{}running{}", k.cream, rst))
+        } else {
+            (format!("{}○{}", k.faint, rst), format!("{}stopped{}", k.dim, rst))
+        };
+        let wd = if watchdog_up(surface) {
+            format!("{}watchdog up{}", k.dim, rst)
+        } else {
+            format!("{}no watchdog{}", k.faint, rst)
+        };
+        row(k, &format!("{dot} {}{surface:<8}{} {st}   {wd}", k.cream, rst));
+    }
+
+    gap(k);
+    sec(k, "daemons");
+    gap(k);
+    let daemons = [
+        ("awww-daemon", "wallpaper daemon"),
+        ("clipvault", "clipboard history"),
+        ("hypridle", "idle management"),
+        ("hyprsunset", "blue light filter"),
+    ];
+    for (bin, label) in &daemons {
+        let running = Command::new("pgrep")
+            .arg("-x")
+            .arg(bin)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        let (dot, st) = if running {
+            (format!("{}●{}", k.flame, rst), format!("{}active{}", k.cream, rst))
+        } else {
+            (format!("{}○{}", k.faint, rst), format!("{}inactive{}", k.dim, rst))
+        };
+        row(k, &format!("{dot} {}{label:<20}{} {st}", k.cream, rst));
+    }
+
+    let rt = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_string());
+    let mut lock_count = 0;
+    if let Ok(entries) = std::fs::read_dir(&rt) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if (name.starts_with("xiu-") && name.ends_with(".lock"))
+                || name.ends_with("-watchdog.lock")
+                || name.starts_with("launch-guard.")
+            {
+                lock_count += 1;
+            }
+        }
+    }
+    gap(k);
+    row(k, &format!("{}runtime locks{} {}{lock_count} in {rt}{}", k.dim, rst, k.dim, rst));
+    gap(k);
+}
+
 
 fn teardown_session() {
     // 1. Stop systemd user session units
