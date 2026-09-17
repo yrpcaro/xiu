@@ -244,6 +244,8 @@ def _wizard(args, info, manifest):
         ], default=1)
         brave = bidx == 0
 
+    fish = tui.confirm("Login shell", ["Set fish as your login shell. (Recommended)"])
+
     root_cmd, overlays = info["root_cmd"], True
     if family == "gentoo":
         ridx = tui.select_one("Root command", [
