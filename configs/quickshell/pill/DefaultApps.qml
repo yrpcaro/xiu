@@ -152,6 +152,16 @@ SettingsSurface {
     function apply(cat, desktopId) {
         for (var i = 0; i < cat.mimes.length; i++)
             xdgProc.run(cat.mimes[i], desktopId);
+        syncVarsProc.catKey = cat.key;
+        syncVarsProc.desktopId = desktopId;
+        syncVarsProc.running = true;
+    }
+
+    Process {
+        id: syncVarsProc
+        property string catKey: ""
+        property string desktopId: ""
+        command: ["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/set-default-app.py", catKey, desktopId]
     }
 
     FileView {

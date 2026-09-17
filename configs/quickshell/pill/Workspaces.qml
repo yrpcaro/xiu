@@ -52,6 +52,10 @@ Item {
         if (a >= 1 && !seen[a])
             out.push(a);
         out.sort(function (x, y) { return x - y; });
+        if (out.length === 0) {
+            var fallbackId = parseInt(activeName);
+            out = (fallbackId >= 1) ? [fallbackId] : [1];
+        }
         return out;
     }
 
@@ -82,7 +86,9 @@ Item {
     readonly property point activeDotPoint: {
         void workspaces.activeName;
         void workspaces.width;
-        return Qt.point(slotCenterX(Math.max(0, activeIndex)), height / 2);
+        if (activeIndex < 0)
+            return Qt.point(width / 2, height / 2);
+        return Qt.point(slotCenterX(activeIndex), height / 2);
     }
 
     implicitWidth: row.implicitWidth
@@ -112,10 +118,10 @@ Item {
 
                 Rectangle {
                     anchors.centerIn: parent
-                    width: parent.width
+                    width: Math.max(height, parent.width)
                     height: workspaces.dotW
                     radius: height / 2
-                    color: slot.isActive ? Theme.vermLit : Theme.cream
+                    color: slot.isActive ? Theme.accent : Theme.cream
                     opacity: slot.isActive ? 1.0 : (area.containsMouse ? 0.7 : 0.3)
                     Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                 }

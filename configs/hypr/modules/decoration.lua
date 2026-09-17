@@ -1,5 +1,8 @@
 local home = os.getenv("HOME")
-local ok, wc = pcall(dofile, home .. "/.cache/ricelin/hypr-colors.lua")
+local ok, wc = pcall(dofile, home .. "/.cache/xiu/hypr-colors.lua")
+if not ok then
+    ok, wc = pcall(dofile, home .. "/.cache/ricelin/hypr-colors.lua")
+end
 if not ok then wc = nil end
 
 local function border(hex, fallback)
@@ -7,11 +10,9 @@ local function border(hex, fallback)
     return "rgb(" .. hex:gsub("#", "") .. ")"
 end
 
--- Only the active window carries a visible border: the inactive color is
--- fully transparent (Hyprland's parser takes rgba(0,0,0,0) — a bare rgb()
--- has no alpha), so focus reads at a glance from the single accent line and
--- inactive windows sit quietly against the wallpaper. The border size stays
--- 2px as shipped — only the inactive color changes.
+-- Active windows carry a clean 1px hairline accent border (border_size = 1).
+-- Inactive windows have a completely transparent border (rgba(0,0,0,0))
+-- so focus reads immediately and inactive windows sit quietly against the wallpaper.
 local active   = border(wc and wc.active, "#e0563b")
 local inactive = "rgba(0,0,0,0)"
 
