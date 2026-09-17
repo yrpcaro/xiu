@@ -15,28 +15,80 @@ Singleton {
     id: root
 
     property string keymap: ""
+    property var configuredLayouts: []
+
     /**
-     * Fold a verbose keymap name into the short code the chips show, for any
-     * configured layout: the parenthetical country code when the name carries
-     * one ("English (US)" -> "US", "German (DE)" -> "DE"), a small name map
-     * for the languages whose xkb names have no parentheses (Persian -> FA),
-     * else the first two letters of the name — never a hardcoded layout set.
+     * Fold a verbose keymap name into a clean 2-3 uppercase letter code:
+     * 1. Strict 2-3 letter parenthetical country code filter ("English (US)" -> "US", "German (DE)" -> "DE").
+     *    4+ letter parenthetical descriptors ("Persian (Windows)", "Russian (phonetic)") are XKB layout variants,
+     *    NOT country codes, and are discarded.
+     * 2. Direct Hyprland Config Integration: matches configured kb_layout codes when present.
+     * 3. Base name resolution: strip parenthetical variants ("Persian (Windows)" -> "Persian") and match standard dictionary.
+     * 4. Strict Abbreviation Invariant: clamp/truncate the output to a maximum of 2 or 3 uppercase letters (never "WINDOWS").
      */
     function codeFor(name) {
         if (!name || name.length === 0)
             return "";
-        var m = /\(([^)]+)\)\s*$/.exec(name);
+
+        // 1. Strict 2-3 letter parenthetical filter
+        var m = /\(([A-Za-z]{2,3})\)\s*$/.exec(name);
         if (m)
             return m[1].toUpperCase();
+
+        // 2. Base name resolution: strip parenthetical variants
+        var baseName = name.replace(/\([^)]+\)/g, "").trim();
+        var n = baseName.toLowerCase();
+
+        // 3. Direct Hyprland Config Integration: check configuredLayouts
+        if (root.configuredLayouts && root.configuredLayouts.length > 0) {
+            for (var i = 0; i < root.configuredLayouts.length; i++) {
+                var c = root.configuredLayouts[i].trim().toLowerCase();
+                if (c.length >= 2 && c.length <= 3) {
+                    if (n === c) return c.toUpperCase();
+                    if ((c === "ir" || c === "fa") && (n === "persian" || n === "farsi")) return c.toUpperCase();
+                    if (c === "us" && n === "english") return "US";
+                    if (c === "ru" && n === "russian") return "RU";
+                    if (c === "de" && n === "german") return "DE";
+                    if (c === "fr" && n === "french") return "FR";
+                    if (c === "es" && n === "spanish") return "ES";
+                    if (c === "it" && n === "italian") return "IT";
+                    if (c === "ar" && (n === "arabic" || n === "arab")) return "AR";
+                    if (c === "tr" && n === "turkish") return "TR";
+                    if (c === "gr" && n === "greek") return "GR";
+                    if (c === "pl" && n === "polish") return "PL";
+                    if (c === "ua" && n === "ukrainian") return "UA";
+                    if (c === "he" && n === "hebrew") return "HE";
+                    if (c === "ja" && n === "japanese") return "JA";
+                    if (c === "ko" && n === "korean") return "KO";
+                    if (c === "zh" && n === "chinese") return "ZH";
+                    if (c === "pt" && n === "portuguese") return "PT";
+                    if (c === "nl" && n === "dutch") return "NL";
+                    if (c === "se" && n === "swedish") return "SE";
+                    if (c === "no" && n === "norwegian") return "NO";
+                    if (c === "dk" && n === "danish") return "DK";
+                    if (c === "fi" && n === "finnish") return "FI";
+                    if (c === "cz" && n === "czech") return "CZ";
+                    if (c === "hu" && n === "hungarian") return "HU";
+                    if (c === "ro" && n === "romanian") return "RO";
+                }
+            }
+        }
+
         var named = {
-            "persian": "FA", "arabic": "AR", "russian": "RU", "polish": "PL",
+            "persian": "FA", "farsi": "FA", "arabic": "AR", "russian": "RU", "polish": "PL",
             "ukrainian": "UA", "greek": "GR", "turkish": "TR", "hebrew": "HE",
-            "thai": "TH", "japanese": "JA", "korean": "KO", "chinese": "ZH"
+            "thai": "TH", "japanese": "JA", "korean": "KO", "chinese": "ZH",
+            "french": "FR", "german": "DE", "spanish": "ES", "italian": "IT",
+            "swedish": "SV", "norwegian": "NO", "danish": "DA", "finnish": "FI",
+            "portuguese": "PT", "czech": "CS", "hungarian": "HU", "romanian": "RO",
+            "english": "US", "dutch": "NL"
         };
-        var n = name.toLowerCase();
         if (named[n] !== undefined)
             return named[n];
-        return name.substring(0, 2).toUpperCase();
+
+        // 4. Fallback: take first 2 or 3 letters of baseName, clamped strictly to 3 chars
+        var abbrev = baseName.substring(0, Math.min(3, Math.max(2, baseName.length))).toUpperCase();
+        return abbrev.substring(0, 3);
     }
 
     readonly property string code: codeFor(keymap)
@@ -60,7 +112,8 @@ Singleton {
         try {
             var o = JSON.parse(text);
             var v = o && o.str ? String(o.str) : "";
-            root.layoutCount = v.length ? v.split(",").length : 0;
+            root.configuredLayouts = v.length ? v.split(",").map(function(s) { return s.trim(); }) : [];
+            root.layoutCount = root.configuredLayouts.length;
         } catch (e) {
         }
     }

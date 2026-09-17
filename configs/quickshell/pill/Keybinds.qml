@@ -76,21 +76,25 @@ PillSurface {
     /**
      * Display form of a combo: mouse tokens are spelled out so a scroll or button
      * gesture reads clearly (these binds are shown read-only), and code:NNN
-     * keycodes show the us-layout letter for that physical key — code:46 reads
-     * "code:46 (L)" so the row says what the key actually is while staying honest
-     * about being a keycode bind.
+     * Display form of a combo: mouse tokens are spelled out so a scroll or button
+     * gesture reads clearly (these binds are shown read-only), and code:NNN
+     * keycodes strictly display their clean US keyboard labels (e.g. SUPER + Q,
+     * SUPER + L, SUPER + T, SUPER + .). Never display raw keycode numbers.
      */
     function comboPretty(c) {
         var shown = c.replace("mouse_up", "Scroll ↑")
                 .replace("mouse_down", "Scroll ↓")
                 .replace("mouse:272", "LMB")
                 .replace("mouse:273", "RMB");
-        var m = shown.match(/^(.*?)(code:\d+)(.*)$/);
-        if (m) {
-            var letter = Chord.letterForScanCode(parseInt(m[2].slice(5), 10) - 8);
+        shown = shown.replace(/code:(\d+)/g, function(match, num) {
+            var label = Chord.labelForKeycode(num);
+            if (label)
+                return label;
+            var letter = Chord.letterForScanCode(parseInt(num, 10) - 8);
             if (letter)
-                shown = m[1] + m[2] + " (" + letter.toUpperCase() + ")" + m[3];
-        }
+                return letter.toUpperCase();
+            return match;
+        });
         return shown;
     }
 
@@ -195,7 +199,7 @@ PillSurface {
             if (root.formCombo.length === 0) { root.conflict = "pick a key"; return; }
             if (root.formCmd.length === 0) { root.conflict = "command empty"; return; }
             if (Binds.inUse(text, root.formCombo, -1)) {
-                root.conflict = root.formCombo + " already bound";
+                root.conflict = root.comboPretty(root.formCombo) + " already bound";
                 return;
             }
             var a = Binds.add(text, root.formCombo, root.formCmd, root.formName);
@@ -205,7 +209,7 @@ PillSurface {
         }
 
         if (root.formCombo !== root.origCombo && Binds.inUse(text, root.formCombo, root.formLine)) {
-            root.conflict = root.formCombo + " already bound";
+            root.conflict = root.comboPretty(root.formCombo) + " already bound";
             return;
         }
 
@@ -684,7 +688,7 @@ PillSurface {
                         anchors.leftMargin: 11 * root.s
                         anchors.verticalCenter: parent.verticalCenter
                         text: root.listening ? "press keys…  esc cancels"
-                            : (root.formCombo.length ? root.formCombo : "tap to set a key")
+                            : (root.formCombo.length ? root.comboPretty(root.formCombo) : "tap to set a key")
                         color: root.listening ? Theme.flameGlow
                             : (root.formCombo.length ? Theme.cream : Theme.faint)
                         font.family: Theme.font

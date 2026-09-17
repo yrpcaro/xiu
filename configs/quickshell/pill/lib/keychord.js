@@ -75,6 +75,27 @@ var US_LETTERS = {
     10: "1", 11: "2", 12: "3", 13: "4", 14: "5", 15: "6", 16: "7", 17: "8", 18: "9", 19: "0"
 };
 
+var US_KEYS = {
+    10: "1", 11: "2", 12: "3", 13: "4", 14: "5", 15: "6", 16: "7", 17: "8", 18: "9", 19: "0",
+    20: "-", 21: "=", 22: "Backspace", 23: "Tab",
+    24: "Q", 25: "W", 26: "E", 27: "R", 28: "T", 29: "Y", 30: "U", 31: "I", 32: "O", 33: "P",
+    34: "[", 35: "]", 36: "Return",
+    38: "A", 39: "S", 40: "D", 41: "F", 42: "G", 43: "H", 44: "J", 45: "K", 46: "L",
+    47: ";", 48: "'", 49: "`",
+    50: "Shift", 51: "\\",
+    52: "Z", 53: "X", 54: "C", 55: "V", 56: "B", 57: "N", 58: "M",
+    59: ",", 60: ".", 61: "/", 62: "Shift",
+    64: "Alt", 65: "Space", 108: "Alt",
+    111: "Up", 113: "Left", 114: "Right", 116: "Down",
+    119: "Delete"
+};
+
+/** Return the clean US keyboard label for a raw XKB keycode (e.g. 24 -> Q, 60 -> .). */
+function labelForKeycode(code) {
+    var c = parseInt(code, 10);
+    return US_KEYS[c] || null;
+}
+
 /** The us-layout character for a raw evdev scan code, or null. */
 function letterForScanCode(scan) {
     return US_LETTERS[scan + 8] || null;
@@ -104,5 +125,5 @@ function chord(key, modifiers, scanCode) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-    module.exports = { chord, keyName, letterForScanCode, US_LETTERS };
+    module.exports = { chord, keyName, letterForScanCode, labelForKeycode, US_LETTERS, US_KEYS };
 }

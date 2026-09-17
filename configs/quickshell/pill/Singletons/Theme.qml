@@ -24,6 +24,7 @@ Singleton {
      */
     readonly property color onGlow: dyn ? Dyn.primary : "#ff9a64"
 
+    readonly property color accent:   dyn ? Dyn.primary : vermLit
     readonly property color verm:     dyn ? Qt.darker(Dyn.primary, 1.18) : "#c0442b"
     readonly property color vermLit:  dyn ? Dyn.primary : "#e0563b"
     readonly property color vermDeep: dyn ? Dyn.primaryContainer : "#a3371f"

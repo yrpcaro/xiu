@@ -1310,6 +1310,8 @@ Item {
             id: restRow
             anchors.centerIn: parent
             spacing: 9 * pill.s
+            opacity: (layoutFlash.opacity === 0) ? 1.0 : (1.0 - layoutFlash.opacity)
+            Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
             Item {
                 id: restKanji
                 visible: pill.specialView === ""
@@ -1327,7 +1329,7 @@ Item {
                     color: "transparent"
                     font: kanjiFill.font
                     style: Text.Outline
-                    styleColor: Qt.alpha(Theme.vermLit,
+                    styleColor: Qt.alpha(Theme.accent,
                         Math.min(1, (pill.mode === "rest" || !pill.hoverSoulGate ? 0.5 : 0) + pill.kanjiFlash))
                     Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
                 }
@@ -1370,12 +1372,10 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: clock.hhmm
                 color: Theme.cream
-                opacity: layoutFlash.opacity === 0 ? 1 : 1 - layoutFlash.opacity
                 font.family: Theme.font
                 font.pixelSize: 16 * pill.s
                 font.weight: Font.DemiBold
                 font.features: { "tnum": 1 }
-                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
             }
             Text {
                 visible: pill.specialView !== ""
@@ -1399,7 +1399,7 @@ Item {
             id: layoutFlash
             anchors.centerIn: parent
             text: Keymap.code
-            color: Theme.vermLit
+            color: Theme.accent
             font.family: Theme.font
             font.pixelSize: 15 * pill.s
             font.weight: Font.DemiBold

@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-const { chord, letterForScanCode } = require("./keychord.js");
+const { chord, letterForScanCode, labelForKeycode } = require("./keychord.js");
 
 let failed = 0;
 function eq(actual, expected, msg) {
@@ -44,6 +44,14 @@ eq(letterForScanCode(16), "q", "evdev 16 (KEY_Q) -> q (xkb 24)");
 eq(letterForScanCode(3), "2", "evdev 3 (KEY_2) -> 2 (xkb 11)");
 eq(letterForScanCode(11), "0", "evdev 11 (KEY_0) -> 0 (xkb 19)");
 eq(letterForScanCode(91), null, "unmapped evdev code -> null");
+
+// labelForKeycode translates raw XKB keycodes to clean US keyboard labels
+eq(labelForKeycode(24), "Q", "xkb 24 -> Q");
+eq(labelForKeycode(46), "L", "xkb 46 -> L");
+eq(labelForKeycode(28), "T", "xkb 28 -> T");
+eq(labelForKeycode(60), ".", "xkb 60 -> .");
+eq(labelForKeycode(119), "Delete", "xkb 119 -> Delete");
+eq(labelForKeycode(999), null, "unmapped xkb keycode -> null");
 
 if (failed > 0) {
     console.error(failed + " failures");
