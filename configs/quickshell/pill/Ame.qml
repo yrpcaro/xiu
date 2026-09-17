@@ -325,7 +325,7 @@ Item {
     }
 
     Timer {
-        running: root.visible && !root.busy
+        running: root.visible && !root.busy && !Flags.reduceMotion && !Flags.gameMode
         interval: root.blinking ? 33 : 83
         repeat: true
         onTriggered: {
