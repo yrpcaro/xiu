@@ -54,23 +54,8 @@ Singleton {
     readonly property string thumbScript: Quickshell.env("HOME") + "/.config/hypr/scripts/cliphist-thumbs.sh"
     readonly property string watchScript: Quickshell.env("HOME") + "/.config/hypr/scripts/cliphist-watch.sh"
 
-    /**
-     * Re-runs the guarded watcher script every 20s. Detached, so the shell
-     * owns nothing: the watcher the script leaves behind outlives pill
-     * restarts, and the script's own pgrep guard means the heartbeat can
-     * never stack a second one. Started by the backend probe, not at
-     * creation, so a box without clipvault never spawns doomed watchers.
-     */
-    Timer {
-        id: storeHeartbeat
-        interval: 20000
-        repeat: true
-        onTriggered: Quickshell.execDetached(["sh", root.watchScript])
-    }
-
     function kickStore() {
-        Quickshell.execDetached(["sh", root.watchScript])
-        storeHeartbeat.running = true
+        Quickshell.execDetached(["sh", root.watchScript]);
     }
 
     function refresh() {
@@ -146,7 +131,11 @@ Singleton {
     Timer {
         id: respawn
         interval: 2000
-        onTriggered: watchProc.running = true
+        onTriggered: {
+            watchProc.running = true;
+            if (!root.backendMissing)
+                root.kickStore();
+        }
     }
 
     Timer {

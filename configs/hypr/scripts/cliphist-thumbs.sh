@@ -7,14 +7,26 @@ mkdir -p "$cache"
 chmod 700 "$cache"
 
 tab=$(printf '\t')
-snapshot=$(clipvault list) || exit 0
+snapshot=$(clipvault list 2>/dev/null) || exit 0
+[ -n "$snapshot" ] || exit 0
 
-ids=$(printf '%s\n' "$snapshot" | cut -f1)
-for f in "$cache"/*.png; do
-    [ -e "$f" ] || continue
-    fid=$(basename "$f" .png)
-    printf '%s\n' "$ids" | grep -qxF "$fid" || rm -f "$f"
-done
+# Prune stale thumbnails in one batch without per-file subprocess spawns
+printf '%s\n' "$snapshot" | awk -v cache="$cache" '
+    BEGIN { FS="\t" }
+    NF { valid[$1] = 1 }
+    END {
+        cmd = "find \"" cache "\" -maxdepth 1 -name \"*.png\""
+        while ((cmd | getline f) > 0) {
+            n = split(f, parts, "/")
+            fname = parts[n]
+            sub(/\.png$/, "", fname)
+            if (fname ~ /^[0-9]+$/ && !(fname in valid)) {
+                print f
+            }
+        }
+        close(cmd)
+    }
+' | xargs -r rm -f
 
 printf '%s\n' "$snapshot" | while IFS= read -r line; do
     # clipvault's metadata always carries dimensions after the mime
@@ -22,7 +34,7 @@ printf '%s\n' "$snapshot" | while IFS= read -r line; do
     # the closing bracket.
     case "$line" in
         *"$tab[[ binary data"*image/*"]]"*)
-            id=$(printf '%s' "$line" | cut -f1)
+            id=${line%%$tab*}
             thumb="$cache/$id.png"
             if [ ! -s "$thumb" ]; then
                 raw="$cache/.raw.$id"
