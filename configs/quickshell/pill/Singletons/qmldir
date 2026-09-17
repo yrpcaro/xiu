@@ -22,3 +22,4 @@ singleton Keymap Keymap.qml
 singleton Metrics Metrics.qml
 singleton Schema Schema.qml
 singleton Store Store.qml
+singleton Peripherals Peripherals.qml
