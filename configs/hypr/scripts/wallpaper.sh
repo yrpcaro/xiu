@@ -29,6 +29,7 @@ printf '%s\n' "$WPDIR" > "$RESOLVED"
 # No-op mode for the QML side: re-resolve the folder and exit before touching any daemon state.
 [ "${1:-}" = "resolve" ] && exit 0
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin-wallpaper"
+STATE_XIU="${XDG_STATE_HOME:-$HOME/.local/state}/xiu/wallpaper"
 MAP="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin-wallpaper-map"
 BAG="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin-wallpaper-bag"
 STILL="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin-wallpaper-still.png"
@@ -228,14 +229,15 @@ palette_update() {
     focused=$(focused_output)
     pic=""
     [ -n "$focused" ] && pic=$(map_get "$focused")
-    [ -n "$pic" ] || pic=$(cat "$STATE" 2>/dev/null || true)
+    [ -n "$pic" ] || pic=$(cat "$STATE_XIU" 2>/dev/null || cat "$STATE" 2>/dev/null || true)
     [ -n "$pic" ] && [ -f "$pic" ] || return 0
     show="$pic"
     if is_video "$pic"; then
         make_still "$pic" "$STILL" && show="$STILL" || return 0
     fi
-    mkdir -p "$(dirname "$STATE")"
+    mkdir -p "$(dirname "$STATE")" "$(dirname "$STATE_XIU")"
     printf '%s\n' "$pic" > "$STATE"
+    printf '%s\n' "$pic" > "$STATE_XIU"
     pmode=$(jq -r '.paletteMode // "static"' "$flags_file" 2>/dev/null || echo static)
     mkdir -p "$(dirname "$WLOG")"
     if [ "$pmode" = "manual" ]; then
@@ -266,7 +268,7 @@ restore_all() {
     local o pic any=false
     for o in $(outputs); do
         pic=$(map_get "$o")
-        [ -n "$pic" ] && [ -f "$pic" ] || pic=$(cat "$STATE" 2>/dev/null || true)
+        [ -n "$pic" ] && [ -f "$pic" ] || pic=$(cat "$STATE_XIU" 2>/dev/null || cat "$STATE" 2>/dev/null || true)
         [ -n "$pic" ] && [ -f "$pic" ] || pic=$(pop_bag) || continue
         map_put "$o" "$pic"
         apply_visual "$pic" "$o"
@@ -286,8 +288,8 @@ cmd="${1:-}"
 target=""
 
 if [ "$cmd" = "init" ]; then
-    if [ ! -s "$MAP" ] && [ -s "$STATE" ]; then
-        pic=$(cat "$STATE")
+    if [ ! -s "$MAP" ] && { [ -s "$STATE_XIU" ] || [ -s "$STATE" ]; }; then
+        pic=$(cat "$STATE_XIU" 2>/dev/null || cat "$STATE" 2>/dev/null || true)
         [ -f "$pic" ] && map_put_all "$pic"
     fi
     if [ "$daemon_was_running" = true ]; then

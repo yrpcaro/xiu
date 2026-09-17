@@ -272,7 +272,7 @@ PillSurface {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.calcCopied ? "copied" : "↵ copy"
-                color: root.calcCopied ? Theme.dim : Theme.vermLit
+                color: root.calcCopied ? Theme.dim : Theme.accent
                 font.family: Theme.font
                 font.pixelSize: 11 * root.s
             }
@@ -404,7 +404,7 @@ PillSurface {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
                     text: retMetrics.text
-                    color: Theme.vermLit
+                    color: Theme.accent
                     font.family: Theme.font
                     font.pixelSize: 12 * root.s
                     visible: appRow.selected && !appRow.editing

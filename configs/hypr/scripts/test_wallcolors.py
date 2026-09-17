@@ -92,6 +92,14 @@ def main():
     assert wc.signed_arc(350, 10) == 20, "signed_arc must cross the seam"
     assert wc.circ_clamp(30, 345, 20) in (345.0, 20.0), "circ_clamp must snap to a bound"
 
+    # achromatic generation: zero sat must produce pure neutral ramp (never vermilion hue 0.09)
+    achro_pill, achro_seed, achro_var = wc.generate_manual(0.09, "dark", 0.0, "auto")
+    assert achro_var == "neutral", f"expected neutral variant, got {achro_var}"
+    assert achro_seed == "#787878", f"expected #787878 seed, got {achro_seed}"
+    for k in ["surface", "primary", "cream", "bright", "dim"]:
+        _, s = wc.hue_sat_of(achro_pill[k])
+        assert s < 0.01, f"achromatic slot {k} has unexpected saturation {s} ({achro_pill[k]})"
+
     print("wallcolors semantic layer: all invariants hold")
     return 0
 

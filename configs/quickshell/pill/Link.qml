@@ -173,7 +173,7 @@ PillSurface {
                 height: 5 * root.s
                 radius: 1.5 * root.s
                 rotation: 45
-                color: nrow.critical ? Theme.vermLit : Theme.verm
+                color: nrow.critical ? Theme.accent : Theme.verm
             }
         }
 
@@ -204,7 +204,7 @@ PillSurface {
                 visible: nrow.entry.count > 1
                 anchors.verticalCenter: parent.verticalCenter
                 text: "×" + nrow.entry.count
-                color: nrow.critical ? Theme.vermLit : Theme.vermDim
+                color: nrow.critical ? Theme.accent : Theme.vermDim
                 font.family: Theme.font
                 font.pixelSize: 9 * root.s
                 font.weight: Font.Bold
@@ -338,7 +338,7 @@ PillSurface {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: Flags.showGlyphs
                             text: "払"
-                            color: clearArea.containsMouse ? Theme.vermLit : Theme.vermDim
+                            color: clearArea.containsMouse ? Theme.accent : Theme.vermDim
                             font.family: Theme.fontJp
                             font.pixelSize: 9 * root.s
                             font.weight: Font.Bold
@@ -349,13 +349,13 @@ PillSurface {
                             width: 11 * root.s
                             height: 11 * root.s
                             name: "trash"
-                            color: clearArea.containsMouse ? Theme.vermLit : Theme.vermDim
+                            color: clearArea.containsMouse ? Theme.accent : Theme.vermDim
                             stroke: 1.8
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "CLEAR"
-                            color: clearArea.containsMouse ? Theme.vermLit : Theme.vermDim
+                            color: clearArea.containsMouse ? Theme.accent : Theme.vermDim
                             font.family: Theme.font
                             font.pixelSize: 9 * root.s
                             font.weight: Font.Bold

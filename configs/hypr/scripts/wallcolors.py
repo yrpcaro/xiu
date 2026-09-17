@@ -35,9 +35,11 @@ import sys
 from pathlib import Path
 
 CACHE = Path.home() / ".cache" / "ricelin"
+CACHE_XIU = Path.home() / ".cache" / "xiu"
 STATE_HOME = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local" / "state")))
 SCHEME_STATE = STATE_HOME / "ricelin" / "scheme"
 WALLPAPER_STATE = STATE_HOME / "ricelin-wallpaper"
+WALLPAPER_STATE_XIU = STATE_HOME / "xiu" / "wallpaper"
 FLAGS_FILE = STATE_HOME / "ricelin" / "flags.json"
 SCHEMES_DIR = Path(__file__).resolve().parent.parent / "schemes"
 
@@ -490,10 +492,15 @@ def set_palette_mode_dynamic():
 
 
 def current_wallpaper():
-    try:
-        return WALLPAPER_STATE.read_text().strip()
-    except OSError:
-        return ""
+    for p in (WALLPAPER_STATE_XIU, WALLPAPER_STATE):
+        try:
+            if p.is_file():
+                w = p.read_text().strip()
+                if w:
+                    return w
+        except OSError:
+            pass
+    return ""
 
 
 def generate_dynamic(wallpaper, variant, smart):
@@ -504,14 +511,17 @@ def generate_dynamic(wallpaper, variant, smart):
     hue, sat, mean_l, share = analyze(wallpaper)
     chromatic = hue is not None
     if not chromatic:
-        hue, sat = 0.09, 0.0
+        hue, sat = 0.0, 0.0
 
     if variant == "auto":
-        variant = smart_variant(colourfulness(wallpaper)) if smart else "tonal-spot"
+        if not chromatic:
+            variant = "neutral"
+        else:
+            variant = smart_variant(colourfulness(wallpaper)) if smart else "tonal-spot"
 
     light = mean_l >= 0.40
     surf_sat = min(sat, 0.26) if light else min(max(sat, 0.30 if chromatic else 0.0), 0.45)
-    acc_sat = (min(sat + 0.18, 0.85) if light else min(max(sat, 0.30) + 0.12, 0.82)) if chromatic else 0.05
+    acc_sat = (min(sat + 0.18, 0.85) if light else min(max(sat, 0.30) + 0.12, 0.82)) if chromatic else 0.0
     acc_sat = min(0.95, acc_sat * ACCENT_MULT.get(variant, 1.0))
     if light:
         base = lerp(mean_l, 0.40, 0.66, 0.80, 0.93)
@@ -522,11 +532,11 @@ def generate_dynamic(wallpaper, variant, smart):
 
     pill = {name: tint(hue, surf_sat, base + step) for name, step in zip(SURF_NAMES, steps)}
     pill["primary"] = tint(hue, acc_sat, acc_l)
-    pill["primary_container"] = tint(hue, min(acc_sat + 0.08, 0.9), deep_l)
-    pill["on_primary_container"] = tint(hue, min(acc_sat, 0.45), glow_l)
+    pill["primary_container"] = tint(hue, min(acc_sat + 0.08, 0.9) if chromatic else 0.0, deep_l)
+    pill["on_primary_container"] = tint(hue, min(acc_sat, 0.45) if chromatic else 0.0, glow_l)
     pill["outline"] = tint(hue, surf_sat, base + (-0.35 if light else 0.35))
     for key, (lit, st) in zip(TEXT_KEYS, text):
-        pill[key] = tint(hue, st, lit)
+        pill[key] = tint(hue, st if chromatic else 0.0, lit)
 
     seed = tint(hue, sat, 0.45) if chromatic else "#787878"
     return pill, seed, variant, share
@@ -538,13 +548,13 @@ def generate_manual(hue, mode, sat, variant):
     mean_l = 0.85 if mode == "light" else 0.12
     chromatic = sat > 0.02
     if not chromatic:
-        hue = 0.09
+        hue, sat = 0.0, 0.0
     if variant == "auto":
-        variant = "tonal-spot"
+        variant = "neutral" if not chromatic else "tonal-spot"
 
     light = mean_l >= 0.40
     surf_sat = min(sat, 0.26) if light else min(max(sat, 0.30 if chromatic else 0.0), 0.45)
-    acc_sat = (min(sat + 0.18, 0.85) if light else min(max(sat, 0.30) + 0.12, 0.82)) if chromatic else 0.05
+    acc_sat = (min(sat + 0.18, 0.85) if light else min(max(sat, 0.30) + 0.12, 0.82)) if chromatic else 0.0
     acc_sat = min(0.95, acc_sat * ACCENT_MULT.get(variant, 1.0))
     if light:
         base = lerp(mean_l, 0.40, 0.66, 0.80, 0.93)
@@ -555,11 +565,11 @@ def generate_manual(hue, mode, sat, variant):
 
     pill = {name: tint(hue, surf_sat, base + step) for name, step in zip(SURF_NAMES, steps)}
     pill["primary"] = tint(hue, acc_sat, acc_l)
-    pill["primary_container"] = tint(hue, min(acc_sat + 0.08, 0.9), deep_l)
-    pill["on_primary_container"] = tint(hue, min(acc_sat, 0.45), glow_l)
+    pill["primary_container"] = tint(hue, min(acc_sat + 0.08, 0.9) if chromatic else 0.0, deep_l)
+    pill["on_primary_container"] = tint(hue, min(acc_sat, 0.45) if chromatic else 0.0, glow_l)
     pill["outline"] = tint(hue, surf_sat, base + (-0.35 if light else 0.35))
     for key, (lit, st) in zip(TEXT_KEYS, text):
-        pill[key] = tint(hue, st, lit)
+        pill[key] = tint(hue, st if chromatic else 0.0, lit)
 
     seed = tint(hue, sat, 0.45) if chromatic else "#787878"
     return pill, seed, variant
@@ -573,9 +583,6 @@ def render_foot(pill, b, ansi):
     dark theme, which is also foot's default. The 16 slots are the semantic
     ANSI list — matugen's raw base16 would leave the regular colors on its
     grey ramp."""
-    foot = _tool_dir("foot")
-    if foot is None:
-        return
     lines = [
         "[colors-dark]",
         "blur=yes",
@@ -590,7 +597,16 @@ def render_foot(pill, b, ansi):
         lines.append("regular%d=%s" % (i, ansi[i].lstrip("#")))
     for i in range(8):
         lines.append("bright%d=%s" % (i, ansi[i + 8].lstrip("#")))
-    (foot / "colors.ini").write_text("\n".join(lines) + "\n")
+    body = "\n".join(lines) + "\n"
+
+    foot = _tool_dir("foot")
+    if foot is None:
+        foot = Path.home() / ".config" / "foot"
+        foot.mkdir(parents=True, exist_ok=True)
+    (foot / "colors.ini").write_text(body)
+
+    CACHE_XIU.mkdir(parents=True, exist_ok=True)
+    (CACHE_XIU / "foot-colors.ini").write_text(body)
 
 
 def osc_sequence(code, hex_color):
@@ -614,7 +630,10 @@ def broadcast_terminal(pill, b, ansi):
     for i, hex_color in enumerate(ansi):
         c = hex_color.lstrip("#")
         seq += "\x1b]4;%d;rgb:%s/%s/%s\x1b\\" % (i, c[0:2], c[2:4], c[4:6])
+    CACHE.mkdir(parents=True, exist_ok=True)
     (CACHE / "sequences.txt").write_text(seq)
+    CACHE_XIU.mkdir(parents=True, exist_ok=True)
+    (CACHE_XIU / "sequences.txt").write_text(seq)
     data = seq.encode()
     try:
         entries = list(Path("/dev/pts").iterdir())
@@ -1117,10 +1136,12 @@ def render_spicetify(pill, b):
     installer) so a vanilla spicetify setup is never touched."""
     d = _tool_dir("spicetify")
     if d is None:
-        return
+        if shutil.which("spicetify"):
+            d = Path.home() / ".config" / "spicetify"
+        else:
+            return
     theme = d / "Themes" / "xiu"
-    if not theme.is_dir():
-        return
+    theme.mkdir(parents=True, exist_ok=True)
     p = pill
     h = lambda c: c.lstrip("#").upper()
     lines = [
@@ -1146,7 +1167,6 @@ def render_spicetify(pill, b):
         "notification-error = %s" % h(b["base08"]),
         "misc               = %s" % h(p["subtle"]),
     ]
-    theme.mkdir(parents=True, exist_ok=True)
     (theme / "color.ini").write_text("\n".join(lines) + "\n")
     prefs = d / "config-xpui.ini"
     if prefs.is_file() and "current_theme = xiu" in prefs.read_text():
@@ -1543,7 +1563,10 @@ def fan_out(pill, seed, variant, share=None):
     read a scheme with fixed luminance bands, chroma ceilings, WCAG floors
     and hue-bent statuses instead of matugen's raw dump."""
     CACHE.mkdir(parents=True, exist_ok=True)
-    (CACHE / "colors.json").write_text(json.dumps(pill, indent=2) + "\n")
+    CACHE_XIU.mkdir(parents=True, exist_ok=True)
+    c_json = json.dumps(pill, indent=2) + "\n"
+    (CACHE / "colors.json").write_text(c_json)
+    (CACHE_XIU / "colors.json").write_text(c_json)
     render_fastfetch(pill)
     render_starship(pill)
 
@@ -1557,9 +1580,10 @@ def fan_out(pill, seed, variant, share=None):
     render_fish(pill, ansi)
     broadcast_terminal(pill, b, ansi)
 
-    (CACHE / "hypr-colors.lua").write_text(
-        'return {\n    active = "%s",\n    inactive = "%s",\n}\n'
-        % (pill["primary"], b["base01"]))
+    hypr_colors = ('return {\n    active = "%s",\n    inactive = "%s",\n}\n'
+                   % (pill["primary"], b["base01"]))
+    (CACHE / "hypr-colors.lua").write_text(hypr_colors)
+    (CACHE_XIU / "hypr-colors.lua").write_text(hypr_colors)
 
     lines = [
         f'background = {b["base00"]}',
