@@ -9,14 +9,30 @@ wpdir=$(jq -r '.wallpaperDir // ""' "$flags" 2>/dev/null || echo "")
 cache="${XDG_CACHE_HOME:-$HOME/.cache}/ricelin-wp-thumbs"
 mkdir -p "$cache"
 
-for f in "$cache"/*.png; do
-    [ -e "$f" ] || continue
-    base="$(basename "$f" .png)"
-    [ -n "$(find "$wpdir" -type f -name "$base" -print -quit)" ] || rm -f "$f"
-done
+if [ -d "$wpdir" ]; then
+    find "$wpdir" -type f 2>/dev/null | awk -v cache="$cache" '
+        {
+            sub(".*/", "", $0)
+            if ($0 != "") valid[$0] = 1
+        }
+        END {
+            cmd = "find \"" cache "\" -maxdepth 1 -name \"*.png\""
+            while ((cmd | getline f) > 0) {
+                n = split(f, parts, "/")
+                fname = parts[n]
+                sub(/\.png$/, "", fname)
+                if (fname != "" && !(fname in valid)) {
+                    print f
+                }
+            }
+            close(cmd)
+        }
+    ' | xargs -r rm -f
+fi
 
-find "$wpdir" -type f \( -iname '*.jpg' -o -iname '*.png' -o -iname '*.gif' -o -iname '*.webp' -o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' -o -iname '*.mov' \) | while IFS= read -r src; do
-    thumb="$cache/$(basename "$src").png"
+find "$wpdir" -type f \( -iname '*.jpg' -o -iname '*.png' -o -iname '*.gif' -o -iname '*.webp' -o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' -o -iname '*.mov' \) 2>/dev/null | while IFS= read -r src; do
+    base=${src##*/}
+    thumb="$cache/$base.png"
     if [ ! -s "$thumb" ] || [ "$src" -nt "$thumb" ]; then
         case "$src" in
             *.[Mm][Pp]4|*.[Ww][Ee][Bb][Mm]|*.[Mm][Kk][Vv]|*.[Mm][Oo][Vv])
