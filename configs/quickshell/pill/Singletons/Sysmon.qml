@@ -160,9 +160,10 @@ Singleton {
         id: fastProc
         command: ["sh", "-c",
             "read -r _ a b c d e f g h _ < /proc/stat; echo \"CPU $((a+b+c+d+e+f+g+h)) $((d+e))\"; "
-            + "awk '/^MemTotal:/{mt=$2}/^MemAvailable:/{ma=$2}/^SwapTotal:/{st=$2}/^SwapFree:/{sf=$2}END{print \"MEM\",mt,ma,st,sf}' /proc/meminfo; "
-            + "awk 'NR>2{gsub(\":\",\" \");if($1!=\"lo\"){rx+=$2;tx+=$10}}END{print \"NET\",rx+0,tx+0}' /proc/net/dev; "
-            + "if [ -n \"$1\" ] && [ -r \"$1\" ]; then echo \"TMP $(cat \"$1\")\"; else echo 'TMP -'; fi",
+            + "awk 'FILENAME ~ /meminfo$/ { if ($1==\"MemTotal:\") mt=$2; else if ($1==\"MemAvailable:\") ma=$2; else if ($1==\"SwapTotal:\") st=$2; else if ($1==\"SwapFree:\") sf=$2; } "
+            + "FILENAME ~ /net\\/dev$/ && FNR>2 { gsub(\":\",\" \"); if ($1!=\"lo\") { rx+=$2; tx+=$10 } } "
+            + "END { print \"MEM\",mt,ma,st,sf; print \"NET\",rx+0,tx+0; }' /proc/meminfo /proc/net/dev; "
+            + "if [ -n \"$1\" ] && [ -r \"$1\" ]; then read -r tp < \"$1\"; echo \"TMP $tp\"; else echo 'TMP -'; fi",
             "_", root.tempPath]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -215,7 +216,7 @@ Singleton {
             : root.gpuVendor === "intel"
             ? ["sh", "-c",
                 "d=\"$1\"; t=$( { cat \"$d\"/hwmon/hwmon*/temp2_input || cat \"$d\"/hwmon/hwmon*/temp1_input; } 2>/dev/null | head -1); echo \"TEMP ${t:--1000}\"; "
-                + "for f in $(find /proc/[0-9]*/fd -lname '/dev/dri/*' 2>/dev/null); do cat \"${f%/fd/*}/fdinfo/${f##*/}\"; done 2>/dev/null | awk -v pdev=\"$2\" "
+                + "find /proc/[0-9]*/fdinfo -type f -exec cat {} + 2>/dev/null | awk -v pdev=\"$2\" "
                 + "'/^drm-pdev:/{p=$2} /^drm-client-id:/{dup=seen[$2]++} "
                 + "p==pdev && !dup && /^drm-engine-render:/{ns+=$2} p==pdev && !dup && /^drm-cycles-rcs:/{cyc+=$2} p==pdev && /^drm-total-cycles-rcs:/{tot=$2} "
                 + "END{print \"FD\", ns+0, cyc+0, tot+0}'",
@@ -274,7 +275,7 @@ Singleton {
     }
 
     Timer {
-        interval: 500
+        interval: 1000
         running: root.open
         repeat: true
         onTriggered: if (!fastProc.running) fastProc.running = true
