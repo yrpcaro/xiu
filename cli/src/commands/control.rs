@@ -621,65 +621,38 @@ fn is_proc_running(name: &str) -> bool {
 }
 
 fn teardown_session() {
-    // 1. Stop systemd user session units
-    let _ = Command::new("systemctl")
-        .args(["--user", "stop", "hyprland-session.target"])
-        .status();
+    // 1. Kill watchdogs immediately so nothing can respawn
+    let _ = Command::new("pkill").args(["-KILL", "-f", "watchdog.sh"]).status();
+
+    // 2. Dispatch exit to compositor immediately (closes Wayland sockets to all clients)
+    if std::env::var("UWSM_ID").is_ok() {
+        let _ = Command::new("uwsm").arg("stop").status();
+    } else {
+        let _ = Command::new("hyprctl").args(["dispatch", "exit"]).status();
+    }
+
+    // 3. Stop systemd user session units asynchronously (--no-block avoids waiting)
     let _ = Command::new("systemctl")
         .args([
             "--user",
             "stop",
+            "--no-block",
+            "hyprland-session.target",
             "hypridle.service",
             "hyprpolkitagent.service",
             "hyprsunset.service",
         ])
         .status();
 
-    // 2. Stop watchdogs first to prevent respawning surfaces
-    let _ = Command::new("pkill").args(["-TERM", "-f", "watchdog.sh"]).status();
+    // 4. Gracefully terminate session daemons in parallel with combined regex calls
+    let _ = Command::new("pkill")
+        .args(["-TERM", "-f", "cliphist-watch\\.sh|clipboard-watch\\.sh|wallpaper\\.sh|launch-guard\\.sh|xiu-resizer"])
+        .status();
+    let _ = Command::new("pkill")
+        .args(["-TERM", "-x", "clipvault|wl-paste|awww-daemon|swww-daemon|cava|quickshell|qs"])
+        .status();
 
-    // 3. Gracefully terminate session processes and scripts
-    let full_patterns = [
-        "cliphist-watch.sh",
-        "clipboard-watch.sh",
-        "wallpaper.sh",
-        "launch-guard.sh",
-        "xiu-resizer",
-    ];
-    let exact_names = [
-        "clipvault",
-        "wl-paste",
-        "awww-daemon",
-        "swww-daemon",
-        "cava",
-        "quickshell",
-        "qs",
-    ];
-
-    for pat in &full_patterns {
-        let _ = Command::new("pkill").args(["-TERM", "-f", pat]).status();
-    }
-    for name in &exact_names {
-        let _ = Command::new("pkill").args(["-TERM", "-x", name]).status();
-    }
-
-    // Graceful period for quickshell and daemons to clean up before SIGKILL (up to 500ms)
-    for _ in 0..10 {
-        if !is_proc_running("quickshell") && !is_proc_running("qs") {
-            break;
-        }
-        thread::sleep(Duration::from_millis(50));
-    }
-
-    let _ = Command::new("pkill").args(["-KILL", "-f", "watchdog.sh"]).status();
-    for pat in &full_patterns {
-        let _ = Command::new("pkill").args(["-KILL", "-f", pat]).status();
-    }
-    for name in &exact_names {
-        let _ = Command::new("pkill").args(["-KILL", "-x", name]).status();
-    }
-
-    // 4. Clean up session lockfiles and sockets
+    // 5. Clean up session lockfiles and sockets
     let rt = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_string());
     if let Ok(entries) = std::fs::read_dir(&rt) {
         for entry in entries.flatten() {
@@ -697,33 +670,36 @@ fn teardown_session() {
         }
     }
 
-    // 5. Exit compositor
-    if std::env::var("UWSM_ID").is_ok() {
-        let _ = Command::new("uwsm").arg("stop").status();
-    } else {
-        let _ = Command::new("hyprctl").args(["dispatch", "exit"]).status();
-    }
-
-    // Wait up to 1.5s for Hyprland to terminate
-    for _ in 0..15 {
+    // 6. Fast poll for Hyprland to exit (up to 500ms in 20ms steps)
+    let mut exited = false;
+    for _ in 0..25 {
         if !is_proc_running("Hyprland") {
+            exited = true;
             break;
         }
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(20));
     }
 
     // Fallback: if Hyprland hangs on Xwayland or DRM master release, escalate with SIGTERM then SIGKILL
-    if is_proc_running("Hyprland") {
+    if !exited && is_proc_running("Hyprland") {
         let _ = Command::new("pkill").args(["-TERM", "-x", "Hyprland"]).status();
         for _ in 0..5 {
             if !is_proc_running("Hyprland") {
+                exited = true;
                 break;
             }
-            thread::sleep(Duration::from_millis(100));
+            thread::sleep(Duration::from_millis(20));
         }
-        if is_proc_running("Hyprland") {
+        if !exited && is_proc_running("Hyprland") {
             let _ = Command::new("pkill").args(["-KILL", "-x", "Hyprland"]).status();
         }
-        let _ = Command::new("pkill").args(["-KILL", "-x", "Xwayland"]).status();
     }
+
+    // Force kill remaining daemons and Xwayland
+    let _ = Command::new("pkill")
+        .args(["-KILL", "-f", "cliphist-watch\\.sh|clipboard-watch\\.sh|wallpaper\\.sh|launch-guard\\.sh|xiu-resizer"])
+        .status();
+    let _ = Command::new("pkill")
+        .args(["-KILL", "-x", "clipvault|wl-paste|awww-daemon|swww-daemon|cava|quickshell|qs|Xwayland"])
+        .status();
 }
