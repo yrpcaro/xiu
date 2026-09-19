@@ -190,8 +190,8 @@
     { "id": "noto-fonts-emoji", "group": "core", "required": true, "desc": "Color emoji", "aur": false,
       "names": { "arch": "noto-fonts-emoji", "debian": "fonts-noto-color-emoji", "fedora": "google-noto-color-emoji-fonts", "suse": "google-noto-coloremoji-fonts", "gentoo": "media-fonts/noto-emoji" }, "fallback": null },
 
-    { "id": "yamis-icon-theme-git", "group": "core", "required": true, "desc": "Yet Another Monochrome Icon Set", "aur": true,
-      "names": { "arch": "yamis-icon-theme-git", "debian": null, "fedora": null, "suse": null, "gentoo": null }, "fallback": "yamis" },
+    { "id": "yamis-icon-theme-git", "group": "core", "required": true, "desc": "Yet Another Monochrome Icon Set", "aur": false,
+      "names": { "arch": null, "debian": null, "fedora": null, "suse": null, "gentoo": null }, "fallback": "yamis" },
 
     { "id": "bibata-cursor-theme", "group": "core", "required": true, "desc": "The cursor theme", "aur": true,
       "names": { "arch": "bibata-cursor-theme-bin", "debian": null, "fedora": null, "suse": null, "gentoo": null },

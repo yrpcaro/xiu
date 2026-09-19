@@ -302,6 +302,8 @@ def _yamis(pkg, family):
          "run": ["mkdir", "-p", ICON_DIR]},
         {"desc": "clone yet-another-monochrome-icon-set into user icon dir",
          "shell": f"rm -rf {shlex.quote(dest)} && git clone --depth=1 {shlex.quote(url)} {shlex.quote(dest)}"},
+        {"desc": "build user icon theme cache",
+         "shell": f"command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -f -t {shlex.quote(dest)} || true"},
     ]
 
 
@@ -350,8 +352,7 @@ def present(fallback_id, pkg):
                                capture_output=True)
             return r.returncode == 0
         if fallback_id == "yamis":
-            return (os.path.isdir(os.path.join(ICON_DIR, "yet-another-monochrome-icon-set")) or
-                    os.path.isdir("/usr/share/icons/yet-another-monochrome-icon-set"))
+            return os.path.isdir(os.path.join(ICON_DIR, "yet-another-monochrome-icon-set"))
     except (OSError, KeyError):
         pass
     return False

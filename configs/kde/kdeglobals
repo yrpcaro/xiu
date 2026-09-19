@@ -101,7 +101,7 @@ ColorScheme=Xiu
 widgetStyle=Breeze
 
 [Icons]
-Theme=Papirus-Dark
+Theme=yet-another-monochrome-icon-set
 
 [KFileDialog Settings]
 Allow Expansion=false
