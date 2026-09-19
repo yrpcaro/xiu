@@ -8,7 +8,8 @@
     "nerdfont": "download the patched font from nerd-fonts releases and run fc-cache",
     "github": "download a release from the project's github",
     "flatpak": "install from Flathub",
-    "curl": "the project's own curl-pipe installer"
+    "curl": "the project's own curl-pipe installer",
+    "yamis": "clone yet-another-monochrome-icon-set from bitbucket into user icon dir"
   },
   "packages": [
     { "id": "hyprland", "group": "core", "required": true, "desc": "The Wayland compositor the whole rice runs on", "aur": false,
@@ -189,8 +190,8 @@
     { "id": "noto-fonts-emoji", "group": "core", "required": true, "desc": "Color emoji", "aur": false,
       "names": { "arch": "noto-fonts-emoji", "debian": "fonts-noto-color-emoji", "fedora": "google-noto-color-emoji-fonts", "suse": "google-noto-coloremoji-fonts", "gentoo": "media-fonts/noto-emoji" }, "fallback": null },
 
-    { "id": "papirus-icon-theme", "group": "core", "required": true, "desc": "Icon theme", "aur": false,
-      "names": { "arch": "papirus-icon-theme", "debian": "papirus-icon-theme", "fedora": "papirus-icon-theme", "suse": "papirus-icon-theme", "gentoo": "x11-themes/papirus-icon-theme" }, "fallback": null },
+    { "id": "yamis-icon-theme-git", "group": "core", "required": true, "desc": "Yet Another Monochrome Icon Set", "aur": true,
+      "names": { "arch": "yamis-icon-theme-git", "debian": null, "fedora": null, "suse": null, "gentoo": null }, "fallback": "yamis" },
 
     { "id": "bibata-cursor-theme", "group": "core", "required": true, "desc": "The cursor theme", "aur": true,
       "names": { "arch": "bibata-cursor-theme-bin", "debian": null, "fedora": null, "suse": null, "gentoo": null },
@@ -249,9 +250,6 @@
 
     { "id": "darkly", "group": "full", "required": false, "desc": "Qt style paired with qtengine", "aur": true,
       "names": { "arch": "darkly", "debian": null, "fedora": null, "suse": null }, "fallback": null },
-
-    { "id": "papirus-folders", "group": "full", "required": false, "desc": "Color-matched Papirus folder icons", "aur": true,
-      "names": { "arch": "papirus-folders", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 
     { "id": "sddm", "group": "full", "required": false, "desc": "Display manager option (torii theme ships in the repo)", "aur": false,
       "names": { "arch": "sddm", "debian": "sddm", "fedora": "sddm", "suse": "sddm" }, "fallback": null },

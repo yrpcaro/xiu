@@ -1454,31 +1454,8 @@ def gnome_accent_color(hex_color):
         return "pink"
 
 
-def papirus_folder_color(hex_color):
-    """Map primary accent color to the closest available Papirus folder color."""
-    h, s = hue_sat_of(hex_color)
-    if s < 0.15:
-        return "grey"
-    if h >= 345 or h < 15:
-        return "carmine" if s > 0.6 else "red"
-    elif 15 <= h < 45:
-        return "deeporange" if s > 0.6 else "orange"
-    elif 45 <= h < 70:
-        return "yellow"
-    elif 70 <= h < 165:
-        return "green"
-    elif 165 <= h < 195:
-        return "teal" if h < 180 else "cyan"
-    elif 195 <= h < 255:
-        return "nordic" if s < 0.4 else "blue"
-    elif 255 <= h < 285:
-        return "violet" if s > 0.5 else "indigo"
-    else:
-        return "magenta" if s > 0.5 else "pink"
-
-
 def get_active_icon_theme(is_dark=True):
-    """Resolve the active icon theme, prioritizing dynamic tintable themes (Chameleon, Papirus)."""
+    """Resolve the active icon theme, defaulting to yet-another-monochrome-icon-set."""
     theme = ""
     if shutil.which("gsettings"):
         try:
@@ -1511,31 +1488,21 @@ def get_active_icon_theme(is_dark=True):
             if theme:
                 break
 
-    chameleon_name = "Breeze-Round-Chameleon Dark Icons" if is_dark else "Breeze-Round-Chameleon Light Icons"
-    papirus_name = "Papirus-Dark" if is_dark else "Papirus"
-
-    if "Chameleon" in theme:
-        return chameleon_name
-    if theme in ("Papirus", "Papirus-Dark", "Papirus-Light"):
-        return papirus_name
-
+    yamis_name = "yet-another-monochrome-icon-set"
     local_icons = Path.home() / ".local" / "share" / "icons"
     usr_icons = Path("/usr/share/icons")
-    has_chameleon = ((local_icons / chameleon_name).is_dir() or
-                     (usr_icons / chameleon_name).is_dir() or
-                     (local_icons / "Breeze-Round-Chameleon Dark Icons").is_dir() or
-                     (usr_icons / "Breeze-Round-Chameleon Dark Icons").is_dir())
-    has_papirus = ((local_icons / papirus_name).is_dir() or
-                   (usr_icons / papirus_name).is_dir() or
-                   shutil.which("papirus-folders"))
+    has_yamis = ((local_icons / yamis_name).is_dir() or (usr_icons / yamis_name).is_dir())
 
-    # Prefer dynamic tintable themes (Chameleon, then Papirus)
-    if has_chameleon:
-        return chameleon_name
-    if has_papirus:
-        return papirus_name
+    if has_yamis or theme == yamis_name:
+        return yamis_name
 
-    return theme or chameleon_name
+    is_generic = (not theme) or theme.lower() in (
+        "breeze", "breeze-dark", "breeze-light", "breeze_light", "adwaita", "adwaitalegacy", "hicolor"
+    )
+    if is_generic or not theme:
+        return yamis_name
+
+    return theme
 
 
 def _update_gtk_settings(settings_file, theme_name, icon_theme, is_dark):
@@ -1838,68 +1805,6 @@ def render_qt(pill):
                    stderr=subprocess.DEVNULL)
 
 
-def _recolor_chameleon_icons(primary_hex, is_dark=True):
-    """Update SVG ColorScheme-Accent in user-local Chameleon icon theme if installed."""
-    theme_name = "Breeze-Round-Chameleon Dark Icons" if is_dark else "Breeze-Round-Chameleon Light Icons"
-    theme_dir = Path.home() / ".local" / "share" / "icons" / theme_name
-    if not theme_dir.is_dir():
-        return
-
-    cache_dir = Path.home() / ".cache" / "xiu"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    cache_file = cache_dir / ("chameleon_%s.txt" % ("dark" if is_dark else "light"))
-
-    accent_re = re.compile(r"(\.ColorScheme-Accent\s*\{\s*color:\s*)[^;]+(;)")
-    rel_paths = []
-    if cache_file.is_file():
-        try:
-            rel_paths = [p for p in cache_file.read_text().splitlines() if p]
-        except OSError:
-            rel_paths = []
-
-    if not rel_paths:
-        for svg in theme_dir.rglob("*.svg"):
-            if svg.is_symlink():
-                continue
-            try:
-                if "ColorScheme-Accent" in svg.read_text(errors="ignore"):
-                    rel_paths.append(str(svg.relative_to(theme_dir)))
-            except (OSError, UnicodeError):
-                pass
-        try:
-            cache_file.write_text("\n".join(rel_paths))
-        except OSError:
-            pass
-
-    changed = False
-    for rel_p in rel_paths:
-        svg = theme_dir / rel_p
-        try:
-            content = svg.read_text(errors="ignore")
-            if "ColorScheme-Accent" in content:
-                new_content = accent_re.sub(r"\g<1>%s\g<2>" % primary_hex, content)
-                if new_content != content:
-                    svg.write_text(new_content)
-                    changed = True
-        except (OSError, UnicodeError):
-            pass
-
-    if changed and shutil.which("gtk-update-icon-cache"):
-        subprocess.run(["gtk-update-icon-cache", "-q", "-f", "-t", str(theme_dir)],
-                       stderr=subprocess.DEVNULL)
-
-
-def render_icons(pill):
-    """Recolor active icon themes (Papirus and Chameleon) matching dynamic accent."""
-    is_dark = rel_luminance(pill["surface"]) < 0.40
-    if shutil.which("papirus-folders"):
-        color = papirus_folder_color(pill["primary"])
-        theme = "Papirus-Dark" if is_dark else "Papirus"
-        subprocess.run(["papirus-folders", "-C", color, "--theme", theme],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    _recolor_chameleon_icons(pill["primary"], is_dark)
-
-
 def fan_out(pill, seed, variant, share=None):
     """Write the pill JSON, recolour fastfetch, and build the terminal/border
     base16 through matugen with the resolved scheme type — then run the
@@ -1956,7 +1861,6 @@ def fan_out(pill, seed, variant, share=None):
     render_browser(pill)
     render_qt(pill)
     render_gtk(pill)
-    render_icons(pill)
     render_user_templates(pill, b)
     return 0
 

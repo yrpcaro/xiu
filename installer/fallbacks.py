@@ -293,6 +293,18 @@ def _curl(pkg, family):
     ]
 
 
+def _yamis(pkg, family):
+    """Clone Yet Another Monochrome Icon Set into user icon dir."""
+    url = "https://bitbucket.org/dirn-typo/yet-another-monochrome-icon-set.git"
+    dest = os.path.join(ICON_DIR, "yet-another-monochrome-icon-set")
+    return [
+        {"desc": "make sure the user icon dir exists",
+         "run": ["mkdir", "-p", ICON_DIR]},
+        {"desc": "clone yet-another-monochrome-icon-set into user icon dir",
+         "shell": f"rm -rf {shlex.quote(dest)} && git clone --depth=1 {shlex.quote(url)} {shlex.quote(dest)}"},
+    ]
+
+
 _HANDLERS = {
     "cargo": _cargo,
     "ghostty": _ghostty,
@@ -301,6 +313,7 @@ _HANDLERS = {
     "github": _github,
     "flatpak": _flatpak,
     "curl": _curl,
+    "yamis": _yamis,
 }
 
 
@@ -336,6 +349,9 @@ def present(fallback_id, pkg):
             r = subprocess.run(["flatpak", "info", "--user", pkg["flatpak_id"]],
                                capture_output=True)
             return r.returncode == 0
+        if fallback_id == "yamis":
+            return (os.path.isdir(os.path.join(ICON_DIR, "yet-another-monochrome-icon-set")) or
+                    os.path.isdir("/usr/share/icons/yet-another-monochrome-icon-set"))
     except (OSError, KeyError):
         pass
     return False

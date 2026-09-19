@@ -101,16 +101,6 @@ def main():
         _, s = wc.hue_sat_of(achro_pill[k])
         assert s < 0.01, f"achromatic slot {k} has unexpected saturation {s} ({achro_pill[k]})"
 
-    # Papirus folder color mapping
-    assert wc.papirus_folder_color("#ff0000") in ("red", "carmine"), "red hue must map to red/carmine"
-    assert wc.papirus_folder_color("#ff8800") in ("orange", "deeporange"), "orange hue must map to orange"
-    assert wc.papirus_folder_color("#ffff00") == "yellow", "yellow hue must map to yellow"
-    assert wc.papirus_folder_color("#00ff00") == "green", "green hue must map to green"
-    assert wc.papirus_folder_color("#00ffff") in ("cyan", "teal"), "cyan hue must map to cyan/teal"
-    assert wc.papirus_folder_color("#0000ff") in ("blue", "nordic"), "blue hue must map to blue/nordic"
-    assert wc.papirus_folder_color("#ff00ff") in ("magenta", "pink"), "magenta hue must map to magenta/pink"
-    assert wc.papirus_folder_color("#888888") == "grey", "low saturation must map to grey"
-
     # GNOME accent color mapping
     assert wc.gnome_accent_color("#ff0000") == "red"
     assert wc.gnome_accent_color("#ff8800") == "orange"
@@ -127,11 +117,11 @@ def main():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_ini = Path(tmpdir) / "settings.ini"
         tmp_ini.write_text("[Settings]\ngtk-modules=colorreload-gtk-module:window-decorations-gtk-module\n")
-        wc._update_gtk_settings(tmp_ini, "adw-gtk3-dark", "Papirus-Dark", True)
+        wc._update_gtk_settings(tmp_ini, "adw-gtk3-dark", "yet-another-monochrome-icon-set", True)
         cp = configparser.RawConfigParser()
         cp.read(str(tmp_ini))
         assert cp.get("Settings", "gtk-theme-name") == "adw-gtk3-dark"
-        assert cp.get("Settings", "gtk-icon-theme-name") == "Papirus-Dark"
+        assert cp.get("Settings", "gtk-icon-theme-name") == "yet-another-monochrome-icon-set"
         assert cp.get("Settings", "gtk-application-prefer-dark-theme") == "true"
         assert "colorreload-gtk-module" not in cp.get("Settings", "gtk-modules")
         assert "window-decorations-gtk-module" in cp.get("Settings", "gtk-modules")
@@ -139,10 +129,10 @@ def main():
         # xsettingsd update
         tmp_xset = Path(tmpdir) / "xsettingsd.conf"
         tmp_xset.write_text('Net/ThemeName "Breeze-Dark"\nNet/IconThemeName "Breeze"\n')
-        wc._update_xsettingsd(tmp_xset, "adw-gtk3-dark", "Breeze-Round-Chameleon Dark Icons")
+        wc._update_xsettingsd(tmp_xset, "adw-gtk3-dark", "yet-another-monochrome-icon-set")
         xset_text = tmp_xset.read_text()
         assert 'Net/ThemeName "adw-gtk3-dark"' in xset_text
-        assert 'Net/IconThemeName "Breeze-Round-Chameleon Dark Icons"' in xset_text
+        assert 'Net/IconThemeName "yet-another-monochrome-icon-set"' in xset_text
 
         # KDE kdeglobals update preserving sections
         tmp_kde = Path(tmpdir) / "kdeglobals"
@@ -151,28 +141,18 @@ def main():
             ("[Colors:Window]", {"BackgroundNormal": "#202020", "ForegroundNormal": "#ffffff"}),
             ("[Colors:Selection]", {"BackgroundNormal": "#fabd2f", "DecorationFocus": "#fabd2f"}),
         ]
-        wc._update_kdeglobals(tmp_kde, sections, "Breeze-Round-Chameleon Dark Icons", "#fabd2f")
+        wc._update_kdeglobals(tmp_kde, sections, "yet-another-monochrome-icon-set", "#fabd2f")
         cp_kde = configparser.RawConfigParser()
         cp_kde.read(str(tmp_kde))
         assert cp_kde.get("KDE", "contrast") == "4", "existing KDE section preserved"
         assert cp_kde.get("General", "ColorScheme") == "Xiu"
         assert cp_kde.get("General", "AccentColor") == "250,189,47"
-        assert cp_kde.get("Icons", "Theme") == "Breeze-Round-Chameleon Dark Icons"
+        assert cp_kde.get("Icons", "Theme") == "yet-another-monochrome-icon-set"
         assert cp_kde.get("Colors:Selection", "DecorationFocus") == "250,189,47"
 
         # Icon theme resolution
-        assert wc.get_active_icon_theme(is_dark=True) in ("Breeze-Round-Chameleon Dark Icons", "Papirus-Dark")
-        assert wc.get_active_icon_theme(is_dark=False) in ("Breeze-Round-Chameleon Light Icons", "Papirus")
-
-        # Chameleon icon recoloring
-        theme_places = Path(tmpdir) / "places" / "32"
-        theme_places.mkdir(parents=True, exist_ok=True)
-        test_svg = theme_places / "folder.svg"
-        test_svg.write_text('<style>.ColorScheme-Accent { color:#3daee9; }</style>')
-        accent_re = re.compile(r"(\.ColorScheme-Accent\s*\{\s*color:\s*)[^;]+(;)")
-        new_svg = accent_re.sub(r"\g<1>#e0563b\g<2>", test_svg.read_text())
-        test_svg.write_text(new_svg)
-        assert "#e0563b" in test_svg.read_text()
+        assert wc.get_active_icon_theme(is_dark=True) == "yet-another-monochrome-icon-set"
+        assert wc.get_active_icon_theme(is_dark=False) == "yet-another-monochrome-icon-set"
 
     print("wallcolors semantic layer: all invariants hold")
     return 0
