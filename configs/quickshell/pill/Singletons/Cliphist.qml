@@ -213,9 +213,9 @@ Singleton {
         id: listProc
         command: ["clipvault", "list"]
         stdout: StdioCollector { id: collected }
-        onExited: {
-            if (listProc.exitCode !== 0) {
-                console.warn("clipvault list failed with exit code " + listProc.exitCode + ", retrying once");
+        onExited: (code) => {
+            if (code !== 0) {
+                console.warn("clipvault list failed with exit code " + code + ", retrying once");
                 root.pending = false;
                 listRetry.restart();
                 return;
@@ -231,8 +231,8 @@ Singleton {
     Process {
         id: probeProc
         command: ["sh", "-c", "command -v clipvault >/dev/null 2>&1"]
-        onExited: {
-            root.backendMissing = exitCode !== 0
+        onExited: (code) => {
+            root.backendMissing = code !== 0
             if (!root.backendMissing)
                 root.kickStore()
         }
