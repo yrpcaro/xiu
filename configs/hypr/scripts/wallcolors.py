@@ -1516,6 +1516,8 @@ def get_active_icon_theme(is_dark=True):
 
     if "Chameleon" in theme:
         return chameleon_name
+    if theme in ("Papirus", "Papirus-Dark", "Papirus-Light"):
+        return papirus_name
 
     local_icons = Path.home() / ".local" / "share" / "icons"
     usr_icons = Path("/usr/share/icons")
@@ -1527,25 +1529,13 @@ def get_active_icon_theme(is_dark=True):
                    (usr_icons / papirus_name).is_dir() or
                    shutil.which("papirus-folders"))
 
-    is_generic = (not theme) or theme.lower() in (
-        "breeze", "breeze-dark", "breeze-light", "breeze_light", "adwaita", "adwaitalegacy", "hicolor"
-    )
-
-    if is_generic:
-        if has_chameleon:
-            return chameleon_name
-        if has_papirus:
-            return papirus_name
-
-    if theme in ("Papirus", "Papirus-Dark", "Papirus-Light"):
-        return papirus_name
-
-    if theme:
-        return theme
-
+    # Prefer dynamic tintable themes (Chameleon, then Papirus)
     if has_chameleon:
         return chameleon_name
-    return papirus_name
+    if has_papirus:
+        return papirus_name
+
+    return theme or chameleon_name
 
 
 def _update_gtk_settings(settings_file, theme_name, icon_theme, is_dark):

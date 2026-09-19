@@ -1310,10 +1310,22 @@ Item {
             id: restRow
             anchors.centerIn: parent
             spacing: 9 * pill.s
-            opacity: (layoutFlash.opacity === 0) ? 1.0 : (1.0 - layoutFlash.opacity)
-            scale: (layoutFlash.opacity === 0) ? 1.0 : 0.85
-            Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-            Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+            opacity: layoutFlash.active ? 0 : 1.0
+            scale: layoutFlash.active ? 0.88 : 1.0
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.glide
+                    easing.type: Motion.easeMorph
+                    easing.bezierCurve: Motion.morphCurve
+                }
+            }
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Motion.glide
+                    easing.type: Motion.easeMorph
+                    easing.bezierCurve: Motion.morphCurve
+                }
+            }
             Item {
                 id: restKanji
                 visible: pill.specialView === ""
@@ -1393,28 +1405,82 @@ Item {
         /**
          * Layout-change flash: a keybind switch (Alt+Shift, the chips) flips
          * the layout and the resting pill answers by showing the new code
-         * centered, over the time, for ~1.5s — then the time fades back.
-         * Purely an overlay on the fixed rest size; nothing measures it, so
-         * the pill never resizes. Re-arms on every change tick.
+         * with liquid morph and spring animation, over the time, for ~1.5s —
+         * then the time smoothly glides back.
          */
-        Text {
+        Item {
             id: layoutFlash
+            property bool active: false
+            property real punchScale: 1.0
+
             anchors.centerIn: parent
-            text: Keymap.code
-            color: Theme.accent
-            font.family: Theme.font
-            font.pixelSize: 15 * pill.s
-            font.weight: Font.DemiBold
-            font.letterSpacing: 2 * pill.s
-            opacity: 0
-            scale: opacity > 0 ? 1 : 0.7
-            Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-            Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+            width: layoutFlashRow.implicitWidth
+            height: layoutFlashRow.implicitHeight
+
+            opacity: active ? 1.0 : 0.0
+            scale: active ? 1.0 : 0.75
+            visible: opacity > 0.005
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: layoutFlash.active ? Motion.fast : Motion.glide
+                    easing.type: Motion.easeStandard
+                }
+            }
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Motion.glide
+                    easing.type: (Flags.reduceMotion || !layoutFlash.active) ? Motion.easeStandard : Easing.OutBack
+                    easing.overshoot: 1.35
+                }
+            }
+
+            NumberAnimation {
+                id: layoutPunch
+                target: layoutFlash
+                property: "punchScale"
+                from: 1.15
+                to: 1.0
+                duration: Motion.glide
+                easing.type: Motion.easeMorph
+                easing.bezierCurve: Motion.morphCurve
+            }
+
+            Row {
+                id: layoutFlashRow
+                anchors.centerIn: parent
+                spacing: 7 * pill.s
+                scale: layoutFlash.punchScale
+
+                GlyphIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 14 * pill.s
+                    height: 14 * pill.s
+                    name: "keyboard"
+                    color: Theme.accent
+                    stroke: 1.8
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Keymap.code
+                    color: Theme.cream
+                    font.family: Theme.font
+                    font.pixelSize: 14 * pill.s
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.5 * pill.s
+                }
+            }
 
             Connections {
                 target: Keymap
                 function onChangedChanged() {
-                    layoutFlash.opacity = 1;
+                    kanjiFlashAnim.restart();
+                    if (layoutFlash.active) {
+                        layoutPunch.restart();
+                    } else {
+                        layoutFlash.active = true;
+                    }
                     layoutFlashHide.restart();
                 }
             }
@@ -1422,7 +1488,7 @@ Item {
             Timer {
                 id: layoutFlashHide
                 interval: 1500
-                onTriggered: layoutFlash.opacity = 0
+                onTriggered: layoutFlash.active = false
             }
         }
     }
