@@ -100,6 +100,46 @@ def main():
         _, s = wc.hue_sat_of(achro_pill[k])
         assert s < 0.01, f"achromatic slot {k} has unexpected saturation {s} ({achro_pill[k]})"
 
+    # Papirus folder color mapping
+    assert wc.papirus_folder_color("#ff0000") in ("red", "carmine"), "red hue must map to red/carmine"
+    assert wc.papirus_folder_color("#ff8800") in ("orange", "deeporange"), "orange hue must map to orange"
+    assert wc.papirus_folder_color("#ffff00") == "yellow", "yellow hue must map to yellow"
+    assert wc.papirus_folder_color("#00ff00") == "green", "green hue must map to green"
+    assert wc.papirus_folder_color("#00ffff") in ("cyan", "teal"), "cyan hue must map to cyan/teal"
+    assert wc.papirus_folder_color("#0000ff") in ("blue", "nordic"), "blue hue must map to blue/nordic"
+    assert wc.papirus_folder_color("#ff00ff") in ("magenta", "pink"), "magenta hue must map to magenta/pink"
+    assert wc.papirus_folder_color("#888888") == "grey", "low saturation must map to grey"
+
+    # GTK settings update and colorreload-gtk-module purge
+    import tempfile, configparser
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_ini = Path(tmpdir) / "settings.ini"
+        tmp_ini.write_text("[Settings]\ngtk-modules=colorreload-gtk-module:window-decorations-gtk-module\n")
+        wc._update_gtk_settings(tmp_ini, "adw-gtk3-dark", "Papirus-Dark", True)
+        cp = configparser.RawConfigParser()
+        cp.read(str(tmp_ini))
+        assert cp.get("Settings", "gtk-theme-name") == "adw-gtk3-dark"
+        assert cp.get("Settings", "gtk-icon-theme-name") == "Papirus-Dark"
+        assert cp.get("Settings", "gtk-application-prefer-dark-theme") == "true"
+        assert "colorreload-gtk-module" not in cp.get("Settings", "gtk-modules")
+        assert "window-decorations-gtk-module" in cp.get("Settings", "gtk-modules")
+
+        # KDE kdeglobals update preserving sections
+        tmp_kde = Path(tmpdir) / "kdeglobals"
+        tmp_kde.write_text("[KDE]\ncontrast=4\n[Icons]\nTheme=Breeze\n")
+        sections = [
+            ("[Colors:Window]", {"BackgroundNormal": "#202020", "ForegroundNormal": "#ffffff"}),
+            ("[Colors:Selection]", {"BackgroundNormal": "#fabd2f", "DecorationFocus": "#fabd2f"}),
+        ]
+        wc._update_kdeglobals(tmp_kde, sections, "Breeze-Round-Chameleon Dark Icons", "#fabd2f")
+        cp_kde = configparser.RawConfigParser()
+        cp_kde.read(str(tmp_kde))
+        assert cp_kde.get("KDE", "contrast") == "4", "existing KDE section preserved"
+        assert cp_kde.get("General", "ColorScheme") == "Xiu"
+        assert cp_kde.get("General", "AccentColor") == "#fabd2f"
+        assert cp_kde.get("Icons", "Theme") == "Breeze-Round-Chameleon Dark Icons"
+        assert cp_kde.get("Colors:Selection", "DecorationFocus") == "250,189,47"
+
     print("wallcolors semantic layer: all invariants hold")
     return 0
 
