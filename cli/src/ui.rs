@@ -68,10 +68,19 @@ pub fn ctl_die(k: &Skin, text: &str) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn plain_skin_when_piped() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let prev = std::env::var_os("NO_COLOR");
+        std::env::remove_var("NO_COLOR");
         let k = skin();
+        if let Some(v) = prev {
+            std::env::set_var("NO_COLOR", v);
+        }
         if !std::io::stdout().is_terminal() {
             assert_eq!(k.verm, "");
             assert_eq!(k.rst, "");
@@ -82,10 +91,15 @@ mod tests {
 
     #[test]
     fn plain_skin_when_no_color() {
-        // NO_COLOR forces plain regardless of the terminal.
+        let _guard = ENV_LOCK.lock().unwrap();
+        let prev = std::env::var_os("NO_COLOR");
         std::env::set_var("NO_COLOR", "1");
         let k = skin();
-        std::env::remove_var("NO_COLOR");
+        if let Some(v) = prev {
+            std::env::set_var("NO_COLOR", v);
+        } else {
+            std::env::remove_var("NO_COLOR");
+        }
         assert_eq!(k.verm, "");
     }
 }

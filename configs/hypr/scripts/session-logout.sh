@@ -28,8 +28,15 @@ pkill -TERM -x cava 2>/dev/null || true
 pkill -TERM -x quickshell 2>/dev/null || true
 pkill -TERM -x qs 2>/dev/null || true
 
-# Brief grace period for clean exit
-sleep 0.15
+# Graceful period for quickshell and daemons to clean up before SIGKILL (up to 500ms)
+grace=0
+while [ "$grace" -lt 10 ]; do
+    if ! pgrep -x quickshell >/dev/null 2>&1 && ! pgrep -x qs >/dev/null 2>&1; then
+        break
+    fi
+    sleep 0.05
+    grace=$((grace + 1))
+done
 
 # Force kill any lingering daemons
 pkill -KILL -f "watchdog.sh" 2>/dev/null || true
@@ -52,7 +59,28 @@ rm -f "$rt"/xiu-*.lock "$rt"/*-watchdog.lock "$rt"/launch-guard.* "$rt"/xiu-resi
 
 # 5. Exit compositor
 if [ -n "${UWSM_ID:-}" ] && command -v uwsm >/dev/null 2>&1; then
-    exec uwsm stop
+    uwsm stop 2>/dev/null || true
 elif command -v hyprctl >/dev/null 2>&1; then
-    exec hyprctl dispatch exit
+    hyprctl dispatch exit 2>/dev/null || true
+fi
+
+# Wait up to 1.5s for Hyprland to terminate
+waited=0
+while pgrep -x Hyprland >/dev/null 2>&1 && [ "$waited" -lt 15 ]; do
+    sleep 0.1
+    waited=$((waited + 1))
+done
+
+# Fallback: if Hyprland hangs on Xwayland or DRM master release, escalate with SIGTERM then SIGKILL
+if pgrep -x Hyprland >/dev/null 2>&1; then
+    pkill -TERM -x Hyprland 2>/dev/null || true
+    term_waited=0
+    while pgrep -x Hyprland >/dev/null 2>&1 && [ "$term_waited" -lt 5 ]; do
+        sleep 0.1
+        term_waited=$((term_waited + 1))
+    done
+    if pgrep -x Hyprland >/dev/null 2>&1; then
+        pkill -KILL -x Hyprland 2>/dev/null || true
+    fi
+    pkill -KILL -x Xwayland 2>/dev/null || true
 fi

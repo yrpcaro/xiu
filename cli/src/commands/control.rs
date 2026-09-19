@@ -610,6 +610,16 @@ fn session_stats(k: &crate::ui::Skin) {
 }
 
 
+fn is_proc_running(name: &str) -> bool {
+    Command::new("pgrep")
+        .args(["-x", name])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
 fn teardown_session() {
     // 1. Stop systemd user session units
     let _ = Command::new("systemctl")
@@ -653,7 +663,13 @@ fn teardown_session() {
         let _ = Command::new("pkill").args(["-TERM", "-x", name]).status();
     }
 
-    thread::sleep(Duration::from_millis(150));
+    // Graceful period for quickshell and daemons to clean up before SIGKILL (up to 500ms)
+    for _ in 0..10 {
+        if !is_proc_running("quickshell") && !is_proc_running("qs") {
+            break;
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
 
     let _ = Command::new("pkill").args(["-KILL", "-f", "watchdog.sh"]).status();
     for pat in &full_patterns {
@@ -686,5 +702,28 @@ fn teardown_session() {
         let _ = Command::new("uwsm").arg("stop").status();
     } else {
         let _ = Command::new("hyprctl").args(["dispatch", "exit"]).status();
+    }
+
+    // Wait up to 1.5s for Hyprland to terminate
+    for _ in 0..15 {
+        if !is_proc_running("Hyprland") {
+            break;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    // Fallback: if Hyprland hangs on Xwayland or DRM master release, escalate with SIGTERM then SIGKILL
+    if is_proc_running("Hyprland") {
+        let _ = Command::new("pkill").args(["-TERM", "-x", "Hyprland"]).status();
+        for _ in 0..5 {
+            if !is_proc_running("Hyprland") {
+                break;
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+        if is_proc_running("Hyprland") {
+            let _ = Command::new("pkill").args(["-KILL", "-x", "Hyprland"]).status();
+        }
+        let _ = Command::new("pkill").args(["-KILL", "-x", "Xwayland"]).status();
     }
 }
