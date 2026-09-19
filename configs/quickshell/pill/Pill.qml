@@ -1311,7 +1311,9 @@ Item {
             anchors.centerIn: parent
             spacing: 9 * pill.s
             opacity: (layoutFlash.opacity === 0) ? 1.0 : (1.0 - layoutFlash.opacity)
-            Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
+            scale: (layoutFlash.opacity === 0) ? 1.0 : 0.85
+            Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+            Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
             Item {
                 id: restKanji
                 visible: pill.specialView === ""
@@ -1405,7 +1407,9 @@ Item {
             font.weight: Font.DemiBold
             font.letterSpacing: 2 * pill.s
             opacity: 0
-            Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
+            scale: opacity > 0 ? 1 : 0.7
+            Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+            Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
 
             Connections {
                 target: Keymap
