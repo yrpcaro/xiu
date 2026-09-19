@@ -5,6 +5,7 @@ no magick — the base16 dicts are synthetic, so the tests run anywhere and only
 exercise the palette math. Run: python3 test_wallcolors.py
 """
 import colorsys
+import re
 import sys
 from pathlib import Path
 
@@ -110,6 +111,17 @@ def main():
     assert wc.papirus_folder_color("#ff00ff") in ("magenta", "pink"), "magenta hue must map to magenta/pink"
     assert wc.papirus_folder_color("#888888") == "grey", "low saturation must map to grey"
 
+    # GNOME accent color mapping
+    assert wc.gnome_accent_color("#ff0000") == "red"
+    assert wc.gnome_accent_color("#ff8800") == "orange"
+    assert wc.gnome_accent_color("#ffff00") == "yellow"
+    assert wc.gnome_accent_color("#00ff00") == "green"
+    assert wc.gnome_accent_color("#00ffff") == "teal"
+    assert wc.gnome_accent_color("#0000ff") == "blue"
+    assert wc.gnome_accent_color("#8800ff") == "purple"
+    assert wc.gnome_accent_color("#ff00aa") == "pink"
+    assert wc.gnome_accent_color("#888888") == "slate"
+
     # GTK settings update and colorreload-gtk-module purge
     import tempfile, configparser
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -124,6 +136,14 @@ def main():
         assert "colorreload-gtk-module" not in cp.get("Settings", "gtk-modules")
         assert "window-decorations-gtk-module" in cp.get("Settings", "gtk-modules")
 
+        # xsettingsd update
+        tmp_xset = Path(tmpdir) / "xsettingsd.conf"
+        tmp_xset.write_text('Net/ThemeName "Breeze-Dark"\nNet/IconThemeName "Breeze"\n')
+        wc._update_xsettingsd(tmp_xset, "adw-gtk3-dark", "Breeze-Round-Chameleon Dark Icons")
+        xset_text = tmp_xset.read_text()
+        assert 'Net/ThemeName "adw-gtk3-dark"' in xset_text
+        assert 'Net/IconThemeName "Breeze-Round-Chameleon Dark Icons"' in xset_text
+
         # KDE kdeglobals update preserving sections
         tmp_kde = Path(tmpdir) / "kdeglobals"
         tmp_kde.write_text("[KDE]\ncontrast=4\n[Icons]\nTheme=Breeze\n")
@@ -136,9 +156,23 @@ def main():
         cp_kde.read(str(tmp_kde))
         assert cp_kde.get("KDE", "contrast") == "4", "existing KDE section preserved"
         assert cp_kde.get("General", "ColorScheme") == "Xiu"
-        assert cp_kde.get("General", "AccentColor") == "#fabd2f"
+        assert cp_kde.get("General", "AccentColor") == "250,189,47"
         assert cp_kde.get("Icons", "Theme") == "Breeze-Round-Chameleon Dark Icons"
         assert cp_kde.get("Colors:Selection", "DecorationFocus") == "250,189,47"
+
+        # Icon theme resolution
+        assert wc.get_active_icon_theme(is_dark=True) in ("Breeze-Round-Chameleon Dark Icons", "Papirus-Dark")
+        assert wc.get_active_icon_theme(is_dark=False) in ("Breeze-Round-Chameleon Light Icons", "Papirus")
+
+        # Chameleon icon recoloring
+        theme_places = Path(tmpdir) / "places" / "32"
+        theme_places.mkdir(parents=True, exist_ok=True)
+        test_svg = theme_places / "folder.svg"
+        test_svg.write_text('<style>.ColorScheme-Accent { color:#3daee9; }</style>')
+        accent_re = re.compile(r"(\.ColorScheme-Accent\s*\{\s*color:\s*)[^;]+(;)")
+        new_svg = accent_re.sub(r"\g<1>#e0563b\g<2>", test_svg.read_text())
+        test_svg.write_text(new_svg)
+        assert "#e0563b" in test_svg.read_text()
 
     print("wallcolors semantic layer: all invariants hold")
     return 0

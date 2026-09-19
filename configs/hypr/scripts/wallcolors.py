@@ -1431,6 +1431,29 @@ def _rgb(hex_str):
     return ",".join(str(int(hex_str[i:i + 2], 16)) for i in (1, 3, 5))
 
 
+def gnome_accent_color(hex_color):
+    """Map accent color to one of GNOME 47+'s supported desktop accent colors."""
+    h, s = hue_sat_of(hex_color)
+    if s < 0.15:
+        return "slate"
+    if h >= 345 or h < 15:
+        return "red"
+    elif 15 <= h < 45:
+        return "orange"
+    elif 45 <= h < 70:
+        return "yellow"
+    elif 70 <= h < 150:
+        return "green"
+    elif 150 <= h < 190:
+        return "teal"
+    elif 190 <= h < 255:
+        return "blue"
+    elif 255 <= h < 290:
+        return "purple"
+    else:
+        return "pink"
+
+
 def papirus_folder_color(hex_color):
     """Map primary accent color to the closest available Papirus folder color."""
     h, s = hue_sat_of(hex_color)
@@ -1455,7 +1478,7 @@ def papirus_folder_color(hex_color):
 
 
 def get_active_icon_theme(is_dark=True):
-    """Resolve the active icon theme, preserving user choice or Chameleon/Papirus defaults."""
+    """Resolve the active icon theme, prioritizing dynamic tintable themes (Chameleon, Papirus)."""
     theme = ""
     if shutil.which("gsettings"):
         try:
@@ -1487,15 +1510,42 @@ def get_active_icon_theme(is_dark=True):
                     pass
             if theme:
                 break
+
+    chameleon_name = "Breeze-Round-Chameleon Dark Icons" if is_dark else "Breeze-Round-Chameleon Light Icons"
+    papirus_name = "Papirus-Dark" if is_dark else "Papirus"
+
     if "Chameleon" in theme:
-        return "Breeze-Round-Chameleon Dark Icons" if is_dark else "Breeze-Round-Chameleon Light Icons"
-    if theme and theme != "Papirus-Dark" and theme != "Papirus":
-        return theme
+        return chameleon_name
+
     local_icons = Path.home() / ".local" / "share" / "icons"
     usr_icons = Path("/usr/share/icons")
-    if (local_icons / "Breeze-Round-Chameleon Dark Icons").is_dir() or (usr_icons / "Breeze-Round-Chameleon Dark Icons").is_dir():
-        return "Breeze-Round-Chameleon Dark Icons" if is_dark else "Breeze-Round-Chameleon Light Icons"
-    return "Papirus-Dark" if is_dark else "Papirus"
+    has_chameleon = ((local_icons / chameleon_name).is_dir() or
+                     (usr_icons / chameleon_name).is_dir() or
+                     (local_icons / "Breeze-Round-Chameleon Dark Icons").is_dir() or
+                     (usr_icons / "Breeze-Round-Chameleon Dark Icons").is_dir())
+    has_papirus = ((local_icons / papirus_name).is_dir() or
+                   (usr_icons / papirus_name).is_dir() or
+                   shutil.which("papirus-folders"))
+
+    is_generic = (not theme) or theme.lower() in (
+        "breeze", "breeze-dark", "breeze-light", "breeze_light", "adwaita", "adwaitalegacy", "hicolor"
+    )
+
+    if is_generic:
+        if has_chameleon:
+            return chameleon_name
+        if has_papirus:
+            return papirus_name
+
+    if theme in ("Papirus", "Papirus-Dark", "Papirus-Light"):
+        return papirus_name
+
+    if theme:
+        return theme
+
+    if has_chameleon:
+        return chameleon_name
+    return papirus_name
 
 
 def _update_gtk_settings(settings_file, theme_name, icon_theme, is_dark):
@@ -1523,6 +1573,35 @@ def _update_gtk_settings(settings_file, theme_name, icon_theme, is_dark):
         cp.write(f)
 
 
+def _update_xsettingsd(conf_path, theme_name, icon_theme):
+    """Ensure ~/.config/xsettingsd/xsettingsd.conf specifies the active GTK and icon theme."""
+    lines = []
+    if conf_path.is_file():
+        try:
+            lines = conf_path.read_text().splitlines()
+        except OSError:
+            lines = []
+    new_lines = []
+    has_theme = False
+    has_icon = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("Net/ThemeName"):
+            new_lines.append('Net/ThemeName "%s"' % theme_name)
+            has_theme = True
+        elif stripped.startswith("Net/IconThemeName"):
+            new_lines.append('Net/IconThemeName "%s"' % icon_theme)
+            has_icon = True
+        else:
+            new_lines.append(line)
+    if not has_theme:
+        new_lines.append('Net/ThemeName "%s"' % theme_name)
+    if not has_icon:
+        new_lines.append('Net/IconThemeName "%s"' % icon_theme)
+    conf_path.parent.mkdir(parents=True, exist_ok=True)
+    conf_path.write_text("\n".join(new_lines) + "\n")
+
+
 def _update_kdeglobals(kdeglobals, sections, icon_theme, primary_hex):
     """Update KDE color schemes and icon settings in ~/.config/kdeglobals preserving custom user options."""
     cp = configparser.RawConfigParser(strict=False)
@@ -1542,7 +1621,7 @@ def _update_kdeglobals(kdeglobals, sections, icon_theme, primary_hex):
     if not cp.has_section("General"):
         cp.add_section("General")
     cp.set("General", "ColorScheme", "Xiu")
-    cp.set("General", "AccentColor", primary_hex)
+    cp.set("General", "AccentColor", _rgb(primary_hex))
     if not cp.has_section("Icons"):
         cp.add_section("Icons")
     cp.set("Icons", "Theme", icon_theme)
@@ -1552,18 +1631,20 @@ def _update_kdeglobals(kdeglobals, sections, icon_theme, primary_hex):
 
 
 def render_gtk(pill):
-    """GTK named colors: the adw-gtk3 theme (set through gsettings and settings.ini)
-    picks these up, so GTK apps follow the palette."""
+    """GTK named colors: the adw-gtk3 theme (set through gsettings, settings.ini,
+    and xsettingsd) picks these up, so GTK apps follow the palette."""
     is_dark = rel_luminance(pill["surface"]) < 0.40
     theme_name = "adw-gtk3-dark" if is_dark else "adw-gtk3"
     color_scheme = "prefer-dark" if is_dark else "prefer-light"
     icon_theme = get_active_icon_theme(is_dark)
+    gnome_accent = gnome_accent_color(pill["primary"])
+    accent_fg = "#000000" if rel_luminance(pill["primary"]) > 0.45 else "#ffffff"
 
-    css = "\n".join([
+    css_lines = [
         "/* Written by wallcolors.py on every palette change. */",
         "@define-color accent_color %s;" % pill["primary"],
         "@define-color accent_bg_color %s;" % pill["primary"],
-        "@define-color accent_fg_color %s;" % pill["on_primary_container"],
+        "@define-color accent_fg_color %s;" % accent_fg,
         "@define-color window_bg_color %s;" % pill["surface"],
         "@define-color window_fg_color %s;" % pill["cream"],
         "@define-color headerbar_bg_color %s;" % pill["surface_container"],
@@ -1577,13 +1658,51 @@ def render_gtk(pill):
         "@define-color sidebar_bg_color @window_bg_color;",
         "@define-color sidebar_fg_color @window_fg_color;",
         "@define-color sidebar_border_color @window_bg_color;",
-        "@define-color theme_selected_bg_color alpha(@accent_color, 0.15);",
+        "@define-color theme_selected_bg_color alpha(@accent_color, 0.25);",
         "@define-color theme_selected_fg_color %s;" % pill["primary"],
         "@define-color theme_bg_color @window_bg_color;",
         "@define-color theme_fg_color @window_fg_color;",
         "@define-color theme_base_color @view_bg_color;",
         "@define-color theme_text_color @view_fg_color;",
-    ]) + "\n"
+        "",
+        "/* Concrete widget selectors to guarantee recoloring across GTK engines */",
+        "window, .background {",
+        "    background-color: @window_bg_color;",
+        "    color: @window_fg_color;",
+        "}",
+        "headerbar, .titlebar {",
+        "    background-color: @headerbar_bg_color;",
+        "    color: @headerbar_fg_color;",
+        "}",
+        "view, .view, textview text {",
+        "    background-color: @view_bg_color;",
+        "    color: @view_fg_color;",
+        "}",
+        "popover, .popover, menu, .menu {",
+        "    background-color: @popover_bg_color;",
+        "    color: @popover_fg_color;",
+        "}",
+        "card, .card {",
+        "    background-color: @card_bg_color;",
+        "    color: @card_fg_color;",
+        "}",
+        "button.suggested-action {",
+        "    background-color: @accent_bg_color;",
+        "    color: @accent_fg_color;",
+        "}",
+        "button.suggested-action:hover {",
+        "    background-color: alpha(@accent_bg_color, 0.85);",
+        "}",
+        "switch:checked {",
+        "    background-color: @accent_bg_color;",
+        "    color: @accent_fg_color;",
+        "}",
+        "selection, *:selected {",
+        "    background-color: @theme_selected_bg_color;",
+        "    color: @window_fg_color;",
+        "}",
+    ]
+    css = "\n".join(css_lines) + "\n"
 
     for ver in ("gtk-3.0", "gtk-4.0"):
         d = Path.home() / ".config" / ver
@@ -1591,18 +1710,17 @@ def render_gtk(pill):
         (d / "gtk.css").write_text(css)
         _update_gtk_settings(d / "settings.ini", theme_name, icon_theme, is_dark)
 
+    xsettings_conf = Path.home() / ".config" / "xsettingsd" / "xsettingsd.conf"
+    _update_xsettingsd(xsettings_conf, theme_name, icon_theme)
+    subprocess.run(["killall", "-HUP", "xsettingsd"], stderr=subprocess.DEVNULL)
+
     if shutil.which("gsettings"):
         for key, value in (("color-scheme", color_scheme),
                            ("gtk-theme", theme_name),
-                           ("icon-theme", icon_theme)):
+                           ("icon-theme", icon_theme),
+                           ("accent-color", gnome_accent)):
             subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", key, value],
                            stderr=subprocess.DEVNULL)
-
-        stub = "adw-gtk3" if is_dark else "adw-gtk3-dark"
-        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", stub],
-                       stderr=subprocess.DEVNULL)
-        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", theme_name],
-                       stderr=subprocess.DEVNULL)
 
 
 def render_qt(pill):
@@ -1669,35 +1787,30 @@ def render_qt(pill):
 
     # 1. QtEngine config and colors
     d_qtengine = Path.home() / ".config" / "qtengine"
-    plugin = Path("/usr/lib/qt6/plugins/platformthemes/libqt6engine-plugin.so")
-    if d_qtengine.is_dir() or plugin.is_file():
+    plugin6 = Path("/usr/lib/qt6/plugins/platformthemes/libqt6engine-plugin.so")
+    plugin5 = Path("/usr/lib/qt5/plugins/platformthemes/libqt5engine-plugin.so")
+    if d_qtengine.is_dir() or plugin6.is_file() or plugin5.is_file():
         d_qtengine.mkdir(parents=True, exist_ok=True)
         (d_qtengine / "xiu.colors").write_text(colors_content)
         config = d_qtengine / "config.json"
-        if not config.is_file():
-            config.write_text(json.dumps({
-                "theme": {
-                    "colorScheme": str(d_qtengine / "xiu.colors"),
-                    "iconTheme": icon_theme,
-                    "style": "Darkly",
-                },
-                "misc": {
-                    "menusHaveIcons": True,
-                    "singleClickActivate": False,
-                },
-            }, indent=4) + "\n")
-        else:
+        cfg_data = {}
+        if config.is_file():
             try:
                 cfg_data = json.loads(config.read_text())
-                if cfg_data.get("theme", {}).get("iconTheme") != icon_theme:
-                    cfg_data.setdefault("theme", {})["iconTheme"] = icon_theme
-                    config.write_text(json.dumps(cfg_data, indent=4) + "\n")
             except Exception:
-                pass
-        try:
-            config.write_text(config.read_text())
-        except OSError:
-            pass
+                cfg_data = {}
+        theme_cfg = cfg_data.setdefault("theme", {})
+        theme_cfg["colorScheme"] = str(d_qtengine / "xiu.colors")
+        theme_cfg["iconTheme"] = icon_theme
+        theme_cfg.setdefault("style", "Darkly")
+        misc_cfg = cfg_data.setdefault("misc", {})
+        misc_cfg.setdefault("menusHaveIcons", True)
+        misc_cfg.setdefault("singleClickActivate", False)
+        config.write_text(json.dumps(cfg_data, indent=4) + "\n")
+        # Notify running qtengine apps via DBus
+        subprocess.run(["dbus-send", "--session", "--type=signal", "/",
+                        "org.qtengine.ConfigWatcher.configChanged"],
+                       stderr=subprocess.DEVNULL)
 
     # 2. KDE color scheme & kdeglobals
     d_kde_schemes = Path.home() / ".local" / "share" / "color-schemes"
@@ -1707,19 +1820,94 @@ def render_qt(pill):
     kdeglobals = Path.home() / ".config" / "kdeglobals"
     _update_kdeglobals(kdeglobals, sections, icon_theme, p["primary"])
 
+    if shutil.which("kwriteconfig6"):
+        subprocess.run(["kwriteconfig6", "--file", "kdeglobals", "--group", "General",
+                        "--key", "ColorScheme", "Xiu", "--notify"],
+                       stderr=subprocess.DEVNULL)
+        subprocess.run(["kwriteconfig6", "--file", "kdeglobals", "--group", "Icons",
+                        "--key", "Theme", icon_theme, "--notify"],
+                       stderr=subprocess.DEVNULL)
+
     if shutil.which("plasma-apply-colorscheme"):
-        subprocess.run(["plasma-apply-colorscheme", "Xiu", "-a", p["primary"]],
+        # If Xiu is already active, plasma-apply-colorscheme skips reloading Xiu.colors.
+        # Toggle briefly to Breeze to force a full scheme reload of Xiu.
+        fallback_theme = "BreezeDark" if is_dark else "BreezeLight"
+        subprocess.run(["plasma-apply-colorscheme", fallback_theme],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["plasma-apply-colorscheme", "Xiu"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["plasma-apply-colorscheme", "-a", p["primary"]],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Broadcast KGlobalSettings PaletteChanged notification (type 0, arg 0) and IconChanged (type 1)
+    subprocess.run(["dbus-send", "--session", "--type=signal", "/KGlobalSettings",
+                    "org.kde.KGlobalSettings.notifyChange", "int32:0", "int32:0"],
+                   stderr=subprocess.DEVNULL)
+    subprocess.run(["dbus-send", "--session", "--type=signal", "/KGlobalSettings",
+                    "org.kde.KGlobalSettings.notifyChange", "int32:1", "int32:0"],
+                   stderr=subprocess.DEVNULL)
+
+
+def _recolor_chameleon_icons(primary_hex, is_dark=True):
+    """Update SVG ColorScheme-Accent in user-local Chameleon icon theme if installed."""
+    theme_name = "Breeze-Round-Chameleon Dark Icons" if is_dark else "Breeze-Round-Chameleon Light Icons"
+    theme_dir = Path.home() / ".local" / "share" / "icons" / theme_name
+    if not theme_dir.is_dir():
+        return
+
+    cache_dir = Path.home() / ".cache" / "xiu"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = cache_dir / ("chameleon_%s.txt" % ("dark" if is_dark else "light"))
+
+    accent_re = re.compile(r"(\.ColorScheme-Accent\s*\{\s*color:\s*)[^;]+(;)")
+    rel_paths = []
+    if cache_file.is_file():
+        try:
+            rel_paths = [p for p in cache_file.read_text().splitlines() if p]
+        except OSError:
+            rel_paths = []
+
+    if not rel_paths:
+        for svg in theme_dir.rglob("*.svg"):
+            if svg.is_symlink():
+                continue
+            try:
+                if "ColorScheme-Accent" in svg.read_text(errors="ignore"):
+                    rel_paths.append(str(svg.relative_to(theme_dir)))
+            except (OSError, UnicodeError):
+                pass
+        try:
+            cache_file.write_text("\n".join(rel_paths))
+        except OSError:
+            pass
+
+    changed = False
+    for rel_p in rel_paths:
+        svg = theme_dir / rel_p
+        try:
+            content = svg.read_text(errors="ignore")
+            if "ColorScheme-Accent" in content:
+                new_content = accent_re.sub(r"\g<1>%s\g<2>" % primary_hex, content)
+                if new_content != content:
+                    svg.write_text(new_content)
+                    changed = True
+        except (OSError, UnicodeError):
+            pass
+
+    if changed and shutil.which("gtk-update-icon-cache"):
+        subprocess.run(["gtk-update-icon-cache", "-q", "-f", "-t", str(theme_dir)],
+                       stderr=subprocess.DEVNULL)
 
 
 def render_icons(pill):
-    """Recolor Papirus folder icons matching dynamic accent if papirus-folders is available."""
+    """Recolor active icon themes (Papirus and Chameleon) matching dynamic accent."""
+    is_dark = rel_luminance(pill["surface"]) < 0.40
     if shutil.which("papirus-folders"):
-        is_dark = rel_luminance(pill["surface"]) < 0.40
         color = papirus_folder_color(pill["primary"])
         theme = "Papirus-Dark" if is_dark else "Papirus"
         subprocess.run(["papirus-folders", "-C", color, "--theme", theme],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _recolor_chameleon_icons(pill["primary"], is_dark)
 
 
 def fan_out(pill, seed, variant, share=None):
@@ -1776,8 +1964,8 @@ def fan_out(pill, seed, variant, share=None):
     render_vscode(pill)
     render_zed(pill)
     render_browser(pill)
-    render_gtk(pill)
     render_qt(pill)
+    render_gtk(pill)
     render_icons(pill)
     render_user_templates(pill, b)
     return 0
