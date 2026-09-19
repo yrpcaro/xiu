@@ -1497,7 +1497,8 @@ def get_active_icon_theme(is_dark=True):
         return yamis_name
 
     is_generic = (not theme) or theme.lower() in (
-        "breeze", "breeze-dark", "breeze-light", "breeze_light", "adwaita", "adwaitalegacy", "hicolor"
+        "breeze", "breeze-dark", "breeze-light", "breeze_light", "adwaita", "adwaitalegacy", "hicolor",
+        "breeze-round-chameleon dark icons", "breeze-round-chameleon light icons", "papirus", "papirus-dark"
     )
     if is_generic or not theme:
         return yamis_name

@@ -102,6 +102,9 @@ ENV_BASE = """hl.env("XCURSOR_THEME",   "Bibata-Modern-Ice")
 hl.env("XCURSOR_SIZE",    "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 
+hl.env("PATH", os.getenv("HOME") .. "/.local/bin:" .. (os.getenv("PATH") or ""))
+hl.env("XDG_DATA_DIRS", os.getenv("HOME") .. "/.local/share:" .. (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"))
+
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 
 hl.env("QT_QPA_PLATFORMTHEME", "qtengine")
@@ -510,6 +513,17 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
         out = _render_fastfetch(ff, palette, apply)
         actions.append({"step": "fastfetch", "path": str(ff / "config.jsonc"),
                         "palette": source, "rendered": out is not None})
+
+    icon_theme = "yet-another-monochrome-icon-set"
+    kde = config_root / "kdeglobals"
+    if kde.is_file():
+        text = kde.read_text()
+        if "Theme=yet-another-monochrome-icon-set" not in text:
+            new_text = re.sub(r"(?m)^Theme=.*$", f"Theme={icon_theme}", text)
+            if new_text != text:
+                actions.append({"step": "kdeglobals-icons", "path": str(kde), "theme": icon_theme})
+                if apply:
+                    kde.write_text(new_text)
 
     actions.append({"step": "grub-excluded", "files": GRUB_EXCLUDED,
                     "note": "personal bootloader entries, never deployed"})
