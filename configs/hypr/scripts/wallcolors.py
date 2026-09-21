@@ -1344,10 +1344,11 @@ def render_vscode(pill):
 
 def render_zed(pill, b=None):
     """Zed picks user themes out of ~/.config/zed/themes; the xiu themes
-    ("xiu" flat and "xiu blur") are kept fresh. The active selection in
-    settings.json is only set when the user never chose a theme — their file
-    is hand-written JSONC, so it is edited textually (never re-serialized)
-    and an existing choice is respected."""
+    ("xiu" flat and "xiu blur") are kept fresh, based on the Vesper and
+    Vesper Blur themes dynamically mapped across the wallpaper palette.
+    The active selection in settings.json is only set when the user never
+    chose a theme — their file is hand-written JSONC, so it is edited
+    textually (never re-serialized) and an existing choice is respected."""
     z = _tool_dir("zed")
     if z is None:
         return
@@ -1372,7 +1373,8 @@ def render_zed(pill, b=None):
             "base0f": p.get("outline", p["dim"]),
         }
     lum = lambda c: 0.2126 * int(c[1:3], 16) + 0.7152 * int(c[3:5], 16) + 0.0722 * int(c[5:7], 16)
-    a = lambda c: c if len(c) == 9 else c + "ff"
+    hex_a = lambda c, al: "#" + c.lstrip("#")[:6] + al
+    a = lambda c: c if c is None else ("#" + c.lstrip("#")[:6] + "ff" if len(c.lstrip("#")) <= 6 else ("#" + c.lstrip("#") if not c.startswith("#") else c))
 
     def syntax(c, italic=False, bold=False):
         entry = {"color": a(c)}
@@ -1383,54 +1385,85 @@ def render_zed(pill, b=None):
         return entry
 
     syntax_tree = {
+        "attribute": syntax(p["subtle"]),
+        "boolean": syntax(p["primary"]),
         "comment": syntax(p["dim"], italic=True),
-        "comment.doc": syntax(p["subtle"], italic=True),
-        "string": syntax(b["base0b"]),
-        "string.escape": syntax(b["base0e"]),
-        "string.regex": syntax(b["base0c"]),
-        "string.special": syntax(b["base0b"]),
-        "constant": syntax(b["base0a"]),
-        "boolean": syntax(b["base09"]),
-        "number": syntax(b["base09"]),
-        "keyword": syntax(p["primary"]),
-        "keyword.control": syntax(p["primary"]),
-        "keyword.operator": syntax(p["primary"]),
-        "function": syntax(b["base0d"]),
-        "function.builtin": syntax(b["base0c"]),
-        "function.method": syntax(b["base0d"]),
-        "function.macro": syntax(b["base0e"]),
-        "variable": syntax(p["cream"]),
-        "variable.builtin": syntax(p["primary"]),
-        "variable.parameter": syntax(p["subtle"]),
-        "variable.special": syntax(p["bright"]),
-        "type": syntax(b["base0a"]),
-        "type.builtin": syntax(b["base0c"]),
-        "tag": syntax(p["primary"]),
-        "attribute": syntax(b["base0d"]),
-        "property": syntax(p["subtle"]),
-        "operator": syntax(p["subtle"]),
-        "punctuation": syntax(p["dim"]),
-        "punctuation.bracket": syntax(p["faint"]),
-        "punctuation.delimiter": syntax(p["dim"]),
-        "punctuation.special": syntax(p["primary"]),
-        "label": syntax(p["primary"]),
-        "title": syntax(p["bright"], bold=True),
+        "comment.doc": syntax(p["dim"], italic=True),
+        "constant": syntax(p["primary"]),
+        "constructor": syntax(p["primary"]),
         "emphasis": syntax(p["cream"], italic=True),
         "emphasis.strong": syntax(p["bright"], bold=True),
-        "link_text": syntax(p["primary"]),
-        "link_uri": syntax(p["dim"]),
+        "function": syntax(p["primary"]),
+        "function.builtin": syntax(p["primary"]),
+        "function.method": syntax(p["primary"]),
+        "function.macro": syntax(p["primary"]),
+        "keyword": syntax(p["subtle"]),
+        "keyword.control": syntax(p["subtle"]),
+        "keyword.operator": syntax(p["subtle"]),
+        "label": syntax(p["primary"]),
+        "link_text": syntax(p["cream"]),
+        "link_uri": syntax(p["primary"]),
+        "number": syntax(p["primary"]),
+        "operator": syntax(p["subtle"]),
+        "punctuation": syntax(p["subtle"]),
+        "punctuation.bracket": syntax(p["subtle"]),
+        "punctuation.delimiter": syntax(p["subtle"]),
+        "punctuation.list_marker": syntax(p["subtle"]),
+        "punctuation.special": syntax(p["subtle"]),
+        "string": syntax(b["base0b"]),
+        "string.escape": syntax(p["subtle"]),
+        "string.regex": syntax(b.get("base0c", p["subtle"])),
+        "string.special": syntax(b["base0b"]),
+        "string.special.symbol": syntax(b["base0b"]),
+        "tag": syntax(p["primary"]),
+        "text.literal": syntax(b["base0b"]),
+        "title": syntax(p["primary"], bold=True),
+        "type": syntax(p["primary"]),
+        "type.builtin": syntax(p["primary"]),
+        "variable": syntax(p["cream"]),
+        "variable.special": syntax(p["subtle"]),
     }
 
+    players = [
+        {
+            "cursor": a(p["primary"]),
+            "selection": hex_a(p["bright"], "25"),
+            "background": a(p["primary"]),
+        },
+        {
+            "cursor": a(b["base0b"]),
+            "selection": hex_a(b["base0b"], "25"),
+            "background": a(b["base0b"]),
+        },
+        {
+            "cursor": a(b["base08"]),
+            "selection": hex_a(b["base08"], "25"),
+            "background": a(b["base08"]),
+        },
+        {
+            "cursor": a(p["subtle"]),
+            "selection": hex_a(p["subtle"], "25"),
+            "background": a(p["subtle"]),
+        },
+    ]
+
     base_elements = {
-        "text": a(p["cream"]),
-        "text.muted": a(p["subtle"]),
-        "text.disabled": a(p["faint"]),
-        "text.placeholder": a(p["dim"]),
-        "text.accent": a(p["primary"]),
-        "icon": a(p["cream"]),
-        "icon.muted": a(p["subtle"]),
-        "icon.disabled": a(p["faint"]),
-        "icon.accent": a(p["primary"]),
+        # Borders - flat UI by default
+        "border": "#00000000",
+        "border.variant": "#00000000",
+        "border.focused": a(p["primary"]),
+        "border.selected": a(p["primary"]),
+        "border.transparent": "#00000000",
+        "border.disabled": "#00000000",
+        "panel.focused_border": "#00000000",
+        "pane.focused_border": "#00000000",
+        "pane_group.border": "#00000000",
+
+        # Elevated surface & container overlays
+        "elevated_surface.background": a(p["surface_container"]),
+        "panel.overlay_background": a(p["surface_container"]),
+
+        # Elements & interactive items
         "element.background": a(p["surface_container_low"]),
         "element.hover": a(p["surface_container"]),
         "element.active": a(p["surface_container_high"]),
@@ -1441,30 +1474,103 @@ def render_zed(pill, b=None):
         "ghost_element.active": a(p["surface_container_high"]),
         "ghost_element.selected": a(p["surface_container_high"]),
         "ghost_element.disabled": "#00000000",
-        "scrollbar.thumb.background": a(p["outline_variant"]),
+        "drop_target.background": hex_a(p["primary"], "50"),
+
+        # Typography & Icons
+        "text": a(p["cream"]),
+        "text.muted": a(p["subtle"]),
+        "text.placeholder": a(p["dim"]),
+        "text.disabled": a(p["faint"]),
+        "text.accent": a(p["primary"]),
+        "icon": a(p["cream"]),
+        "icon.muted": a(p["subtle"]),
+        "icon.disabled": a(p["faint"]),
+        "icon.placeholder": a(p["dim"]),
+        "icon.accent": a(p["primary"]),
+
+        # Guides & Indents
+        "panel.indent_guide": a(p["outline_variant"]),
+        "panel.indent_guide_active": a(p["outline"]),
+        "panel.indent_guide_hover": a(p["primary"]),
+        "editor.indent_guide": a(p["outline_variant"]),
+        "editor.indent_guide_active": a(p["outline"]),
+        "editor.wrap_guide": a(p["outline_variant"]),
+        "editor.active_wrap_guide": a(p["outline_variant"]),
+        "editor.invisible": a(p["faint"]),
+
+        # Scrollbars
+        "scrollbar.thumb.background": hex_a(p["outline_variant"], "80"),
         "scrollbar.thumb.hover_background": a(p["outline"]),
+        "scrollbar.thumb.active_background": a(p["outline"]),
         "scrollbar.thumb.border": "#00000000",
         "scrollbar.track.background": "#00000000",
         "scrollbar.track.border": "#00000000",
-        "search.match_background": p["primary_container"] + "66",
-        "search.active_match_background": p["primary"] + "66",
-        "link_text.hover": a(p["primary"]),
-        "error": a(b["base08"]),
-        "warning": a(b["base0a"]),
-        "info": a(b["base0c"]),
-        "hint": a(p["subtle"]),
-        "predictive": a(p["dim"]),
-        "created": a(b["base0b"]),
-        "modified": a(b["base0a"]),
-        "deleted": a(b["base08"]),
+
+        # Search
+        "search.match_background": hex_a(p["bright"], "25"),
+        "search.active_match_background": hex_a(p["primary"], "50"),
+
+        # Editor foreground, numbers, highlights
         "editor.foreground": a(p["cream"]),
         "editor.line_number": a(p["faint"]),
-        "editor.active_line_number": a(p["subtle"]),
-        "editor.document_highlight.read_background": a(p["surface_container"]),
-        "editor.document_highlight.write_background": a(p["surface_container_high"]),
+        "editor.active_line_number": a(p["bright"]),
+        "editor.highlighted_line.background": hex_a(p["bright"], "10"),
+        "editor.document_highlight.read_background": hex_a(p["bright"], "15"),
+        "editor.document_highlight.write_background": hex_a(p["bright"], "15"),
+        "editor.subheader.background": a(p["surface_container_low"]),
+
+        # Link
+        "link_text.hover": a(p.get("primary_container", p["primary"])),
+
+        # Git & Diagnostics
+        "conflict": a(b["base0a"]),
+        "conflict.background": hex_a(b["base0a"], "15"),
+        "conflict.border": a(b["base0a"]),
+        "created": a(b["base0b"]),
+        "created.background": hex_a(b["base0b"], "15"),
+        "created.border": a(b["base0b"]),
+        "deleted": a(b["base08"]),
+        "deleted.background": hex_a(b["base08"], "15"),
+        "deleted.border": a(b["base08"]),
+        "error": a(b["base08"]),
+        "error.background": hex_a(b["base08"], "25"),
+        "error.border": a(b["base08"]),
+        "hidden": a(p["dim"]),
+        "hidden.background": a(p["surface"]),
+        "hidden.border": a(p["surface"]),
+        "hint": a(p["subtle"]),
+        "hint.background": a(p["surface_container_low"]),
+        "hint.border": a(p["surface_container"]),
+        "ignored": a(p["dim"]),
+        "ignored.background": a(p["surface"]),
+        "ignored.border": a(p["surface"]),
+        "info": a(b["base0c"]),
+        "info.background": a(p["surface_container_low"]),
+        "info.border": a(p["surface_container"]),
+        "modified": a(b["base0a"]),
+        "modified.background": hex_a(b["base0a"], "15"),
+        "modified.border": a(b["base0a"]),
+        "predictive": a(p["dim"]),
+        "predictive.background": a(p["surface"]),
+        "predictive.border": a(p["surface"]),
+        "renamed": a(b["base0a"]),
+        "renamed.background": hex_a(b["base0a"], "15"),
+        "renamed.border": a(b["base0a"]),
+        "success": a(b["base0b"]),
+        "success.background": hex_a(b["base0b"], "15"),
+        "success.border": a(b["base0b"]),
+        "unreachable": a(b["base08"]),
+        "unreachable.background": hex_a(b["base08"], "15"),
+        "unreachable.border": a(b["base08"]),
+        "warning": a(b["base0a"]),
+        "warning.background": hex_a(b["base0a"], "25"),
+        "warning.border": a(b["base0a"]),
+
+        # Terminal ANSI
         "terminal.foreground": a(p["cream"]),
         "terminal.bright_foreground": a(p["bright"]),
         "terminal.dim_foreground": a(p["dim"]),
+        "terminal.ansi.background": a(p["surface"]),
         "terminal.ansi.black": a(b["base00"]),
         "terminal.ansi.bright_black": a(b["base03"]),
         "terminal.ansi.red": a(b["base08"]),
@@ -1481,31 +1587,24 @@ def render_zed(pill, b=None):
         "terminal.ansi.bright_cyan": a(b["base0c"]),
         "terminal.ansi.white": a(b["base07"]),
         "terminal.ansi.bright_white": a(p["bright"]),
+
+        "players": players,
         "syntax": syntax_tree,
     }
 
-    # Flat theme: seamless edges, borderless panels, identical active/inactive header
+    # Flat theme: seamless flat UI, borderless panels, identical active/inactive header
     flat_style = dict(base_elements)
     flat_style.update({
         "background": a(p["surface"]),
         "surface.background": a(p["surface"]),
-        "elevated_surface.background": a(p["surface_container"]),
         "panel.background": a(p["surface"]),
-        "panel.focused_border": None,
-        "pane.focused_border": None,
         "title_bar.background": a(p["surface"]),
         "title_bar.inactive_background": a(p["surface"]),
+        "status_bar.background": a(p["surface"]),
         "toolbar.background": a(p["surface"]),
         "tab_bar.background": a(p["surface"]),
         "tab.active_background": a(p["surface_container_low"]),
         "tab.inactive_background": a(p["surface"]),
-        "status_bar.background": a(p["surface"]),
-        "border": "#00000000",
-        "border.variant": "#00000000",
-        "border.focused": a(p["primary"]),
-        "border.selected": "#00000000",
-        "border.transparent": "#00000000",
-        "border.disabled": "#00000000",
         "editor.background": a(p["surface"]),
         "editor.gutter.background": a(p["surface"]),
         "editor.active_line.background": a(p["surface_container_low"]),
@@ -1516,29 +1615,20 @@ def render_zed(pill, b=None):
     blur_style = dict(base_elements)
     blur_style.update({
         "background.appearance": "blurred",
-        "background": p["surface"] + "b8",
-        "surface.background": p["surface"] + "a0",
-        "elevated_surface.background": p["surface_container"] + "e0",
-        "panel.background": p["surface"] + "a0",
-        "panel.focused_border": None,
-        "pane.focused_border": None,
-        "title_bar.background": p["surface"] + "b8",
-        "title_bar.inactive_background": p["surface"] + "b8",
-        "toolbar.background": p["surface"] + "a0",
-        "tab_bar.background": p["surface"] + "a0",
-        "tab.active_background": p["surface"] + "cc",
+        "background": hex_a(p["surface"], "b8"),
+        "surface.background": hex_a(p["surface"], "b8"),
+        "panel.background": "#00000000",
+        "title_bar.background": hex_a(p["surface"], "b8"),
+        "title_bar.inactive_background": hex_a(p["surface"], "b8"),
+        "status_bar.background": hex_a(p["surface"], "b8"),
+        "toolbar.background": "#00000000",
+        "tab_bar.background": "#00000000",
+        "tab.active_background": a(p["surface_container_low"]),
         "tab.inactive_background": "#00000000",
-        "status_bar.background": p["surface"] + "b8",
-        "border": "#00000000",
-        "border.variant": "#00000000",
-        "border.focused": a(p["primary"]),
-        "border.selected": "#00000000",
-        "border.transparent": "#00000000",
-        "border.disabled": "#00000000",
-        "editor.background": p["surface"] + "90",
+        "editor.background": "#00000000",
         "editor.gutter.background": "#00000000",
-        "editor.active_line.background": p["surface_container_low"] + "80",
-        "terminal.background": p["surface"] + "90",
+        "editor.active_line.background": "#00000000",
+        "terminal.background": "#00000000",
     })
 
     appearance = "light" if lum(p["surface"]) > 128 else "dark"

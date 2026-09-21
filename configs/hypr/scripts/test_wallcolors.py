@@ -184,12 +184,41 @@ def main():
             # Flat UI borders
             assert t_flat["style"]["border"] == "#00000000"
             assert t_flat["style"]["border.variant"] == "#00000000"
-            # Blur theme has blurred background appearance
+            assert t_flat["style"]["pane.focused_border"] == "#00000000"
+            assert t_flat["style"]["panel.focused_border"] == "#00000000"
+            # Blur theme has blurred background appearance and transparent surfaces
             assert t_blur["style"]["background.appearance"] == "blurred"
-            # Syntax tree
+            assert t_blur["style"]["editor.background"] == "#00000000"
+            assert t_blur["style"]["panel.background"] == "#00000000"
+            assert t_blur["style"]["toolbar.background"] == "#00000000"
+            assert t_blur["style"]["tab_bar.background"] == "#00000000"
+            assert t_blur["style"]["terminal.background"] == "#00000000"
+            # Players / Multi-cursor
+            assert len(t_flat["style"]["players"]) == 4
+            assert len(t_blur["style"]["players"]) == 4
+            # Syntax tree (Vesper roles: accent functions/constants/numbers/booleans, muted keywords, mint/cool strings)
             for s in (t_flat["style"]["syntax"], t_blur["style"]["syntax"]):
                 assert "string" in s and "function" in s and "number" in s and "boolean" in s
                 assert "keyword" in s and "type" in s and "comment" in s
+                assert s["constant"]["color"] == s["function"]["color"]
+                assert s["boolean"]["color"] == s["number"]["color"]
+                assert s["keyword"]["color"] != s["function"]["color"]
+                assert s["string"]["color"] != s["function"]["color"]
+
+            # Fallback when b is None
+            wc.render_zed(sample_pill, b=None)
+            data_nob = json.loads(theme_file.read_text())
+            assert len(data_nob["themes"]) == 2
+
+            # Settings injection test
+            settings_file = zed_dir / "settings.json"
+            settings_file.write_text('{\n  "autosave": "on_focus_change"\n}\n')
+            wc.render_zed(sample_pill, WARM)
+            assert '"theme": { "mode": "system", "dark": "xiu", "light": "xiu" }' in settings_file.read_text()
+            # Existing theme choice respected
+            settings_file.write_text('{\n  "theme": "Nord"\n}\n')
+            wc.render_zed(sample_pill, WARM)
+            assert settings_file.read_text() == '{\n  "theme": "Nord"\n}\n'
 
             # Helix theme tests
             helix_dir = Path(tmpdir) / "helix"
