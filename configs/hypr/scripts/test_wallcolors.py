@@ -190,6 +190,36 @@ def main():
             for s in (t_flat["style"]["syntax"], t_blur["style"]["syntax"]):
                 assert "string" in s and "function" in s and "number" in s and "boolean" in s
                 assert "keyword" in s and "type" in s and "comment" in s
+
+            # Helix theme tests
+            helix_dir = Path(tmpdir) / "helix"
+            helix_dir.mkdir()
+            wc._tool_dir = lambda name: helix_dir if name == "helix" else orig_tool_dir(name)
+            wc.render_helix(sample_pill, WARM)
+            helix_file = helix_dir / "themes" / "xiu.toml"
+            assert helix_file.is_file(), "helix theme file was created"
+            h_text = helix_file.read_text()
+            assert '"ui.background" = {}' in h_text, "helix background is transparent"
+            assert '"ui.bufferline.background" = {}' in h_text, "helix bufferline is transparent"
+            assert '"ui.statusline.inactive" = { fg =' in h_text, "helix inactive statusline is transparent"
+            assert '"ui.window" =' in h_text, "helix window divider is defined"
+            assert '"keyword.control"' in h_text, "helix rich keyword scopes present"
+            assert '"constant.numeric"' in h_text, "helix numeric scopes present"
+            assert '"diagnostic.error"' in h_text, "helix diagnostic scopes present"
+
+            # Micro theme tests
+            micro_dir = Path(tmpdir) / "micro"
+            micro_dir.mkdir()
+            wc._tool_dir = lambda name: micro_dir if name == "micro" else orig_tool_dir(name)
+            wc.render_micro(sample_pill, WARM)
+            micro_file = micro_dir / "colorschemes" / "xiu.micro"
+            assert micro_file.is_file(), "micro colorscheme file was created"
+            m_text = micro_file.read_text()
+            assert 'color-link default "%s"' % sample_pill["cream"] in m_text, "micro default is transparent"
+            assert 'color-link gutter "%s"' % sample_pill["faint"] in m_text, "micro gutter is transparent"
+            assert 'color-link tabbar "%s"' % sample_pill["dim"] in m_text, "micro tabbar is transparent"
+            assert 'color-link constant.bool' in m_text, "micro constant.bool present"
+            assert 'color-link diff-added' in m_text, "micro diff-added present"
         finally:
             wc._tool_dir = orig_tool_dir
 
