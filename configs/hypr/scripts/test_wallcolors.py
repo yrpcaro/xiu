@@ -154,6 +154,45 @@ def main():
         assert wc.get_active_icon_theme(is_dark=True) == "yet-another-monochrome-icon-set"
         assert wc.get_active_icon_theme(is_dark=False) == "yet-another-monochrome-icon-set"
 
+        # Zed theme rendering tests
+        import json
+        zed_dir = Path(tmpdir) / "zed"
+        zed_dir.mkdir()
+        orig_tool_dir = wc._tool_dir
+        wc._tool_dir = lambda name: zed_dir if name == "zed" else orig_tool_dir(name)
+        try:
+            sample_pill = {
+                "surface": "#1e1e2e", "surface_container": "#252538",
+                "surface_container_low": "#181825", "surface_container_high": "#313244",
+                "outline_variant": "#45475a", "outline": "#585b70", "primary": "#f38ba8",
+                "primary_container": "#eba0ac", "cream": "#cdd6f4", "bright": "#ffffff",
+                "subtle": "#bac2de", "dim": "#a6adc8", "faint": "#6c7086",
+                "on_primary_container": "#11111b", "tick_rest": "#fab387",
+            }
+            wc.render_zed(sample_pill, WARM)
+            theme_file = zed_dir / "themes" / "xiu.json"
+            assert theme_file.is_file(), "zed theme file was created"
+            data = json.loads(theme_file.read_text())
+            assert data["name"] == "xiu"
+            assert len(data["themes"]) == 2, "defines both xiu and xiu blur"
+            t_flat, t_blur = data["themes"][0], data["themes"][1]
+            assert t_flat["name"] == "xiu"
+            assert t_blur["name"] == "xiu blur"
+            # Inactive header must match active header
+            assert t_flat["style"]["title_bar.inactive_background"] == t_flat["style"]["title_bar.background"]
+            assert t_blur["style"]["title_bar.inactive_background"] == t_blur["style"]["title_bar.background"]
+            # Flat UI borders
+            assert t_flat["style"]["border"] == "#00000000"
+            assert t_flat["style"]["border.variant"] == "#00000000"
+            # Blur theme has blurred background appearance
+            assert t_blur["style"]["background.appearance"] == "blurred"
+            # Syntax tree
+            for s in (t_flat["style"]["syntax"], t_blur["style"]["syntax"]):
+                assert "string" in s and "function" in s and "number" in s and "boolean" in s
+                assert "keyword" in s and "type" in s and "comment" in s
+        finally:
+            wc._tool_dir = orig_tool_dir
+
     print("wallcolors semantic layer: all invariants hold")
     return 0
 

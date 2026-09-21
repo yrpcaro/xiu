@@ -1326,83 +1326,222 @@ def render_vscode(pill):
         sfile.write_text(json.dumps(data, indent=4) + "\n")
 
 
-def render_zed(pill):
-    """Zed picks user themes out of ~/.config/zed/themes; the xiu one is kept
-    fresh. The active selection in settings.json is only set when the user
-    never chose a theme — their file is hand-written JSONC, so it is edited
-    textually (never re-serialized) and an existing choice is respected."""
+def render_zed(pill, b=None):
+    """Zed picks user themes out of ~/.config/zed/themes; the xiu themes
+    ("xiu" flat and "xiu blur") are kept fresh. The active selection in
+    settings.json is only set when the user never chose a theme — their file
+    is hand-written JSONC, so it is edited textually (never re-serialized)
+    and an existing choice is respected."""
     z = _tool_dir("zed")
     if z is None:
         return
     p = pill
+    if b is None:
+        b = {
+            "base00": p["surface"],
+            "base01": p["surface_container_low"],
+            "base02": p["surface_container"],
+            "base03": p["surface_container_high"],
+            "base04": p["outline_variant"],
+            "base05": p["dim"],
+            "base06": p["subtle"],
+            "base07": p["cream"],
+            "base08": p["primary"],
+            "base09": p.get("on_primary_container", p["primary"]),
+            "base0a": p.get("tick_rest", p["primary"]),
+            "base0b": p.get("tick_rest", p["cream"]),
+            "base0c": p.get("subtle", p["cream"]),
+            "base0d": p.get("primary", p["bright"]),
+            "base0e": p.get("primary_container", p["primary"]),
+            "base0f": p.get("outline", p["dim"]),
+        }
     lum = lambda c: 0.2126 * int(c[1:3], 16) + 0.7152 * int(c[3:5], 16) + 0.0722 * int(c[5:7], 16)
-    a = lambda c: c + "ff"
+    a = lambda c: c if len(c) == 9 else c + "ff"
 
-    def syntax(c, italic=False):
+    def syntax(c, italic=False, bold=False):
         entry = {"color": a(c)}
         if italic:
             entry["font_style"] = "italic"
+        if bold:
+            entry["font_weight"] = 700
         return entry
 
+    syntax_tree = {
+        "comment": syntax(p["dim"], italic=True),
+        "comment.doc": syntax(p["subtle"], italic=True),
+        "string": syntax(b["base0b"]),
+        "string.escape": syntax(b["base0e"]),
+        "string.regex": syntax(b["base0c"]),
+        "string.special": syntax(b["base0b"]),
+        "constant": syntax(b["base0a"]),
+        "boolean": syntax(b["base09"]),
+        "number": syntax(b["base09"]),
+        "keyword": syntax(p["primary"]),
+        "keyword.control": syntax(p["primary"]),
+        "keyword.operator": syntax(p["primary"]),
+        "function": syntax(b["base0d"]),
+        "function.builtin": syntax(b["base0c"]),
+        "function.method": syntax(b["base0d"]),
+        "function.macro": syntax(b["base0e"]),
+        "variable": syntax(p["cream"]),
+        "variable.builtin": syntax(p["primary"]),
+        "variable.parameter": syntax(p["subtle"]),
+        "variable.special": syntax(p["bright"]),
+        "type": syntax(b["base0a"]),
+        "type.builtin": syntax(b["base0c"]),
+        "tag": syntax(p["primary"]),
+        "attribute": syntax(b["base0d"]),
+        "property": syntax(p["subtle"]),
+        "operator": syntax(p["subtle"]),
+        "punctuation": syntax(p["dim"]),
+        "punctuation.bracket": syntax(p["faint"]),
+        "punctuation.delimiter": syntax(p["dim"]),
+        "punctuation.special": syntax(p["primary"]),
+        "label": syntax(p["primary"]),
+        "title": syntax(p["bright"], bold=True),
+        "emphasis": syntax(p["cream"], italic=True),
+        "emphasis.strong": syntax(p["bright"], bold=True),
+        "link_text": syntax(p["primary"]),
+        "link_uri": syntax(p["dim"]),
+    }
+
+    base_elements = {
+        "text": a(p["cream"]),
+        "text.muted": a(p["subtle"]),
+        "text.disabled": a(p["faint"]),
+        "text.placeholder": a(p["dim"]),
+        "text.accent": a(p["primary"]),
+        "icon": a(p["cream"]),
+        "icon.muted": a(p["subtle"]),
+        "icon.disabled": a(p["faint"]),
+        "icon.accent": a(p["primary"]),
+        "element.background": a(p["surface_container_low"]),
+        "element.hover": a(p["surface_container"]),
+        "element.active": a(p["surface_container_high"]),
+        "element.selected": a(p["surface_container_high"]),
+        "element.disabled": a(p["surface_container_low"]),
+        "ghost_element.background": "#00000000",
+        "ghost_element.hover": a(p["surface_container"]),
+        "ghost_element.active": a(p["surface_container_high"]),
+        "ghost_element.selected": a(p["surface_container_high"]),
+        "ghost_element.disabled": "#00000000",
+        "scrollbar.thumb.background": a(p["outline_variant"]),
+        "scrollbar.thumb.hover_background": a(p["outline"]),
+        "scrollbar.thumb.border": "#00000000",
+        "scrollbar.track.background": "#00000000",
+        "scrollbar.track.border": "#00000000",
+        "search.match_background": p["primary_container"] + "66",
+        "search.active_match_background": p["primary"] + "66",
+        "link_text.hover": a(p["primary"]),
+        "error": a(b["base08"]),
+        "warning": a(b["base0a"]),
+        "info": a(b["base0c"]),
+        "hint": a(p["subtle"]),
+        "predictive": a(p["dim"]),
+        "created": a(b["base0b"]),
+        "modified": a(b["base0a"]),
+        "deleted": a(b["base08"]),
+        "editor.foreground": a(p["cream"]),
+        "editor.line_number": a(p["faint"]),
+        "editor.active_line_number": a(p["subtle"]),
+        "editor.document_highlight.read_background": a(p["surface_container"]),
+        "editor.document_highlight.write_background": a(p["surface_container_high"]),
+        "terminal.foreground": a(p["cream"]),
+        "terminal.bright_foreground": a(p["bright"]),
+        "terminal.dim_foreground": a(p["dim"]),
+        "terminal.ansi.black": a(b["base00"]),
+        "terminal.ansi.bright_black": a(b["base03"]),
+        "terminal.ansi.red": a(b["base08"]),
+        "terminal.ansi.bright_red": a(b["base08"]),
+        "terminal.ansi.green": a(b["base0b"]),
+        "terminal.ansi.bright_green": a(b["base0b"]),
+        "terminal.ansi.yellow": a(b["base0a"]),
+        "terminal.ansi.bright_yellow": a(b["base0a"]),
+        "terminal.ansi.blue": a(b["base0d"]),
+        "terminal.ansi.bright_blue": a(b["base0d"]),
+        "terminal.ansi.magenta": a(b["base0e"]),
+        "terminal.ansi.bright_magenta": a(b["base0e"]),
+        "terminal.ansi.cyan": a(b["base0c"]),
+        "terminal.ansi.bright_cyan": a(b["base0c"]),
+        "terminal.ansi.white": a(b["base07"]),
+        "terminal.ansi.bright_white": a(p["bright"]),
+        "syntax": syntax_tree,
+    }
+
+    # Flat theme: seamless edges, borderless panels, identical active/inactive header
+    flat_style = dict(base_elements)
+    flat_style.update({
+        "background": a(p["surface"]),
+        "surface.background": a(p["surface"]),
+        "elevated_surface.background": a(p["surface_container"]),
+        "panel.background": a(p["surface"]),
+        "panel.focused_border": None,
+        "pane.focused_border": None,
+        "title_bar.background": a(p["surface"]),
+        "title_bar.inactive_background": a(p["surface"]),
+        "toolbar.background": a(p["surface"]),
+        "tab_bar.background": a(p["surface"]),
+        "tab.active_background": a(p["surface_container_low"]),
+        "tab.inactive_background": a(p["surface"]),
+        "status_bar.background": a(p["surface"]),
+        "border": "#00000000",
+        "border.variant": "#00000000",
+        "border.focused": a(p["primary"]),
+        "border.selected": "#00000000",
+        "border.transparent": "#00000000",
+        "border.disabled": "#00000000",
+        "editor.background": a(p["surface"]),
+        "editor.gutter.background": a(p["surface"]),
+        "editor.active_line.background": a(p["surface_container_low"]),
+        "terminal.background": a(p["surface"]),
+    })
+
+    # Xiu Blur theme: translucent alpha backgrounds supporting Hyprland blur
+    blur_style = dict(base_elements)
+    blur_style.update({
+        "background.appearance": "blurred",
+        "background": p["surface"] + "b8",
+        "surface.background": p["surface"] + "a0",
+        "elevated_surface.background": p["surface_container"] + "e0",
+        "panel.background": p["surface"] + "a0",
+        "panel.focused_border": None,
+        "pane.focused_border": None,
+        "title_bar.background": p["surface"] + "b8",
+        "title_bar.inactive_background": p["surface"] + "b8",
+        "toolbar.background": p["surface"] + "a0",
+        "tab_bar.background": p["surface"] + "a0",
+        "tab.active_background": p["surface"] + "cc",
+        "tab.inactive_background": "#00000000",
+        "status_bar.background": p["surface"] + "b8",
+        "border": "#00000000",
+        "border.variant": "#00000000",
+        "border.focused": a(p["primary"]),
+        "border.selected": "#00000000",
+        "border.transparent": "#00000000",
+        "border.disabled": "#00000000",
+        "editor.background": p["surface"] + "90",
+        "editor.gutter.background": "#00000000",
+        "editor.active_line.background": p["surface_container_low"] + "80",
+        "terminal.background": p["surface"] + "90",
+    })
+
+    appearance = "light" if lum(p["surface"]) > 128 else "dark"
     theme = {
         "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
         "name": "xiu",
         "author": "yrpcaro",
-        "themes": [{
-            "name": "xiu",
-            "appearance": "light" if lum(p["surface"]) > 128 else "dark",
-            "style": {
-                "background": a(p["surface"]),
-                "surface.background": a(p["surface_container"]),
-                "elevated_surface.background": a(p["surface_container_high"]),
-                "panel.background": a(p["surface_container"]),
-                "title_bar.background": a(p["surface"]),
-                "status_bar.background": a(p["surface_container"]),
-                "toolbar.background": a(p["surface"]),
-                "tab_bar.background": a(p["surface_container_low"]),
-                "tab.active_background": a(p["surface"]),
-                "tab.inactive_background": a(p["surface_container_low"]),
-                "border": a(p["outline_variant"]),
-                "border.variant": a(p["outline"]),
-                "border.focused": a(p["primary"]),
-                "editor.background": a(p["surface"]),
-                "editor.foreground": a(p["cream"]),
-                "editor.gutter.background": a(p["surface"]),
-                "editor.active_line.background": a(p["surface_container"]),
-                "editor.line_number": a(p["faint"]),
-                "editor.active_line_number": a(p["subtle"]),
-                "editor.document_highlight.read_background": a(p["surface_container"]),
-                "terminal.background": a(p["surface"]),
-                "terminal.foreground": a(p["cream"]),
-                "text": a(p["cream"]),
-                "text.muted": a(p["subtle"]),
-                "text.disabled": a(p["faint"]),
-                "text.accent": a(p["primary"]),
-                "element.hover": a(p["surface_container"]),
-                "element.active": a(p["surface_container_high"]),
-                "element.selected": a(p["surface_container_high"]),
-                "ghost_element.hover": a(p["surface_container"]),
-                "scrollbar.thumb.background": a(p["outline_variant"]),
-                "link_text.hover": a(p["primary"]),
-                "error": a(p["primary"]),
-                "warning": "#e0a03bff",
-                "info": a(p["subtle"]),
-                "predicted": a(p["dim"]),
-                "syntax": {
-                    "comment": syntax(p["faint"], italic=True),
-                    "string": syntax(p["on_primary_container"]),
-                    "constant": syntax(p["on_primary_container"]),
-                    "keyword": syntax(p["primary"]),
-                    "function": syntax(p["subtle"]),
-                    "variable": syntax(p["cream"]),
-                    "type": syntax(p["bright"]),
-                    "tag": syntax(p["primary"]),
-                    "property": syntax(p["subtle"]),
-                    "operator": syntax(p["dim"]),
-                    "punctuation": syntax(p["dim"]),
-                },
+        "themes": [
+            {
+                "name": "xiu",
+                "appearance": appearance,
+                "style": flat_style,
             },
-        }],
+            {
+                "name": "xiu blur",
+                "appearance": appearance,
+                "style": blur_style,
+            },
+        ],
     }
     (z / "themes").mkdir(exist_ok=True)
     (z / "themes" / "xiu.json").write_text(json.dumps(theme, indent=2) + "\n")
@@ -1877,7 +2016,7 @@ def fan_out(pill, seed, variant, share=None):
     render_discord(pill)
     render_userchrome(pill)
     render_vscode(pill)
-    render_zed(pill)
+    render_zed(pill, b)
     render_browser(pill)
     render_qt(pill)
     render_gtk(pill)
