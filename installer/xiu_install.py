@@ -1556,10 +1556,11 @@ def run(args):
         # n2. chosen extras that need one activation step past the package:
         #     spicetify is pointed at spotify-launcher's install layout
         #     (~/.local/share/spotify-launcher/install/usr/share/spotify —
-        #     spicetify's documented path for the launcher) and the xiu theme
-        #     applied; spotify-launcher downloads the Spotify binary on its
-        #     FIRST RUN, so on a fresh box the apply is deferred with a note,
-        #     and re-running the installer after that first launch lands it.
+        #     spicetify's documented path for the launcher) and Spicetify
+        #     Marketplace installed; spotify-launcher downloads the Spotify
+        #     binary on its FIRST RUN, so on a fresh box the apply is deferred
+        #     with a note, and re-running the installer after that first launch
+        #     lands it.
         #     vesktop's themes dir is created so the palette pipeline has
         #     somewhere to drop the xiu CSS (vesktop normally creates it on
         #     first run, which may be after the first wallpaper change).
@@ -1571,16 +1572,17 @@ def run(args):
                     "spicetify", "config",
                     "spotify_path", str(spotify_dir),
                     "prefs_path", str(Path.home() / ".config" / "spotify" / "prefs"),
-                    "current_theme", "xiu",
-                    "color_scheme", "xiu",
                 ], False)
                 record(ok, detail, "Configure spicetify",
-                       "Run: spicetify config spotify_path '%s' prefs_path '%s' "
-                       "current_theme xiu color_scheme xiu"
+                       "Run: spicetify config spotify_path '%s' prefs_path '%s'"
                        % (spotify_dir, Path.home() / ".config" / "spotify" / "prefs"))
+                market_cmd = "curl -fsSL https://raw.githubusercontent.com/spicetify/spicetify-marketplace/main/resources/install.sh | sh"
+                ok, detail = _shell(market_cmd, False)
+                record(ok, detail, "Install spicetify marketplace",
+                       "Run: " + market_cmd)
                 if spotify_dir.is_dir():
                     ok, detail = _run(["spicetify", "backup", "apply"], False)
-                    record(ok, detail, "Apply spicetify theme",
+                    record(ok, detail, "Apply spicetify",
                            "Run: spicetify backup apply")
                 else:
                     notes.append("spotify-launcher hasn't downloaded Spotify yet — "

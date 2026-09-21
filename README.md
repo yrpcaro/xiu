@@ -52,7 +52,7 @@ event, never on a pointer crossing.
 - matugen drives everything from the wallpaper: the pill, both terminals
   (foot and the optional ghostty), fastfetch, window borders, btop, htop,
   nvtop, cava, micro, helix, bottom, yazi, nvim (live — its colorscheme reads
-  the palette file), spicetify, vesktop/vencord/equicord, Telegram (a
+  the palette file), vesktop/vencord/equicord, Telegram (a
   generated `.attheme`), VSCode/VSCodium, Zed, GTK (adw-gtk3), Qt
   (qtengine + Darkly) and the window decorations.
 - A scheme engine on top: seven presets, matugen's scheme variants, and

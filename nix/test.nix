@@ -12,7 +12,7 @@ let
   expectedRoots = [
     "hypr" "quickshell" "ghostty" "foot" "fish" "fastfetch"
     "btop" "cava" "micro" "htop" "nvtop" "nvim" "helix"
-    "bottom" "yazi" "spicetify"
+    "bottom" "yazi"
     "xdg-desktop-portal" "uwsm" "xiu"
     "systemd" "kdeglobals"
   ];

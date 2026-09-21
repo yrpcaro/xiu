@@ -1199,69 +1199,6 @@ def render_yazi(pill, b):
     (d / "theme.toml").write_text("\n".join(lines) + "\n")
 
 
-def render_spicetify(pill, b):
-    """Spotify through spicetify: the xiu theme's color.ini is regenerated on
-    every palette change; `spicetify refresh` pushes it into the client, run
-    only when the theme is the configured current one (opt-in through the
-    installer) so a vanilla spicetify setup is never touched."""
-    d = _tool_dir("spicetify")
-    if d is None:
-        if shutil.which("spicetify"):
-            d = Path.home() / ".config" / "spicetify"
-        else:
-            return
-    theme = d / "Themes" / "xiu"
-    theme.mkdir(parents=True, exist_ok=True)
-    p = pill
-    h = lambda c: c.lstrip("#").upper()
-    lines = [
-        "; Xiu Spotify theme — colors kept fresh by wallcolors.py on every",
-        "; palette change. Selected with: spicetify config current_theme xiu",
-        "[xiu]",
-        "text               = %s" % h(p["bright"]),
-        "subtext            = %s" % h(p["subtle"]),
-        "main               = %s" % h(p["surface"]),
-        "main-elevated      = %s" % h(p["surface_container_high"]),
-        "highlight          = %s" % h(p["surface_container"]),
-        "highlight-elevated = %s" % h(p["surface_container_highest"]),
-        "sidebar            = %s" % h(p["surface_container_low"]),
-        "player             = %s" % h(p["surface_container"]),
-        "card               = %s" % h(p["surface_container_high"]),
-        "shadow             = %s" % h(p["surface_container_low"]),
-        "selected-row       = %s" % h(p["bright"]),
-        "button             = %s" % h(p["primary"]),
-        "button-active      = %s" % h(p["primary_container"]),
-        "button-disabled    = %s" % h(p["outline_variant"]),
-        "tab-active         = %s" % h(p["surface_container_high"]),
-        "notification       = %s" % h(p["primary"]),
-        "notification-error = %s" % h(b["base08"]),
-        "misc               = %s" % h(p["subtle"]),
-    ]
-    (theme / "color.ini").write_text("\n".join(lines) + "\n")
-
-    css_file = theme / "user.css"
-    if not css_file.is_file():
-        css_src = Path(__file__).resolve().parent.parent.parent / "spicetify" / "Themes" / "xiu" / "user.css"
-        if css_src.is_file():
-            try:
-                css_file.write_text(css_src.read_text())
-            except OSError:
-                pass
-
-    prefs = d / "config-xpui.ini"
-    if prefs.is_file() and shutil.which("spicetify"):
-        try:
-            text = prefs.read_text()
-            if re.search(r"(?m)^\s*current_theme\s*=\s*xiu\s*$", text):
-                subprocess.run(["spicetify", "refresh", "-s"], stderr=subprocess.DEVNULL)
-            elif re.search(r"(?m)^\s*current_theme\s*=\s*(marketplace)?\s*$", text):
-                subprocess.run(["spicetify", "config", "current_theme", "xiu", "color_scheme", "xiu"],
-                               stderr=subprocess.DEVNULL)
-                subprocess.run(["spicetify", "apply"], stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
-
-
 def render_userchrome(pill):
     """Recolor the xiu palette block inside every deployed userChrome.css
     (Firefox and Zen profiles the installer wired), so the browser chrome
@@ -2090,7 +2027,6 @@ def fan_out(pill, seed, variant, share=None):
     render_helix(pill, b)
     render_bottom(pill, b)
     render_yazi(pill, b)
-    render_spicetify(pill, b)
     render_discord(pill)
     render_userchrome(pill)
     render_vscode(pill)
