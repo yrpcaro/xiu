@@ -6,7 +6,6 @@ theme = "xiu"
 true-color = true
 cursorline = true
 bufferline = "multiple"
-rulers = [100]
 
 [editor.cursor-shape]
 insert = "bar"
