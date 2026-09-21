@@ -68,15 +68,30 @@ function Linemode:size_and_mtime()
     return ui.Line(string.format("%s  %s", size and ya.readable_size(size) or "-", timestr))
 end
 
--- 4. Modern Header with breadcrumbs and git status
-local old_header_render = Header.render
-Header.render = function(self, area)
-    local chunks = self:layout(area)
-    local left = ui.Line {
-        ui.Span("   "):style(th.mgr.cwd),
-        ui.Span(ya.readable_path(cx.active.current.cwd)):style(th.mgr.cwd):bold(),
-    }
-    return {
-        ui.Paragraph(area, { left }),
-    }
+-- Global guard: intercept deprecated File:icon() across all plugins (e.g. root.yazi)
+if File then
+    File.icon = function(self, opts)
+        if th and th.icon then
+            local ok, icon = pcall(function() return th.icon:match(self, opts) end)
+            if ok and icon then return icon end
+            local ok2, icon2 = pcall(function() return th.icon.match(self, opts) end)
+            if ok2 and icon2 then return icon2 end
+        end
+        return nil
+    end
+end
+
+-- 4. Modern Header with breadcrumb folder icon
+if Header and Header.cwd then
+    Header.cwd = function(self)
+        local max = (self._area and self._area.w or 80) - (self._right_width or 0)
+        if max <= 0 then return "" end
+        local cwd_str = tostring(self._current and self._current.cwd or (cx and cx.active and cx.active.current and cx.active.current.cwd) or "")
+        local flags_str = self.flags and self:flags() or ""
+        local s = ya.readable_path(cwd_str) .. flags_str
+        return ui.Line {
+            ui.Span("   "):style(th.mgr.cwd),
+            ui.Span(ui.truncate(s, { max = math.max(1, max - 4), rtl = true })):style(th.mgr.cwd):bold(),
+        }
+    end
 end

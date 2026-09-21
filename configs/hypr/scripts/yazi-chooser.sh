@@ -24,40 +24,45 @@ if [ -z "${TERMCMD:-}" ]; then
 fi
 termbase="${TERMCMD:-foot}"
 
-case "$termbase" in
-    *foot*)
-        termcmd="$termbase --app-id=termfilechooser --title='File Chooser'"
-        ;;
-    *ghostty*|*kitty*)
-        termcmd="$termbase --class=termfilechooser --title='File Chooser'"
-        ;;
-    *alacritty*)
-        termcmd="$termbase --class=termfilechooser -t 'File Chooser' -e"
-        ;;
-    *)
-        termcmd="$termbase"
-        ;;
-esac
+run_term() {
+    case "$termbase" in
+        *foot*)
+            "$termbase" --app-id=termfilechooser --title="File Chooser" "$@"
+            ;;
+        *ghostty*)
+            "$termbase" --class=termfilechooser --title="File Chooser" -e "$@"
+            ;;
+        *kitty*)
+            "$termbase" --class=termfilechooser --title="File Chooser" "$@"
+            ;;
+        *alacritty*)
+            "$termbase" --class=termfilechooser -t "File Chooser" -e "$@"
+            ;;
+        *)
+            "$termbase" "$@"
+            ;;
+    esac
+}
 
 if [ "$save" = "1" ]; then
     # Save mode: navigate to the recommended path's parent, name the file,
     # open it to confirm — the open writes the chosen path to the out file.
     dir=$(dirname -- "$path")
     mkdir -p -- "$dir" 2>/dev/null
-    "$termcmd" -- "$yazi" --chooser-file="$out" "$dir"
+    run_term "$yazi" --chooser-file="$out" "$dir"
 elif [ "$directory" = "1" ]; then
     # Directory mode: yazi has no dirs-only filter; quitting in a directory
     # selects it through --cwd-file (the fish wrapper's trick).
     tmp=$(mktemp)
-    "$termcmd" -- "$yazi" --cwd-file="$tmp" "$path"
-    if [ -s "$tmp" ]; then
+    run_term "$yazi" --chooser-file="$out" --cwd-file="$tmp" "$path"
+    if [ ! -s "$out" ] && [ -s "$tmp" ]; then
         cp -- "$tmp" "$out"
     fi
     rm -f -- "$tmp"
 elif [ "$multiple" = "1" ]; then
-    "$termcmd" -- "$yazi" --chooser-file="$out" "$path"
+    run_term "$yazi" --chooser-file="$out" "$path"
 else
-    "$termcmd" -- "$yazi" --chooser-file="$out" "$path"
+    run_term "$yazi" --chooser-file="$out" "$path"
 fi
 
 # Save mode cleanup: an empty out file means the save was cancelled, so the

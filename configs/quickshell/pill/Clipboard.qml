@@ -26,6 +26,7 @@ PillSurface {
     property int selectedIndex: 0
     property string sortMode: "recent"
     property int armedDeleteIndex: -1
+    Keys.forwardTo: [search.input]
 
     Timer {
         id: deleteArmTimer

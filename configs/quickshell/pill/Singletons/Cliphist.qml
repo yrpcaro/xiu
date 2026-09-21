@@ -63,6 +63,13 @@ Singleton {
         blockLoading: true
         atomicWrites: true
         printErrors: false
+        onLoaded: root.loadPinned()
+        onLoadFailed: function(err) {
+            Quickshell.execDetached(["mkdir", "-p", root.stateDir]);
+            if (err === FileViewError.FileNotFound) {
+                pinnedStore.setText("[]");
+            }
+        }
     }
 
     function isPinned(entry) {
@@ -137,7 +144,9 @@ Singleton {
         var kept = [];
         for (var i = 0; i < entries.length; i++) {
             if (root.isPinned(entries[i])) {
-                pinnedIds.push(Number(entries[i].id));
+                var nid = Number(entries[i].id);
+                if (isFinite(nid) && nid > 0)
+                    pinnedIds.push(nid);
                 kept.push(entries[i]);
             }
         }
@@ -145,10 +154,10 @@ Singleton {
         if (pinnedIds.length === 0) {
             wipeProc.running = true;
         } else {
-            var dbPath = (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/clipvault.db";
+            var dbPath = Quickshell.env("CLIPVAULT_DB") || ((Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/clipvault.db");
             var sql = "DELETE FROM clipboard WHERE id NOT IN (" + pinnedIds.join(",") + "); VACUUM;";
-            Quickshell.execDetached(["sqlite3", dbPath, sql]);
-            Qt.callLater(root.refresh);
+            selectiveWipeProc.command = ["sqlite3", dbPath, sql];
+            selectiveWipeProc.running = true;
         }
     }
 
@@ -225,6 +234,11 @@ Singleton {
     Process {
         id: wipeProc
         command: ["clipvault", "clear"]
+        onExited: root.refresh()
+    }
+
+    Process {
+        id: selectiveWipeProc
         onExited: root.refresh()
     }
 
@@ -319,6 +333,7 @@ Singleton {
     }
 
     Component.onCompleted: {
+        Quickshell.execDetached(["mkdir", "-p", root.stateDir]);
         root.loadPinned();
         probeProc.running = true;
         refresh();
