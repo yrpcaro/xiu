@@ -1155,10 +1155,10 @@ def render_spicetify(pill, b):
         "main-elevated      = %s" % h(p["surface_container_high"]),
         "highlight          = %s" % h(p["surface_container"]),
         "highlight-elevated = %s" % h(p["surface_container_highest"]),
-        "sidebar            = %s" % h(p["surface_container"]),
+        "sidebar            = %s" % h(p["surface_container_low"]),
         "player             = %s" % h(p["surface_container"]),
-        "card               = %s" % h(p["primary_container"]),
-        "shadow             = %s" % h(p["surface_container"]),
+        "card               = %s" % h(p["surface_container_high"]),
+        "shadow             = %s" % h(p["surface_container_low"]),
         "selected-row       = %s" % h(p["bright"]),
         "button             = %s" % h(p["primary"]),
         "button-active      = %s" % h(p["primary_container"]),
@@ -1169,9 +1169,28 @@ def render_spicetify(pill, b):
         "misc               = %s" % h(p["subtle"]),
     ]
     (theme / "color.ini").write_text("\n".join(lines) + "\n")
+
+    css_file = theme / "user.css"
+    if not css_file.is_file():
+        css_src = Path(__file__).resolve().parent.parent.parent / "spicetify" / "Themes" / "xiu" / "user.css"
+        if css_src.is_file():
+            try:
+                css_file.write_text(css_src.read_text())
+            except OSError:
+                pass
+
     prefs = d / "config-xpui.ini"
-    if prefs.is_file() and "current_theme = xiu" in prefs.read_text():
-        subprocess.run(["spicetify", "refresh"], stderr=subprocess.DEVNULL)
+    if prefs.is_file() and shutil.which("spicetify"):
+        try:
+            text = prefs.read_text()
+            if re.search(r"(?m)^\s*current_theme\s*=\s*xiu\s*$", text):
+                subprocess.run(["spicetify", "refresh", "-s"], stderr=subprocess.DEVNULL)
+            elif re.search(r"(?m)^\s*current_theme\s*=\s*(marketplace)?\s*$", text):
+                subprocess.run(["spicetify", "config", "current_theme", "xiu", "color_scheme", "xiu"],
+                               stderr=subprocess.DEVNULL)
+                subprocess.run(["spicetify", "apply"], stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
 
 
 def render_userchrome(pill):
