@@ -15,6 +15,14 @@ end
 -- so focus reads immediately and inactive windows sit quietly against the wallpaper.
 local active   = border(wc and wc.active, "#e0563b")
 local inactive = "rgba(0,0,0,0)"
+local locked_active   = border(wc and wc.locked_active, "#f0b85e")
+local locked_inactive = "rgba(0,0,0,0)"
+
+local group_active          = border(wc and wc.group_active, wc and wc.active or "#e0563b")
+local group_inactive        = border(wc and wc.group_inactive, "#2e231b")
+local group_locked_active   = border(wc and wc.group_locked_active, "#f0b85e")
+local group_locked_inactive = border(wc and wc.group_locked_inactive, "#2e231b")
+local group_text            = border(wc and wc.text_color, "#fff6f0")
 
 --[[
     Splash rendering SEGVs Hyprland (pango free in renderSplash) when a monitor
@@ -35,6 +43,27 @@ hl.config({
         resize_on_border = true,
         ["col.active_border"]   = active,
         ["col.inactive_border"] = inactive,
+    },
+    group = {
+        ["col.border_active"]          = active,
+        ["col.border_inactive"]        = inactive,
+        ["col.border_locked_active"]   = locked_active,
+        ["col.border_locked_inactive"] = locked_inactive,
+        groupbar = {
+            enabled               = true,
+            font_family           = "Inter",
+            font_size             = 10,
+            gradients             = false,
+            height                = 14,
+            priority              = 3,
+            render_titles         = true,
+            scrolling             = true,
+            text_color            = group_text,
+            ["col.active"]        = group_active,
+            ["col.inactive"]      = group_inactive,
+            ["col.locked_active"] = group_locked_active,
+            ["col.locked_inactive"] = group_locked_inactive,
+        },
     },
     decoration = {
         rounding         = 12,

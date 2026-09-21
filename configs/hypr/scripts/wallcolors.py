@@ -1154,8 +1154,8 @@ def render_bottom(pill, b):
 
 
 def render_yazi(pill, b):
-    """yazi: theme.toml is the palette surface (mgr, tabs, mode, filetype) and
-    is regenerated whole, like htoprc; yazi.toml (keys, openers) is the user's
+    """yazi: theme.toml is the palette surface (mgr, tabs, mode, filetype, status, etc.)
+    and is regenerated whole, like htoprc; yazi.toml (keys, openers) is the user's
     and is never touched."""
     d = _tool_dir("yazi")
     if d is None:
@@ -1163,10 +1163,11 @@ def render_yazi(pill, b):
     p = pill
     lines = [
         "# Written by wallcolors.py on every palette change.",
-        "# [manager] is the long-lived section name — current yazi also accepts",
-        "# [mgr], older ones only this one — and the tab separator key is 'sep'.",
         "[manager]",
-        'cwd = { fg = "%s" }' % p["cream"],
+        'cwd = { fg = "%s", bold = true }' % p["cream"],
+        'hovered = { fg = "%s", bg = "%s", bold = true }'
+        % (p["bright"], p["surface_container_high"]),
+        'preview_hovered = { underline = true }',
         'border_style = { fg = "%s" }' % p["outline_variant"],
         'find_keyword = { fg = "%s", bold = true }' % p["primary"],
         'find_position = { fg = "%s", bg = "%s" }'
@@ -1175,7 +1176,15 @@ def render_yazi(pill, b):
         'marker_copied = { fg = "%s" }' % b["base0b"],
         'marker_cut = { fg = "%s" }' % b["base08"],
         'marker_marked = { fg = "%s" }' % b["base0e"],
-        'symlink_target = { fg = "%s" }' % b["base0d"],
+        'tab_active = { fg = "%s", bg = "%s", bold = true }'
+        % (p["bright"], p["surface_container_high"]),
+        'tab_inactive = { fg = "%s" }' % p["dim"],
+        'tab_width = 1',
+        'count_copied = { fg = "%s", bg = "%s" }' % (p["bright"], b["base0b"]),
+        'count_cut = { fg = "%s", bg = "%s" }' % (p["bright"], b["base08"]),
+        'count_selected = { fg = "%s", bg = "%s" }' % (p["bright"], p["primary"]),
+        'border_symbol = "│"',
+        'syntect_theme = ""',
         "",
         "[tabs]",
         'active = { fg = "%s", bg = "%s", bold = true }'
@@ -1192,10 +1201,36 @@ def render_yazi(pill, b):
         'unset_main = { fg = "%s", bg = "%s", bold = true }' % (p["cream"], b["base08"]),
         'unset_alt = { fg = "%s", bg = "%s" }' % (p["cream"], p["surface_container_high"]),
         "",
+        "[status]",
+        'separator_open = ""',
+        'separator_close = ""',
+        'separator_style = { fg = "%s" }' % p["outline_variant"],
+        "",
+        "[select]",
+        'border = { fg = "%s" }' % p["primary"],
+        'active = { fg = "%s", bg = "%s" }' % (p["bright"], p["surface_container_high"]),
+        'inactive = { fg = "%s" }' % p["cream"],
+        "",
+        "[input]",
+        'border = { fg = "%s" }' % p["primary"],
+        'title = { fg = "%s", bold = true }' % p["cream"],
+        'value = { fg = "%s" }' % p["bright"],
+        'selected = { bg = "%s" }' % p["surface_container_high"],
+        "",
+        "[which]",
+        'mask = { bg = "%s" }' % p["surface_container"],
+        'cand = { fg = "%s" }' % b["base0c"],
+        'rest = { fg = "%s" }' % p["subtle"],
+        'desc = { fg = "%s" }' % p["cream"],
+        'separator = "  "',
+        'separator_style = { fg = "%s" }' % p["outline_variant"],
+        "",
         "[filetype]",
         "rules = [",
         '  { mime = "image/*", fg = "%s" },' % b["base0a"],
         '  { mime = "{audio,video}/*", fg = "%s" },' % b["base0d"],
+        '  { mime = "application/{zip,rar,7z*,tar*,gzip,xz}", fg = "%s" },' % b["base0e"],
+        '  { mime = "application/{pdf,doc*,epub*}", fg = "%s" },' % b["base0b"],
         '  { mime = "inode/empty", fg = "%s" },' % p["dim"],
         '  { url = "*/", fg = "%s", bold = true },' % b["base0d"],
         '  { url = "*", fg = "%s" },' % p["cream"],
@@ -2098,8 +2133,30 @@ def fan_out(pill, seed, variant, share=None):
     render_fish(pill, ansi)
     broadcast_terminal(pill, b, ansi)
 
-    hypr_colors = ('return {\n    active = "%s",\n    inactive = "%s",\n}\n'
-                   % (pill["primary"], b["base01"]))
+    hypr_colors = (
+        'return {\n'
+        '    active = "%s",\n'
+        '    inactive = "%s",\n'
+        '    locked_active = "%s",\n'
+        '    locked_inactive = "%s",\n'
+        '    group_active = "%s",\n'
+        '    group_inactive = "%s",\n'
+        '    group_locked_active = "%s",\n'
+        '    group_locked_inactive = "%s",\n'
+        '    text_color = "%s",\n'
+        '}\n'
+        % (
+            pill["primary"],
+            b["base01"],
+            pill.get("on_primary_container", b.get("base09", "#f0b85e")),
+            b["base02"],
+            pill["primary"],
+            pill.get("surface_container", b["base01"]),
+            pill.get("on_primary_container", b.get("base09", "#f0b85e")),
+            b["base02"],
+            pill.get("cream", b["base07"]),
+        )
+    )
     (CACHE / "hypr-colors.lua").write_text(hypr_colors)
     (CACHE_XIU / "hypr-colors.lua").write_text(hypr_colors)
 

@@ -17,6 +17,8 @@ Item {
     readonly property color dim2: "#565e6a"
 
     readonly property string secondary: {
+        if (!entry) return "";
+        if (entry.isCommand) return (entry.arg && entry.arg.length > 0) ? ("Arg: " + entry.arg) : (entry.desc || "");
         if (entry.genericName && entry.genericName.length > 0) return entry.genericName;
         if (entry.categories && entry.categories.length > 0) {
             var first = String(entry.categories).split(";")[0].trim();
@@ -54,7 +56,17 @@ Item {
             height: 26
             radius: 6
             color: Qt.rgba(1, 1, 1, 0.05)
-            visible: !(icon.status === Image.Ready && icon.source !== "")
+            visible: (row.entry && row.entry.isCommand) || !(icon.status === Image.Ready && icon.source !== "")
+
+            Text {
+                anchors.centerIn: parent
+                visible: row.entry && row.entry.isCommand
+                text: ">"
+                color: row.selected ? row.white : row.cream
+                font.family: "Inter"
+                font.pixelSize: 13
+                font.weight: Font.Bold
+            }
         }
 
         Image {
@@ -64,15 +76,15 @@ Item {
             sourceSize.height: 52
             fillMode: Image.PreserveAspectFit
             asynchronous: true
-            visible: status === Image.Ready && source !== ""
-            source: row.entry.icon ? Quickshell.iconPath(row.entry.icon, true) : ""
+            visible: !(row.entry && row.entry.isCommand) && status === Image.Ready && source !== ""
+            source: (row.entry && !row.entry.isCommand && row.entry.icon) ? Quickshell.iconPath(row.entry.icon, true) : ""
         }
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: icon.right
             anchors.leftMargin: 12
-            text: row.entry.name
+            text: row.entry ? (row.entry.isCommand ? (row.entry.name + " (" + row.entry.prefix + ")") : row.entry.name) : ""
             color: row.selected ? row.white : row.cream
             font.family: "Inter"
             font.pixelSize: 15

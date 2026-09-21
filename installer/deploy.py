@@ -53,6 +53,7 @@ DEPLOY_SET = [
     ("bottom",     "bottom",                                "bottom"),
     ("yazi",       "yazi",                                  "yazi"),
     ("portals",    "portals",                               "xdg-desktop-portal"),
+    ("termfilechooser", "xdg-desktop-portal-termfilechooser", "xdg-desktop-portal-termfilechooser"),
     ("uwsm",       "uwsm",                                  "uwsm"),
     ("browser",    "browser-integration",                   "xiu/browser-integration"),
     ("kdeglobals", "kde/kdeglobals",                        "kdeglobals"),

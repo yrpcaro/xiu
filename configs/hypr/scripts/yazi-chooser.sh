@@ -12,8 +12,32 @@ save="$3"
 path="$4"
 out="$5"
 
-yazi="/usr/bin/yazi"
-termcmd="${TERMCMD:-/usr/bin/foot}"
+yazi="$(command -v yazi 2>/dev/null || echo "/usr/bin/yazi")"
+
+if [ -z "${TERMCMD:-}" ]; then
+    for t in foot ghostty kitty alacritty; do
+        if command -v "$t" >/dev/null 2>&1; then
+            TERMCMD="$t"
+            break
+        fi
+    done
+fi
+termbase="${TERMCMD:-foot}"
+
+case "$termbase" in
+    *foot*)
+        termcmd="$termbase --app-id=termfilechooser --title='File Chooser'"
+        ;;
+    *ghostty*|*kitty*)
+        termcmd="$termbase --class=termfilechooser --title='File Chooser'"
+        ;;
+    *alacritty*)
+        termcmd="$termbase --class=termfilechooser -t 'File Chooser' -e"
+        ;;
+    *)
+        termcmd="$termbase"
+        ;;
+esac
 
 if [ "$save" = "1" ]; then
     # Save mode: navigate to the recommended path's parent, name the file,

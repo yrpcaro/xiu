@@ -54,6 +54,66 @@ Singleton {
     readonly property string thumbScript: Quickshell.env("HOME") + "/.config/hypr/scripts/cliphist-thumbs.sh"
     readonly property string watchScript: Quickshell.env("HOME") + "/.config/hypr/scripts/cliphist-watch.sh"
 
+    readonly property string stateDir: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/xiu"
+    property var pinnedLines: []
+
+    FileView {
+        id: pinnedStore
+        path: root.stateDir + "/clipboard-pinned.json"
+        blockLoading: true
+        atomicWrites: true
+        printErrors: false
+    }
+
+    function isPinned(entry) {
+        if (!entry) return false;
+        var p = String(entry.preview || "");
+        var l = String(entry.line || "");
+        for (var i = 0; i < pinnedLines.length; i++) {
+            if (pinnedLines[i] === p || pinnedLines[i] === l)
+                return true;
+        }
+        return false;
+    }
+
+    function togglePin(entry) {
+        if (!entry) return;
+        var p = String(entry.preview || "");
+        var l = String(entry.line || "");
+        var next = [];
+        var found = false;
+        for (var i = 0; i < pinnedLines.length; i++) {
+            if (pinnedLines[i] === p || pinnedLines[i] === l) {
+                found = true;
+            } else {
+                next.push(pinnedLines[i]);
+            }
+        }
+        if (!found) {
+            next.push(p.length ? p : l);
+        }
+        pinnedLines = next;
+        pinnedStore.setText(JSON.stringify(pinnedLines));
+        pinnedStore.waitForJob();
+        for (var j = 0; j < entries.length; j++) {
+            entries[j].pinned = root.isPinned(entries[j]);
+        }
+        entries = entries.slice();
+    }
+
+    function loadPinned() {
+        try {
+            var raw = pinnedStore.text();
+            if (raw && raw.trim().length > 0) {
+                var arr = JSON.parse(raw);
+                if (Array.isArray(arr))
+                    root.pinnedLines = arr;
+            }
+        } catch (e) {
+            root.pinnedLines = [];
+        }
+    }
+
     function kickStore() {
         Quickshell.execDetached(["sh", root.watchScript]);
     }
@@ -73,8 +133,23 @@ Singleton {
     }
 
     function wipe() {
-        entries = [];
-        wipeProc.running = true;
+        var pinnedIds = [];
+        var kept = [];
+        for (var i = 0; i < entries.length; i++) {
+            if (root.isPinned(entries[i])) {
+                pinnedIds.push(Number(entries[i].id));
+                kept.push(entries[i]);
+            }
+        }
+        entries = kept;
+        if (pinnedIds.length === 0) {
+            wipeProc.running = true;
+        } else {
+            var dbPath = (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/clipvault.db";
+            var sql = "DELETE FROM clipboard WHERE id NOT IN (" + pinnedIds.join(",") + "); VACUUM;";
+            Quickshell.execDetached(["sqlite3", dbPath, sql]);
+            Qt.callLater(root.refresh);
+        }
     }
 
     /**
@@ -90,6 +165,9 @@ Singleton {
     function remove(entry) {
         if (!entry.line || entry.line.indexOf("\t") < 1)
             return;
+        if (root.isPinned(entry)) {
+            root.togglePin(entry);
+        }
         var id = String(entry.id);
         var kept = [];
         for (var i = 0; i < entries.length; i++)
@@ -195,7 +273,7 @@ Singleton {
                     label = m[1];
                 }
             }
-            out.push({
+            var entryObj = {
                 id: id,
                 line: line,
                 preview: preview,
@@ -203,7 +281,9 @@ Singleton {
                 label: label,
                 sizeLabel: sizeLabel,
                 thumb: isImage ? root.thumbDir + id + ".png" : ""
-            });
+            };
+            entryObj.pinned = root.isPinned(entryObj);
+            out.push(entryObj);
         }
         root.entries = out;
         root.loaded = true;
@@ -239,6 +319,7 @@ Singleton {
     }
 
     Component.onCompleted: {
+        root.loadPinned();
         probeProc.running = true;
         refresh();
     }

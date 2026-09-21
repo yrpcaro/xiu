@@ -25,8 +25,16 @@ hl.window_rule({
 
 hl.window_rule({
     name  = "float-file-pickers",
-    match = { title = "(Open File|Save File|Save As|Choose Files|Open Folder)" },
+    match = { title = "(Open File|Save File|Save As|Choose Files|Open Folder|File Chooser)" },
     float = true,
+})
+
+hl.window_rule({
+    name   = "float-termfilechooser",
+    match  = { class = "termfilechooser" },
+    float  = true,
+    size   = { 1200, 750 },
+    center = true,
 })
 
 hl.window_rule({

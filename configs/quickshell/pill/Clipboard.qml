@@ -24,6 +24,14 @@ PillSurface {
 
     property string query: ""
     property int selectedIndex: 0
+    property string sortMode: "recent"
+    property int armedDeleteIndex: -1
+
+    Timer {
+        id: deleteArmTimer
+        interval: 2000
+        onTriggered: root.armedDeleteIndex = -1
+    }
 
     /**
      * Window-coordinate position of the last hover event that was allowed to
@@ -50,15 +58,29 @@ PillSurface {
     readonly property var results: {
         var all = Cliphist.entries;
         var q = query.trim().toLowerCase();
-        if (!q.length)
-            return all;
-        var out = [];
+        var filtered = [];
         for (var i = 0; i < all.length; i++) {
             var hay = (all[i].isImage ? all[i].label + " " + all[i].sizeLabel : all[i].preview).toLowerCase();
-            if (hay.indexOf(q) !== -1)
-                out.push(all[i]);
+            if (!q.length || hay.indexOf(q) !== -1)
+                filtered.push(all[i]);
         }
-        return out;
+        filtered.sort(function(a, b) {
+            var aPin = a.pinned ? 1 : 0;
+            var bPin = b.pinned ? 1 : 0;
+            if (aPin !== bPin) {
+                return bPin - aPin;
+            }
+            if (root.sortMode === "alpha") {
+                var aText = (a.isImage ? a.label : a.preview).toLowerCase();
+                var bText = (b.isImage ? b.label : b.preview).toLowerCase();
+                return aText.localeCompare(bText);
+            } else if (root.sortMode === "oldest") {
+                return Number(a.id) - Number(b.id);
+            } else {
+                return Number(b.id) - Number(a.id);
+            }
+        });
+        return filtered;
     }
 
     function focusField() { search.input.forceActiveFocus(); }
@@ -66,6 +88,8 @@ PillSurface {
     function move(delta) {
         if (results.length === 0)
             return;
+        armedDeleteIndex = -1;
+        deleteArmTimer.stop();
         selectedIndex = Math.max(0, Math.min(results.length - 1, selectedIndex + delta));
         list.positionViewAtIndex(selectedIndex, ListView.Contain);
     }
@@ -80,6 +104,8 @@ PillSurface {
     function removeAt(index) {
         if (index < 0 || index >= results.length)
             return;
+        armedDeleteIndex = -1;
+        deleteArmTimer.stop();
         Cliphist.remove(results[index]);
     }
 
@@ -88,6 +114,8 @@ PillSurface {
             query = "";
             search.text = "";
             selectedIndex = 0;
+            armedDeleteIndex = -1;
+            deleteArmTimer.stop();
             Cliphist.refresh();
             Qt.callLater(root.focusField);
         }
@@ -112,64 +140,131 @@ PillSurface {
         onAccepted: root.activate()
         onDismissed: root.requestClose()
         onKeyPressed: (e) => {
-            if (e.key === Qt.Key_X && (e.modifiers & Qt.ControlModifier)
-                && search.input.selectedText.length === 0) {
-                root.removeAt(root.selectedIndex);
-                e.accepted = true;
+            if (e.key === Qt.Key_Delete || (e.key === Qt.Key_X && (e.modifiers & Qt.ControlModifier) && search.input.selectedText.length === 0)) {
+                if (root.selectedIndex >= 0 && root.selectedIndex < root.results.length) {
+                    var entry = root.results[root.selectedIndex];
+                    if (entry && entry.pinned) {
+                        if (root.armedDeleteIndex === root.selectedIndex && deleteArmTimer.running) {
+                            deleteArmTimer.stop();
+                            root.armedDeleteIndex = -1;
+                            root.removeAt(root.selectedIndex);
+                        } else {
+                            root.armedDeleteIndex = root.selectedIndex;
+                            deleteArmTimer.restart();
+                        }
+                    } else {
+                        root.removeAt(root.selectedIndex);
+                    }
+                    e.accepted = true;
+                }
             }
         }
 
-        Item {
-            id: wipeBtn
+        Row {
             anchors.verticalCenter: parent.verticalCenter
-            width: 16 * root.s
-            height: 16 * root.s
+            spacing: 8 * root.s
 
-            readonly property real hold: wipeHeat.hold
-            readonly property bool holding: wipeHeat.holding
-            readonly property color tone: holding ? Theme.vermLit : (wipeArea.containsMouse ? Theme.cream : Theme.faint)
+            Item {
+                id: sortBtn
+                anchors.verticalCenter: parent.verticalCenter
+                width: 16 * root.s
+                height: 16 * root.s
 
-            Tooltip {
-                s: root.s
-                placement: "below"
-                title: "hold to wipe"
-                show: wipeArea.containsMouse || wipeBtn.holding
+                readonly property color tone: sortArea.containsMouse ? Theme.cream : Theme.faint
+
+                Tooltip {
+                    s: root.s
+                    placement: "below"
+                    title: root.sortMode === "recent" ? "sort: recent" : (root.sortMode === "alpha" ? "sort: alphabetical" : "sort: oldest")
+                    show: sortArea.containsMouse
+                }
+
+                Text {
+                    visible: Flags.showGlyphs
+                    anchors.centerIn: parent
+                    text: "序"
+                    color: sortBtn.tone
+                    font.family: Theme.fontJp
+                    font.pixelSize: 12 * root.s
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                }
+
+                GlyphIcon {
+                    visible: !Flags.showGlyphs
+                    anchors.centerIn: parent
+                    width: 12 * root.s
+                    height: 12 * root.s
+                    name: "sort"
+                    color: sortBtn.tone
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                }
+
+                MouseArea {
+                    id: sortArea
+                    anchors.fill: parent
+                    anchors.margins: -5 * root.s
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (root.sortMode === "recent") root.sortMode = "alpha";
+                        else if (root.sortMode === "alpha") root.sortMode = "oldest";
+                        else root.sortMode = "recent";
+                    }
+                }
             }
 
-            Text {
-                visible: Flags.showGlyphs
-                anchors.centerIn: parent
-                text: "掃"
-                color: wipeBtn.tone
-                font.family: Theme.fontJp
-                font.pixelSize: 12 * root.s
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-            }
+            Item {
+                id: wipeBtn
+                anchors.verticalCenter: parent.verticalCenter
+                width: 16 * root.s
+                height: 16 * root.s
 
-            GlyphIcon {
-                visible: !Flags.showGlyphs
-                anchors.centerIn: parent
-                width: 12 * root.s
-                height: 12 * root.s
-                name: "trash"
-                color: wipeBtn.tone
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
-            }
+                readonly property real hold: wipeHeat.hold
+                readonly property bool holding: wipeHeat.holding
+                readonly property color tone: holding ? Theme.vermLit : (wipeArea.containsMouse ? Theme.cream : Theme.faint)
 
-            HeatHold {
-                id: wipeHeat
-                onConfirmed: Cliphist.wipe()
-            }
+                Tooltip {
+                    s: root.s
+                    placement: "below"
+                    title: "hold to wipe"
+                    show: wipeArea.containsMouse || wipeBtn.holding
+                }
 
-            MouseArea {
-                id: wipeArea
-                anchors.fill: parent
-                anchors.margins: -5 * root.s
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onPressed: wipeHeat.press()
-                onReleased: wipeHeat.release()
-                onExited: wipeHeat.cancel()
+                Text {
+                    visible: Flags.showGlyphs
+                    anchors.centerIn: parent
+                    text: "掃"
+                    color: wipeBtn.tone
+                    font.family: Theme.fontJp
+                    font.pixelSize: 12 * root.s
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                }
+
+                GlyphIcon {
+                    visible: !Flags.showGlyphs
+                    anchors.centerIn: parent
+                    width: 12 * root.s
+                    height: 12 * root.s
+                    name: "trash"
+                    color: wipeBtn.tone
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                }
+
+                HeatHold {
+                    id: wipeHeat
+                    onConfirmed: Cliphist.wipe()
+                }
+
+                MouseArea {
+                    id: wipeArea
+                    anchors.fill: parent
+                    anchors.margins: -5 * root.s
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onPressed: wipeHeat.press()
+                    onReleased: wipeHeat.release()
+                    onExited: wipeHeat.cancel()
+                }
             }
         }
     }
@@ -322,18 +417,16 @@ PillSurface {
                     font.features: { "tnum": 1 }
                 }
 
-                Item {
+                Row {
                     id: tail
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(ret.implicitWidth, dismiss.implicitWidth)
-                    height: Math.max(ret.implicitHeight, dismiss.implicitHeight)
+                    spacing: 6 * root.s
 
                     Text {
                         id: ret
-                        anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        opacity: row.selected && !rowHover.hovered ? 1 : 0
+                        opacity: row.selected && !rowHover.hovered && !delBtn.isArmed ? 1 : 0
                         text: "↵"
                         color: Theme.vermLit
                         font.family: Theme.font
@@ -341,24 +434,113 @@ PillSurface {
                         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                     }
 
-                    Text {
-                        id: dismiss
-                        anchors.right: parent.right
+                    Item {
+                        id: pinBtn
+                        width: 16 * root.s
+                        height: 16 * root.s
                         anchors.verticalCenter: parent.verticalCenter
-                        opacity: rowHover.hovered ? 1 : 0
-                        text: "✕"
-                        color: dismissArea.containsMouse ? Theme.cream : Theme.dim
-                        font.pixelSize: 10 * root.s
-                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                        visible: row.entry !== undefined && (row.entry.pinned || row.selected || rowHover.hovered)
+                        opacity: (row.entry !== undefined && row.entry.pinned) ? 1.0 : (pinArea.containsMouse ? 1.0 : 0.6)
+
+                        Tooltip {
+                            s: root.s
+                            placement: "left"
+                            title: (row.entry !== undefined && row.entry.pinned) ? "unpin item" : "pin item"
+                            show: pinArea.containsMouse
+                        }
+
+                        Text {
+                            visible: Flags.showGlyphs
+                            anchors.centerIn: parent
+                            text: "留"
+                            color: (row.entry !== undefined && row.entry.pinned) ? Theme.vermLit : (pinArea.containsMouse ? Theme.cream : Theme.dim)
+                            font.family: Theme.fontJp
+                            font.pixelSize: 11 * root.s
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        }
+
+                        GlyphIcon {
+                            visible: !Flags.showGlyphs
+                            anchors.centerIn: parent
+                            width: 12 * root.s
+                            height: 12 * root.s
+                            name: (row.entry !== undefined && row.entry.pinned) ? "pin-filled" : "pin"
+                            color: (row.entry !== undefined && row.entry.pinned) ? Theme.vermLit : (pinArea.containsMouse ? Theme.cream : Theme.dim)
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        }
 
                         MouseArea {
-                            id: dismissArea
+                            id: pinArea
                             anchors.fill: parent
-                            anchors.margins: -6 * root.s
-                            enabled: rowHover.hovered
+                            anchors.margins: -4 * root.s
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.removeAt(row.index)
+                            onClicked: Cliphist.togglePin(row.entry)
+                        }
+                    }
+
+                    Item {
+                        id: delBtn
+                        width: 16 * root.s
+                        height: 16 * root.s
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: row.selected || rowHover.hovered || holding || isArmed
+                        readonly property bool isPinned: row.entry !== undefined && row.entry.pinned
+                        readonly property real hold: delHeat.hold
+                        readonly property bool holding: delHeat.holding
+                        readonly property bool isArmed: root.armedDeleteIndex === row.index && deleteArmTimer.running
+
+                        HeatHold {
+                            id: delHeat
+                            onConfirmed: root.removeAt(row.index)
+                        }
+
+                        Tooltip {
+                            s: root.s
+                            placement: "left"
+                            title: delBtn.isPinned ? (delBtn.holding ? "holding to delete..." : (delBtn.isArmed ? "press delete again" : "hold to delete pinned")) : "delete item"
+                            show: delArea.containsMouse || delBtn.holding || delBtn.isArmed
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: width / 2
+                            visible: delBtn.holding || delBtn.isArmed
+                            color: Qt.alpha(Theme.vermLit, delBtn.holding ? (0.2 + 0.8 * delBtn.hold) : 0.3)
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: delBtn.isArmed ? "!" : "✕"
+                            color: (delBtn.holding || delBtn.isArmed) ? Theme.vermLit : (delArea.containsMouse ? Theme.cream : Theme.dim)
+                            font.pixelSize: 10 * root.s
+                            font.weight: delBtn.isArmed ? Font.Bold : Font.Normal
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        }
+
+                        MouseArea {
+                            id: delArea
+                            anchors.fill: parent
+                            anchors.margins: -4 * root.s
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onPressed: {
+                                if (delBtn.isPinned) {
+                                    delHeat.press();
+                                }
+                            }
+                            onReleased: {
+                                if (delBtn.isPinned) {
+                                    delHeat.release();
+                                } else {
+                                    root.removeAt(row.index);
+                                }
+                            }
+                            onExited: {
+                                if (delBtn.isPinned) {
+                                    delHeat.cancel();
+                                }
+                            }
                         }
                     }
                 }

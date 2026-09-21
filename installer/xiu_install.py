@@ -784,7 +784,9 @@ def wire_portal_chooser(dry):
     and restart xdg-desktop-portal.
     """
     home = Path.home()
-    cfg = home / ".config" / "xdg-desktop-portal-termfilechooser" / "config.toml"
+    cfg_dir = home / ".config" / "xdg-desktop-portal-termfilechooser"
+    cfg = cfg_dir / "config"
+    cfg_toml = cfg_dir / "config.toml"
     wrapper = home / ".config" / "hypr" / "scripts" / "yazi-chooser.sh"
     portal_conf = home / ".config" / "xdg-desktop-portal" / "hyprland-portals.conf"
 
@@ -817,12 +819,14 @@ def wire_portal_chooser(dry):
         return True, ""
 
     try:
-        cfg.parent.mkdir(parents=True, exist_ok=True)
-        cfg.write_text(
+        cfg_dir.mkdir(parents=True, exist_ok=True)
+        content = (
             "[filechooser]\n"
             f"cmd={wrapper}\n"
             f"default_dir={home}\n"
         )
+        cfg.write_text(content)
+        cfg_toml.write_text(content)
 
         if portal_conf.is_file():
             text = portal_conf.read_text()

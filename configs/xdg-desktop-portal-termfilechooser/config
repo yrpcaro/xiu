@@ -1,0 +1,3 @@
+[filechooser]
+cmd=~/.config/hypr/scripts/yazi-chooser.sh
+default_dir=$HOME

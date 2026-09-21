@@ -1,0 +1,65 @@
+#!/bin/sh
+# rishot - Wayland screenshot + annotation overlay (Quickshell).
+# Integrated into Xiu shell.
+
+set -eu
+
+usage() {
+	cat <<'EOF'
+rishot - screenshot + annotate
+
+usage: rishot [mode]
+
+modes:
+  (none), region   drag a region, or click a window to grab it (default)
+  monitor          click a monitor to grab the whole output
+
+options:
+  -h, --help       show this help
+
+env:
+  RISHOT_CONFIG_DIR  override the Quickshell config dir (must hold shell.qml)
+  RISHOT_UPLOAD      override the upload endpoint (https form-post target)
+  RISHOT_SAVEDIR     override the auto-save directory
+  RISHOT_KEYBIND_FILE  write the in-app rebind here instead of autodetecting
+EOF
+}
+
+mode=region
+case "${1:-}" in
+	monitor | --monitor | -m) mode=monitor ;;
+	region | --region | -r | "") mode=region ;;
+	-h | --help) usage; exit 0 ;;
+	*) printf 'rishot: unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
+esac
+
+dir="${RISHOT_CONFIG_DIR:-}"
+if [ -z "$dir" ]; then
+	self=$(dirname "$(readlink -f "$0")")
+	for c in \
+		"${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/rishot" \
+		"$self/../../quickshell/rishot" \
+		"$self/../quickshell/rishot" \
+		"${HOME:-}/.local/share/rishot/src" \
+		/usr/share/rishot/src \
+		/usr/lib/rishot/src; do
+		if [ -f "$c/shell.qml" ]; then dir="$c"; break; fi
+	done
+fi
+
+if [ -z "$dir" ] || [ ! -f "$dir/shell.qml" ]; then
+	echo "rishot: could not locate the config dir (set RISHOT_CONFIG_DIR)" >&2
+	exit 1
+fi
+
+command -v qs >/dev/null 2>&1 || {
+	echo "rishot: 'qs' (quickshell) not found in PATH" >&2
+	exit 1
+}
+
+rundir="${XDG_RUNTIME_DIR:-$HOME/.cache}"
+mkdir -p "$rundir" 2>/dev/null || rundir="/tmp"
+lock="$rundir/rishot.lock"
+exec 9>"$lock"
+flock -n 9 || { echo "rishot: already running" >&2; exit 0; }
+exec env RISHOT_MODE="$mode" qs -p "$dir"

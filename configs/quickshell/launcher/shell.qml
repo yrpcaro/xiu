@@ -4,6 +4,8 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "lib/fuzzy.js" as Fuzzy
+import "lib/commands.js" as Cmds
+import "lib/calc.js" as Calc
 
 ShellRoot {
     id: root
@@ -53,10 +55,46 @@ ShellRoot {
     }
 
     readonly property int totalCount: allEntries.length
-    readonly property var results: Fuzzy.rank(allEntries, query, usage)
+    readonly property bool isCommandMode: query.trim().indexOf(">") === 0
+    readonly property var results: isCommandMode ? Cmds.matchCommands(query) : Fuzzy.rank(allEntries, query, usage)
 
     function run(entry) {
         if (entry) {
+            if (entry.isCommand) {
+                if (entry.needsArg && (!entry.arg || entry.arg.length === 0)) {
+                    root.query = entry.prefix + " ";
+                    return;
+                }
+                if (entry.prefix === ">install" || entry.prefix === ">appimage") {
+                    var rawPath = (entry.arg || "").trim();
+                    if (!rawPath.length) {
+                        root.query = entry.prefix + " ";
+                        return;
+                    }
+                    if (rawPath.indexOf("~") === 0) {
+                        rawPath = (Quickshell.env("HOME") || "") + rawPath.substring(1);
+                    }
+                    var script = (Quickshell.env("HOME") || "") + "/.config/hypr/scripts/app-install.sh";
+                    Quickshell.execDetached(["bash", script, "install", rawPath]);
+                    root.shown = false;
+                    return;
+                }
+                if (entry.prefix === ">calc") {
+                    var c = Calc.evaluate(entry.arg);
+                    if (c.ok) {
+                        Quickshell.execDetached(["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", c.display]);
+                    }
+                    root.shown = false;
+                    return;
+                }
+                if (entry.command && entry.command.length > 0) {
+                    Quickshell.execDetached(entry.command);
+                    root.shown = false;
+                    return;
+                }
+                root.shown = false;
+                return;
+            }
             if (entry.id) {
                 root.usage[entry.id] = (root.usage[entry.id] || 0) + 1;
                 usageStore.setText(JSON.stringify(root.usage));

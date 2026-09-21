@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import Quickshell
+import "lib/calc.js" as Calc
 
 Item {
     id: box
@@ -8,6 +9,9 @@ Item {
     property var entries: []
     property int total: 0
     property int selectedIndex: 0
+
+    readonly property var calc: Calc.evaluate(query)
+    readonly property bool calcActive: calc.ok
 
     signal launch(var entry)
     signal quit()
@@ -20,6 +24,7 @@ Item {
     readonly property color hair: Qt.rgba(150 / 255, 172 / 255, 212 / 255, 0.10)
     readonly property color verm: "#c0442b"
     readonly property color cream: "#e6d6cb"
+    readonly property color white: "#fff6f0"
     readonly property color dim: "#7e8794"
     readonly property color dim2: "#565e6a"
 
@@ -33,6 +38,11 @@ Item {
     }
 
     function activate() {
+        if (box.calcActive) {
+            Quickshell.execDetached(["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", box.calc.display]);
+            box.quit();
+            return;
+        }
         if (entries.length > 0 && selectedIndex >= 0 && selectedIndex < entries.length)
             box.launch(entries[selectedIndex]);
     }
@@ -81,7 +91,7 @@ Item {
                 color: box.cream
                 font.family: "Inter"
                 font.pixelSize: 16
-                placeholderText: "Search"
+                placeholderText: (query.trim().indexOf(">") === 0) ? "Type command or argument..." : "Search apps (type > for commands)"
                 placeholderTextColor: box.dim
                 selectByMouse: true
                 focus: true
@@ -103,7 +113,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: parent.right
                 anchors.rightMargin: 21
-                text: box.entries.length + " / " + box.total
+                text: (query.trim().indexOf(">") === 0) ? (box.entries.length + " cmds") : (box.entries.length + " / " + box.total)
                 color: box.dim2
                 font.family: "Inter"
                 font.pixelSize: 11
@@ -121,10 +131,50 @@ Item {
             color: box.hair
         }
 
+        Item {
+            id: calcRow
+            visible: box.calcActive
+            anchors.top: divider.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: visible ? 46 : 0
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 6
+                radius: 12
+                color: Qt.rgba(1, 1, 1, 0.05)
+            }
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 8
+                Text {
+                    text: "= " + (box.calc ? box.calc.display : "")
+                    color: box.white
+                    font.family: "Inter"
+                    font.pixelSize: 16
+                    font.weight: Font.DemiBold
+                }
+                Text {
+                    text: "(↵ copy)"
+                    color: box.dim
+                    font.family: "Inter"
+                    font.pixelSize: 12
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: box.activate()
+            }
+        }
+
         ListView {
             id: list
             width: parent.width
-            anchors.top: divider.bottom
+            anchors.top: box.calcActive ? calcRow.bottom : divider.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             leftMargin: 14

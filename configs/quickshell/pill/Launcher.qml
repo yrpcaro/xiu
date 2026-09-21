@@ -6,6 +6,7 @@ import Quickshell.Io
 import "Singletons"
 import "lib/fuzzy.js" as Fuzzy
 import "lib/calc.js" as Calc
+import "lib/commands.js" as Cmds
 
 /**
  * Launcher surface: search field over a ranked application list, drawn as one
@@ -110,9 +111,47 @@ PillSurface {
         return out;
     }
     readonly property int totalCount: allEntries.length
-    readonly property var results: Fuzzy.rank(allEntries, query, usage)
+    readonly property bool isCommandMode: query.trim().indexOf(">") === 0
+    readonly property var commandResults: isCommandMode ? Cmds.matchCommands(query) : []
+    readonly property var results: isCommandMode ? commandResults : Fuzzy.rank(allEntries, query, usage)
 
     function focusField() { search.input.forceActiveFocus(); }
+
+    function executeCommand(entry) {
+        if (!entry) return;
+        if (entry.needsArg && (!entry.arg || entry.arg.length === 0)) {
+            search.text = entry.prefix + " ";
+            search.input.cursorPosition = search.text.length;
+            return;
+        }
+        if (entry.prefix === ">install" || entry.prefix === ">appimage") {
+            var rawPath = (entry.arg || "").trim();
+            if (!rawPath.length) {
+                search.text = entry.prefix + " ";
+                return;
+            }
+            if (rawPath.indexOf("~") === 0) {
+                rawPath = (Quickshell.env("HOME") || "") + rawPath.substring(1);
+            }
+            appimageProc.command = ["bash", root.appimageScript, "install", rawPath];
+            appimageProc.running = true;
+            root.requestClose();
+            return;
+        }
+        if (entry.prefix === ">calc") {
+            if (root.calcActive) {
+                root.copyResult();
+            }
+            root.requestClose();
+            return;
+        }
+        if (entry.command && entry.command.length > 0) {
+            Quickshell.execDetached(entry.command);
+            root.requestClose();
+            return;
+        }
+        root.requestClose();
+    }
 
     function mapCategory(raw) {
         const order = [
@@ -145,6 +184,10 @@ PillSurface {
             return;
         var entry = results[selectedIndex];
         if (entry) {
+            if (entry.isCommand) {
+                root.executeCommand(entry);
+                return;
+            }
             if (entry.id) {
                 root.usage[entry.id] = (root.usage[entry.id] || 0) + 1;
                 usageStore.setText(JSON.stringify(root.usage));
@@ -191,9 +234,9 @@ PillSurface {
         anchors.left: parent.left
         anchors.right: parent.right
         s: root.s
-        kanji: "探"
-        placeholder: "Search apps"
-        counterText: root.results.length + " / " + root.totalCount
+        kanji: root.isCommandMode ? "令" : "探"
+        placeholder: root.isCommandMode ? "Type command or argument..." : "Search apps (type > for commands)"
+        counterText: root.isCommandMode ? (root.results.length + " cmds") : (root.results.length + " / " + root.totalCount)
         onTextChanged: {
             root.query = text;
             root.selectedIndex = 0;
@@ -282,7 +325,7 @@ PillSurface {
     Text {
         anchors.centerIn: list
         visible: root.results.length === 0 && !root.calcActive
-        text: root.query.length ? "No matches" : "No apps found"
+        text: root.query.length ? (root.isCommandMode ? "No matching commands" : "No matches") : "No apps found"
         color: Theme.faint
         font.family: Theme.font
         font.pixelSize: 10.5 * root.s
@@ -309,7 +352,8 @@ PillSurface {
 
             readonly property var entry: root.results[index]
             readonly property bool selected: index === root.selectedIndex
-            readonly property bool isAppImage: entry && entry.id
+            readonly property bool isCommand: entry && entry.isCommand
+            readonly property bool isAppImage: !isCommand && entry && entry.id
                 && (entry.id.indexOf("xiu-") === 0 || entry.id.indexOf("ricelin-") === 0)
             readonly property bool editing: root.editIndex === index && isAppImage
             property bool armed: false
@@ -318,6 +362,8 @@ PillSurface {
             readonly property string secondary: {
                 if (!entry)
                     return "";
+                if (isCommand)
+                    return (entry.arg && entry.arg.length > 0) ? ("Arg: " + entry.arg) : (entry.desc || "");
                 if (entry.genericName && entry.genericName.length > 0)
                     return entry.genericName;
                 if (entry.categories && entry.categories.length > 0)
@@ -372,7 +418,16 @@ PillSurface {
                     height: 22 * root.s
                     radius: 5 * root.s
                     color: Qt.rgba(1, 1, 1, 0.05)
-                    visible: !(icon.status === Image.Ready && icon.source != "")
+                    visible: appRow.isCommand || !(icon.status === Image.Ready && icon.source != "")
+
+                    GlyphIcon {
+                        anchors.centerIn: parent
+                        width: 14 * root.s
+                        height: 14 * root.s
+                        name: appRow.isCommand ? (appRow.entry.icon || "cog") : ""
+                        color: appRow.selected ? Theme.cream : Theme.dim
+                        visible: appRow.isCommand
+                    }
                 }
                 Image {
                     id: icon
@@ -382,9 +437,9 @@ PillSurface {
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                     smooth: true
-                    visible: status === Image.Ready && source != ""
+                    visible: !appRow.isCommand && status === Image.Ready && source != ""
                     source: {
-                        if (!appRow.entry || !appRow.entry.icon)
+                        if (appRow.isCommand || !appRow.entry || !appRow.entry.icon)
                             return "";
                         var ic = appRow.entry.icon;
                         if (appRow.isAppImage && ic.indexOf("/") === 0)
@@ -465,7 +520,7 @@ PillSurface {
                             id: nameText
                             anchors.fill: parent
                             visible: !appRow.editing
-                            text: appRow.entry ? appRow.entry.name : ""
+                            text: appRow.entry ? (appRow.isCommand ? (appRow.entry.name + " (" + appRow.entry.prefix + ")") : appRow.entry.name) : ""
                             color: Theme.cream
                             font.family: Theme.font
                             font.pixelSize: 13 * root.s
