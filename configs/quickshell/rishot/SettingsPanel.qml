@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
 import "lib/keymap.js" as Keymap
@@ -301,9 +302,13 @@ Item {
                     sourceSize.height: 18
                     Layout.preferredWidth: 18
                     Layout.preferredHeight: 18
+                    layer.enabled: true
+                    layer.effect: ColorOverlay {
+                        color: panel.vermilion
+                    }
                 }
                 Text {
-                    text: '<font color="#e0563b">rishot</font> settings'
+                    text: '<font color="' + panel.vermilion + '">rishot</font> settings'
                     textFormat: Text.StyledText
                     color: Theme.white
                     font.family: Theme.sansFamily

@@ -57,6 +57,8 @@ PillSurface {
     amePoint: Qt.point(caretX, caretY)
 
     readonly property var results: {
+        var _p = Cliphist.pinnedLines;
+        var _o = Cliphist.manualOrder;
         var all = Cliphist.entries;
         var q = query.trim().toLowerCase();
         var filtered = [];
@@ -71,7 +73,19 @@ PillSurface {
             if (aPin !== bPin) {
                 return bPin - aPin;
             }
-            if (root.sortMode === "alpha") {
+            if (aPin && bPin) {
+                var pA = Cliphist.pinnedIndex(a);
+                var pB = Cliphist.pinnedIndex(b);
+                if (pA !== -1 && pB !== -1 && pA !== pB)
+                    return pA - pB;
+            }
+            if (root.sortMode === "manual") {
+                var mA = Cliphist.manualIndex(a);
+                var mB = Cliphist.manualIndex(b);
+                if (mA !== mB)
+                    return mA - mB;
+                return Number(b.id) - Number(a.id);
+            } else if (root.sortMode === "alpha") {
                 var aText = (a.isImage ? a.label : a.preview).toLowerCase();
                 var bText = (b.isImage ? b.label : b.preview).toLowerCase();
                 return aText.localeCompare(bText);
@@ -85,6 +99,22 @@ PillSurface {
     }
 
     function focusField() { search.input.forceActiveFocus(); }
+
+    function moveItem(fromIndex, delta) {
+        var toIndex = fromIndex + delta;
+        if (fromIndex < 0 || fromIndex >= results.length || toIndex < 0 || toIndex >= results.length)
+            return;
+        var a = results[fromIndex];
+        var b = results[toIndex];
+        if (!a.pinned || !b.pinned) {
+            if (root.sortMode !== "manual") {
+                root.sortMode = "manual";
+            }
+        }
+        Cliphist.swapEntries(a, b, results);
+        selectedIndex = toIndex;
+        list.positionViewAtIndex(selectedIndex, ListView.Contain);
+    }
 
     function move(delta) {
         if (results.length === 0)
@@ -141,6 +171,27 @@ PillSurface {
         onAccepted: root.activate()
         onDismissed: root.requestClose()
         onKeyPressed: (e) => {
+            if ((e.key === Qt.Key_Up) && (e.modifiers & (Qt.ControlModifier | Qt.AltModifier))) {
+                if (root.selectedIndex > 0) {
+                    root.moveItem(root.selectedIndex, -1);
+                }
+                e.accepted = true;
+                return;
+            }
+            if ((e.key === Qt.Key_Down) && (e.modifiers & (Qt.ControlModifier | Qt.AltModifier))) {
+                if (root.selectedIndex < root.results.length - 1) {
+                    root.moveItem(root.selectedIndex, 1);
+                }
+                e.accepted = true;
+                return;
+            }
+            if ((e.key === Qt.Key_P || e.key === Qt.Key_U) && (e.modifiers & Qt.ControlModifier)) {
+                if (root.selectedIndex >= 0 && root.selectedIndex < root.results.length) {
+                    Cliphist.togglePin(root.results[root.selectedIndex]);
+                    e.accepted = true;
+                    return;
+                }
+            }
             if (e.key === Qt.Key_Delete || (e.key === Qt.Key_X && (e.modifiers & Qt.ControlModifier) && search.input.selectedText.length === 0)) {
                 if (root.selectedIndex >= 0 && root.selectedIndex < root.results.length) {
                     var entry = root.results[root.selectedIndex];
@@ -176,7 +227,7 @@ PillSurface {
                 Tooltip {
                     s: root.s
                     placement: "below"
-                    title: root.sortMode === "recent" ? "sort: recent" : (root.sortMode === "alpha" ? "sort: alphabetical" : "sort: oldest")
+                    title: root.sortMode === "recent" ? "sort: recent" : (root.sortMode === "manual" ? "sort: manual" : (root.sortMode === "alpha" ? "sort: alphabetical" : "sort: oldest"))
                     show: sortArea.containsMouse
                 }
 
@@ -207,7 +258,8 @@ PillSurface {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        if (root.sortMode === "recent") root.sortMode = "alpha";
+                        if (root.sortMode === "recent") root.sortMode = "manual";
+                        else if (root.sortMode === "manual") root.sortMode = "alpha";
                         else if (root.sortMode === "alpha") root.sortMode = "oldest";
                         else root.sortMode = "recent";
                     }
@@ -436,6 +488,94 @@ PillSurface {
                     }
 
                     Item {
+                        id: moveUpBtn
+                        width: 16 * root.s
+                        height: 16 * root.s
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: (row.selected || rowHover.hovered) && row.index > 0
+                        opacity: moveUpArea.containsMouse ? 1.0 : 0.6
+
+                        Tooltip {
+                            s: root.s
+                            placement: "left"
+                            title: "move up (Ctrl+Up)"
+                            show: moveUpArea.containsMouse
+                        }
+
+                        Text {
+                            visible: Flags.showGlyphs
+                            anchors.centerIn: parent
+                            text: "▲"
+                            color: moveUpArea.containsMouse ? Theme.cream : Theme.dim
+                            font.pixelSize: 10 * root.s
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        }
+
+                        GlyphIcon {
+                            visible: !Flags.showGlyphs
+                            anchors.centerIn: parent
+                            width: 11 * root.s
+                            height: 11 * root.s
+                            name: "chevron-up"
+                            color: moveUpArea.containsMouse ? Theme.cream : Theme.dim
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        }
+
+                        MouseArea {
+                            id: moveUpArea
+                            anchors.fill: parent
+                            anchors.margins: -4 * root.s
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.moveItem(row.index, -1)
+                        }
+                    }
+
+                    Item {
+                        id: moveDownBtn
+                        width: 16 * root.s
+                        height: 16 * root.s
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: (row.selected || rowHover.hovered) && row.index < root.results.length - 1
+                        opacity: moveDownArea.containsMouse ? 1.0 : 0.6
+
+                        Tooltip {
+                            s: root.s
+                            placement: "left"
+                            title: "move down (Ctrl+Down)"
+                            show: moveDownArea.containsMouse
+                        }
+
+                        Text {
+                            visible: Flags.showGlyphs
+                            anchors.centerIn: parent
+                            text: "▼"
+                            color: moveDownArea.containsMouse ? Theme.cream : Theme.dim
+                            font.pixelSize: 10 * root.s
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        }
+
+                        GlyphIcon {
+                            visible: !Flags.showGlyphs
+                            anchors.centerIn: parent
+                            width: 11 * root.s
+                            height: 11 * root.s
+                            name: "chevron-down"
+                            color: moveDownArea.containsMouse ? Theme.cream : Theme.dim
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        }
+
+                        MouseArea {
+                            id: moveDownArea
+                            anchors.fill: parent
+                            anchors.margins: -4 * root.s
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.moveItem(row.index, 1)
+                        }
+                    }
+
+                    Item {
                         id: pinBtn
                         width: 16 * root.s
                         height: 16 * root.s
@@ -443,18 +583,20 @@ PillSurface {
                         visible: row.entry !== undefined && (row.entry.pinned || row.selected || rowHover.hovered)
                         opacity: (row.entry !== undefined && row.entry.pinned) ? 1.0 : (pinArea.containsMouse ? 1.0 : 0.6)
 
+                        readonly property bool isPinned: row.entry !== undefined && row.entry.pinned
+
                         Tooltip {
                             s: root.s
                             placement: "left"
-                            title: (row.entry !== undefined && row.entry.pinned) ? "unpin item" : "pin item"
+                            title: pinBtn.isPinned ? (pinArea.containsMouse ? "unpin item (Ctrl+P)" : "pinned (click to unpin)") : "pin item (Ctrl+P)"
                             show: pinArea.containsMouse
                         }
 
                         Text {
                             visible: Flags.showGlyphs
                             anchors.centerIn: parent
-                            text: "留"
-                            color: (row.entry !== undefined && row.entry.pinned) ? Theme.vermLit : (pinArea.containsMouse ? Theme.cream : Theme.dim)
+                            text: pinBtn.isPinned ? (pinArea.containsMouse ? "解" : "留") : "留"
+                            color: pinBtn.isPinned ? (pinArea.containsMouse ? Theme.cream : Theme.vermLit) : (pinArea.containsMouse ? Theme.cream : Theme.dim)
                             font.family: Theme.fontJp
                             font.pixelSize: 11 * root.s
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
@@ -465,8 +607,8 @@ PillSurface {
                             anchors.centerIn: parent
                             width: 12 * root.s
                             height: 12 * root.s
-                            name: (row.entry !== undefined && row.entry.pinned) ? "pin-filled" : "pin"
-                            color: (row.entry !== undefined && row.entry.pinned) ? Theme.vermLit : (pinArea.containsMouse ? Theme.cream : Theme.dim)
+                            name: pinBtn.isPinned ? (pinArea.containsMouse ? "pin-off" : "pin-filled") : "pin"
+                            color: pinBtn.isPinned ? (pinArea.containsMouse ? Theme.cream : Theme.vermLit) : (pinArea.containsMouse ? Theme.cream : Theme.dim)
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
                         }
 

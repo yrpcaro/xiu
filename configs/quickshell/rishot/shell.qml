@@ -129,6 +129,15 @@ ShellRoot {
         }
     }
 
+    Connections {
+        target: Theme
+        function onVermilionChanged() {
+            var s = root.toolStyle[root.activeTool];
+            if (!s || !s.color)
+                root.activeColor = Theme.vermilion;
+        }
+    }
+
     property var selectedIndex: null
     property var moveOffset: null
     property var moveStart: null

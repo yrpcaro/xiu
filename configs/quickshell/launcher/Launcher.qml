@@ -91,7 +91,7 @@ Item {
                 color: box.cream
                 font.family: "Inter"
                 font.pixelSize: 16
-                placeholderText: (query.trim().indexOf(">") === 0) ? "Type command or argument..." : "Search apps (type > for commands)"
+                placeholderText: "Search"
                 placeholderTextColor: box.dim
                 selectByMouse: true
                 focus: true
@@ -113,7 +113,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: parent.right
                 anchors.rightMargin: 21
-                text: (query.trim().indexOf(">") === 0) ? (box.entries.length + " cmds") : (box.entries.length + " / " + box.total)
+                text: box.entries.length + " / " + box.total
                 color: box.dim2
                 font.family: "Inter"
                 font.pixelSize: 11

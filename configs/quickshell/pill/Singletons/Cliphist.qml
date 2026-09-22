@@ -56,6 +56,7 @@ Singleton {
 
     readonly property string stateDir: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/xiu"
     property var pinnedLines: []
+    property var manualOrder: []
 
     FileView {
         id: pinnedStore
@@ -72,40 +73,106 @@ Singleton {
         }
     }
 
+    FileView {
+        id: orderStore
+        path: root.stateDir + "/clipboard-order.json"
+        blockLoading: true
+        atomicWrites: true
+        printErrors: false
+        onLoaded: root.loadOrder()
+        onLoadFailed: function(err) {
+            Quickshell.execDetached(["mkdir", "-p", root.stateDir]);
+            if (err === FileViewError.FileNotFound) {
+                orderStore.setText("[]");
+            }
+        }
+    }
+
+    function _entryKey(entry) {
+        if (!entry) return "";
+        var p = String(entry.preview || "");
+        if (p.length > 0) return p;
+        var l = String(entry.line || "");
+        if (l.length > 0) return l;
+        return String(entry.id || "");
+    }
+
     function isPinned(entry) {
         if (!entry) return false;
         var p = String(entry.preview || "");
         var l = String(entry.line || "");
+        var id = String(entry.id || "");
         for (var i = 0; i < pinnedLines.length; i++) {
-            if (pinnedLines[i] === p || pinnedLines[i] === l)
+            var item = String(pinnedLines[i]);
+            if (item === p || item === l || (id.length && item === id))
                 return true;
         }
         return false;
     }
 
-    function togglePin(entry) {
+    function pinnedIndex(entry) {
+        if (!entry) return -1;
+        var p = String(entry.preview || "");
+        var l = String(entry.line || "");
+        var id = String(entry.id || "");
+        for (var i = 0; i < pinnedLines.length; i++) {
+            var item = String(pinnedLines[i]);
+            if (item === p || item === l || (id.length && item === id))
+                return i;
+        }
+        return -1;
+    }
+
+    function pin(entry) {
+        if (!entry || root.isPinned(entry)) return;
+        var key = root._entryKey(entry);
+        if (!key.length) return;
+        var next = pinnedLines.slice();
+        next.push(key);
+        pinnedLines = next;
+        pinnedStore.setText(JSON.stringify(pinnedLines));
+        pinnedStore.waitForJob();
+        var nextEntries = [];
+        for (var j = 0; j < entries.length; j++) {
+            var item = Object.assign({}, entries[j]);
+            item.pinned = root.isPinned(item);
+            nextEntries.push(item);
+        }
+        entries = nextEntries;
+    }
+
+    function unpin(entry) {
         if (!entry) return;
         var p = String(entry.preview || "");
         var l = String(entry.line || "");
+        var id = String(entry.id || "");
         var next = [];
-        var found = false;
         for (var i = 0; i < pinnedLines.length; i++) {
-            if (pinnedLines[i] === p || pinnedLines[i] === l) {
-                found = true;
-            } else {
-                next.push(pinnedLines[i]);
+            var item = String(pinnedLines[i]);
+            if (item === p || item === l || (id.length && item === id)) {
+                continue;
             }
-        }
-        if (!found) {
-            next.push(p.length ? p : l);
+            next.push(item);
         }
         pinnedLines = next;
         pinnedStore.setText(JSON.stringify(pinnedLines));
         pinnedStore.waitForJob();
-        for (var j = 0; j < entries.length; j++) {
-            entries[j].pinned = root.isPinned(entries[j]);
+        var nextUnpinned = [];
+        for (var k = 0; k < entries.length; k++) {
+            var unpItem = Object.assign({}, entries[k]);
+            unpItem.pinned = root.isPinned(unpItem);
+            nextUnpinned.push(unpItem);
         }
-        entries = entries.slice();
+        entries = nextUnpinned;
+    }
+
+    function togglePin(entry) {
+        if (!entry) return;
+        if (root.isPinned(entry)) {
+            root.unpin(entry);
+        } else {
+            root.pin(entry);
+        }
     }
 
     function loadPinned() {
@@ -118,6 +185,90 @@ Singleton {
             }
         } catch (e) {
             root.pinnedLines = [];
+        }
+    }
+
+    function loadOrder() {
+        try {
+            var raw = orderStore.text();
+            if (raw && raw.trim().length > 0) {
+                var arr = JSON.parse(raw);
+                if (Array.isArray(arr))
+                    root.manualOrder = arr;
+            }
+        } catch (e) {
+            root.manualOrder = [];
+        }
+    }
+
+    function manualIndex(entry) {
+        if (!entry) return 999999;
+        var key = root._entryKey(entry);
+        for (var i = 0; i < manualOrder.length; i++) {
+            if (manualOrder[i] === key || manualOrder[i] === entry.line || manualOrder[i] === entry.preview)
+                return i;
+        }
+        for (var j = 0; j < entries.length; j++) {
+            if (entries[j] === entry || entries[j].id === entry.id)
+                return 100000 + j;
+        }
+        return 999999;
+    }
+
+    function swapEntries(a, b, currentResults) {
+        if (!a || !b) return;
+        var isAPinned = root.isPinned(a);
+        var isBPinned = root.isPinned(b);
+
+        if (isAPinned && isBPinned) {
+            var idxA = root.pinnedIndex(a);
+            var idxB = root.pinnedIndex(b);
+            if (idxA !== -1 && idxB !== -1) {
+                var nextPins = pinnedLines.slice();
+                var tmp = nextPins[idxA];
+                nextPins[idxA] = nextPins[idxB];
+                nextPins[idxB] = tmp;
+                pinnedLines = nextPins;
+                pinnedStore.setText(JSON.stringify(pinnedLines));
+                pinnedStore.waitForJob();
+            }
+        }
+
+        var keyA = root._entryKey(a);
+        var keyB = root._entryKey(b);
+        var list = currentResults || entries;
+        var newOrder = [];
+        if (manualOrder && manualOrder.length > 0) {
+            newOrder = manualOrder.slice();
+        } else {
+            for (var k = 0; k < list.length; k++) {
+                newOrder.push(root._entryKey(list[k]));
+            }
+        }
+        var mIdxA = newOrder.indexOf(keyA);
+        var mIdxB = newOrder.indexOf(keyB);
+        if (mIdxA === -1) { newOrder.push(keyA); mIdxA = newOrder.length - 1; }
+        if (mIdxB === -1) { newOrder.push(keyB); mIdxB = newOrder.length - 1; }
+        var mTmp = newOrder[mIdxA];
+        newOrder[mIdxA] = newOrder[mIdxB];
+        newOrder[mIdxB] = mTmp;
+        manualOrder = newOrder;
+        orderStore.setText(JSON.stringify(manualOrder));
+        orderStore.waitForJob();
+
+        var eIdxA = -1, eIdxB = -1;
+        for (var i = 0; i < entries.length; i++) {
+            if (entries[i].id === a.id) eIdxA = i;
+            if (entries[i].id === b.id) eIdxB = i;
+        }
+        if (eIdxA !== -1 && eIdxB !== -1) {
+            var nextEntries = entries.slice();
+            var eTmp = nextEntries[eIdxA];
+            nextEntries[eIdxA] = nextEntries[eIdxB];
+            nextEntries[eIdxB] = eTmp;
+            entries = nextEntries;
+        } else {
+            entries = entries.slice();
         }
     }
 
@@ -335,6 +486,7 @@ Singleton {
     Component.onCompleted: {
         Quickshell.execDetached(["mkdir", "-p", root.stateDir]);
         root.loadPinned();
+        root.loadOrder();
         probeProc.running = true;
         refresh();
     }

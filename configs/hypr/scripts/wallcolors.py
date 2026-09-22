@@ -1179,7 +1179,6 @@ def render_yazi(pill, b):
         'tab_active = { fg = "%s", bg = "%s", bold = true }'
         % (p["bright"], p["surface_container_high"]),
         'tab_inactive = { fg = "%s" }' % p["dim"],
-        'tab_width = 1',
         'count_copied = { fg = "%s", bg = "%s" }' % (p["bright"], b["base0b"]),
         'count_cut = { fg = "%s", bg = "%s" }' % (p["bright"], b["base08"]),
         'count_selected = { fg = "%s", bg = "%s" }' % (p["bright"], p["primary"]),

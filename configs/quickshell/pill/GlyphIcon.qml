@@ -89,6 +89,7 @@ Item {
         "gamepad": { d: "M7 11h4 M9 9v4 M15.5 10h.01 M17.5 13h.01 M17 7H7a5 5 0 0 0-5 5l-.9 4.5A2.4 2.4 0 0 0 5.7 18L8 15h8l2.3 3a2.4 2.4 0 0 0 4.6-1.5L22 12a5 5 0 0 0-5-5z", fill: false },
         "pin": { d: "M12 17v5 M9 2h6l1 7 3 2v2H5v-2l3-2 1-7z", fill: false },
         "pin-filled": { d: "M12 17v5 M9 2h6l1 7 3 2v2H5v-2l3-2 1-7z", fill: true },
+        "pin-off": { d: "M12 17v5 M9 2h6l1 7 3 2v2H5v-2l3-2 1-7z M3 3l18 18", fill: false },
         "sort": { d: "M11 5h10 M11 9h7 M11 13h4 M3 17l3 3 3-3 M6 18V4", fill: false }
     })
 

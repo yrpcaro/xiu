@@ -234,9 +234,9 @@ PillSurface {
         anchors.left: parent.left
         anchors.right: parent.right
         s: root.s
-        kanji: root.isCommandMode ? "令" : "探"
-        placeholder: root.isCommandMode ? "Type command or argument..." : "Search apps (type > for commands)"
-        counterText: root.isCommandMode ? (root.results.length + " cmds") : (root.results.length + " / " + root.totalCount)
+        kanji: "探"
+        placeholder: "Search apps"
+        counterText: root.results.length + " / " + root.totalCount
         onTextChanged: {
             root.query = text;
             root.selectedIndex = 0;
