@@ -28,7 +28,12 @@ SettingsSurface {
     implicitHeight: content.implicitHeight
     rows: []
 
-    readonly property string engine: Quickshell.env("HOME") + "/.config/hypr/scripts/xiu-update.py"
+    readonly property string engine: {
+        var rel = Qt.resolvedUrl("../../../hypr/scripts/xiu-update.py").toString();
+        if (rel.indexOf("file://") === 0)
+            return rel.substring(7);
+        return Quickshell.env("HOME") + "/.config/hypr/scripts/xiu-update.py";
+    }
 
     property string status: ""
     property string version: ""
@@ -88,9 +93,20 @@ SettingsSurface {
         }).join(" ");
     }
 
+    property bool codeChanged: false
+    property var modules: []
+
+    readonly property bool hasModuleUpdates: {
+        for (var i = 0; i < modules.length; i++) {
+            if (modules[i].state === "update" || modules[i].state === "merged")
+                return true;
+        }
+        return false;
+    }
+
     readonly property bool busy: checking || applying
-    readonly property bool behind: status === "ok" && behindCount > 0
-    readonly property bool upToDate: status === "ok" && behindCount === 0
+    readonly property bool behind: status === "ok" && (behindCount > 0 || codeChanged || hasModuleUpdates)
+    readonly property bool upToDate: status === "ok" && !behind
 
     /** rel-path -> human label for the protected files the engine can three-way merge. */
     readonly property var friendlyName: ({
@@ -138,7 +154,7 @@ SettingsSurface {
         : statusKind === "offline" ? "Couldn't reach the server"
         : statusKind === "noclone" ? "Ready to set up"
         : statusKind === "error" ? "Check failed"
-        : statusKind === "behind" ? (behindCount + " update" + (behindCount === 1 ? "" : "s") + " available")
+        : statusKind === "behind" ? (behindCount > 0 ? (behindCount + " update" + (behindCount === 1 ? "" : "s") + " available") : "Updates available")
         : statusKind === "ok" ? "Up to date"
         : "Updates"
 
@@ -146,7 +162,7 @@ SettingsSurface {
     readonly property string subline: statusKind === "devmode" ? "This is a clone or symlinked work-tree, so updates run through plain git. In-app updating is off here."
         : statusKind === "noclone" ? "The rice copy didn't land yet. Check for updates to fetch it, then updates show up here."
         : statusKind === "error" ? errorText
-        : statusKind === "behind" ? (fromDate.length > 0 ? fromDate + " → " + toDate : "")
+        : statusKind === "behind" ? (fromDate.length > 0 && behindCount > 0 ? fromDate + " → " + toDate : (codeChanged ? "Rice configs can be updated to the latest version" : ""))
         : ""
 
     onActiveChanged: {
@@ -163,6 +179,8 @@ SettingsSurface {
     function resetResult() {
         status = "";
         behindCount = 0;
+        codeChanged = false;
+        modules = [];
         fromDate = "";
         toDate = "";
         changelog = [];
@@ -177,6 +195,8 @@ SettingsSurface {
     /** Drop the behind-driven sections so they vanish once an apply has landed. */
     function clearPending() {
         behindCount = 0;
+        codeChanged = false;
+        modules = [];
         changelog = [];
         conflicts = [];
         missingDeps = [];
@@ -202,6 +222,8 @@ SettingsSurface {
     function ingest(data) {
         root.status = data.status || "error";
         root.behindCount = data.behind || 0;
+        root.codeChanged = data.codeChanged === true;
+        root.modules = data.modules || [];
         root.fromDate = data.fromDate || "";
         root.toDate = data.toDate || "";
         root.changelog = data.changelog || [];

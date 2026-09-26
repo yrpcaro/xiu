@@ -259,6 +259,14 @@ def main():
     assert head and not head.startswith("origin/"), head
     print("M4 orphaned syncedSha and missing-branch head handled: ok")
 
+    # M5: target_path translates special paths matching installer DEPLOY_SET
+    cfg_base = Path("/test/config")
+    assert ru.target_path(cfg_base, "kde/kdeglobals") == cfg_base / "kdeglobals"
+    assert ru.target_path(cfg_base, "portals/portals.conf") == cfg_base / "xdg-desktop-portal/portals.conf"
+    assert ru.target_path(cfg_base, "browser-integration/native-messaging.json") == cfg_base / "xiu/browser-integration/native-messaging.json"
+    assert ru.target_path(cfg_base, "hypr/hyprland.lua") == cfg_base / "hypr/hyprland.lua"
+    print("M5 target_path config mapping: ok")
+
     print("\nALL TESTS PASSED")
 
 

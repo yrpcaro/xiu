@@ -21,9 +21,15 @@ WELL_KNOWN = {
     "xiu-yazi.desktop": "yazi",
     "nautilus.desktop": "nautilus",
     "foot.desktop": "foot",
+    "footclient.desktop": "footclient",
+    "org.kde.konsole.desktop": "konsole",
     "com.mitchellh.ghostty.desktop": "ghostty",
+    "ghostty.desktop": "ghostty",
     "kitty.desktop": "kitty",
     "alacritty.desktop": "alacritty",
+    "Alacritty.desktop": "alacritty",
+    "wezterm.desktop": "wezterm",
+    "org.wezfurlong.wezterm.desktop": "wezterm",
     "brave-browser.desktop": "brave",
     "firefox.desktop": "firefox",
     "chromium.desktop": "chromium",
@@ -39,6 +45,7 @@ def resolve_cmd(desktop_id):
     # Inspect desktop file Exec=
     for app_dir in [
         Path.home() / ".local" / "share" / "applications",
+        Path("/usr/local/share/applications"),
         Path("/usr/share/applications"),
     ]:
         f = app_dir / desktop_id

@@ -90,7 +90,8 @@ Item {
         "pin": { d: "M12 17v5 M9 2h6l1 7 3 2v2H5v-2l3-2 1-7z", fill: false },
         "pin-filled": { d: "M12 17v5 M9 2h6l1 7 3 2v2H5v-2l3-2 1-7z", fill: true },
         "pin-off": { d: "M12 17v5 M9 2h6l1 7 3 2v2H5v-2l3-2 1-7z M3 3l18 18", fill: false },
-        "sort": { d: "M11 5h10 M11 9h7 M11 13h4 M3 17l3 3 3-3 M6 18V4", fill: false }
+        "sort": { d: "M11 5h10 M11 9h7 M11 13h4 M3 17l3 3 3-3 M6 18V4", fill: false },
+        "grip": { d: "M7 8h10 M7 12h10 M7 16h10", fill: false }
     })
 
     readonly property var g: glyphs[name] !== undefined ? glyphs[name] : ({ d: "", fill: false })

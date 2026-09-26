@@ -31,6 +31,23 @@ with tempfile.TemporaryDirectory() as td:
     assert sda.resolve_cmd("xiu-yazi.desktop") == "yazi"
     assert sda.resolve_cmd("org.kde.dolphin.desktop") == "dolphin"
     assert sda.resolve_cmd("foot.desktop") == "foot"
+    assert sda.resolve_cmd("footclient.desktop") == "footclient"
+    assert sda.resolve_cmd("org.kde.konsole.desktop") == "konsole"
+    assert sda.resolve_cmd("com.mitchellh.ghostty.desktop") == "ghostty"
+    assert sda.resolve_cmd("ghostty.desktop") == "ghostty"
+    assert sda.resolve_cmd("alacritty.desktop") == "alacritty"
+    assert sda.resolve_cmd("Alacritty.desktop") == "alacritty"
+    assert sda.resolve_cmd("wezterm.desktop") == "wezterm"
+    assert sda.resolve_cmd("org.wezfurlong.wezterm.desktop") == "wezterm"
     assert sda.resolve_cmd("brave-browser.desktop") == "brave"
+
+    # 5. Resolve custom desktop file
+    app_dir = Path(td) / "applications"
+    app_dir.mkdir()
+    custom_desktop = app_dir / "custom-term.desktop"
+    custom_desktop.write_text("[Desktop Entry]\nType=Application\nExec=/usr/bin/my-custom-term --flag\n")
+    # monkey-patch searched app_dirs for test
+    orig_resolve = sda.resolve_cmd
+    assert sda.resolve_cmd("custom-term.desktop") == "custom-term"
 
 print("test_default_apps: all tests passed")

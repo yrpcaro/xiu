@@ -26,6 +26,10 @@ PillSurface {
     property int selectedIndex: 0
     property string sortMode: "recent"
     property int armedDeleteIndex: -1
+    property int dragSourceIndex: -1
+    property int dragTargetIndex: -1
+    property real dragOffsetY: 0
+    readonly property bool isDragging: dragSourceIndex >= 0
     Keys.forwardTo: [search.input]
 
     Timer {
@@ -100,9 +104,8 @@ PillSurface {
 
     function focusField() { search.input.forceActiveFocus(); }
 
-    function moveItem(fromIndex, delta) {
-        var toIndex = fromIndex + delta;
-        if (fromIndex < 0 || fromIndex >= results.length || toIndex < 0 || toIndex >= results.length)
+    function reorderItem(fromIndex, toIndex) {
+        if (fromIndex < 0 || fromIndex >= results.length || toIndex < 0 || toIndex >= results.length || fromIndex === toIndex)
             return;
         var a = results[fromIndex];
         var b = results[toIndex];
@@ -111,9 +114,13 @@ PillSurface {
                 root.sortMode = "manual";
             }
         }
-        Cliphist.swapEntries(a, b, results);
+        Cliphist.moveEntry(a, b, results);
         selectedIndex = toIndex;
         list.positionViewAtIndex(selectedIndex, ListView.Contain);
+    }
+
+    function moveItem(fromIndex, delta) {
+        reorderItem(fromIndex, fromIndex + delta);
     }
 
     function move(delta) {
@@ -145,6 +152,9 @@ PillSurface {
             query = "";
             search.text = "";
             selectedIndex = 0;
+            dragSourceIndex = -1;
+            dragTargetIndex = -1;
+            dragOffsetY = 0;
             armedDeleteIndex = -1;
             deleteArmTimer.stop();
             Cliphist.refresh();
@@ -365,6 +375,7 @@ PillSurface {
         anchors.bottom: parent.bottom
         spacing: 2 * root.s
         clip: true
+        interactive: !root.isDragging
         boundsBehavior: Flickable.StopAtBounds
         model: root.results.length
 
@@ -376,9 +387,14 @@ PillSurface {
 
             readonly property var entry: root.results[index]
             readonly property bool selected: index === root.selectedIndex
+            readonly property bool isDragged: root.dragSourceIndex === row.index
+
+            z: isDragged ? 100 : 1
+            transform: Translate { y: row.isDragged ? root.dragOffsetY : 0 }
 
             HoverHandler {
                 id: rowHover
+                enabled: !root.isDragging
                 onPointChanged: {
                     if (!hovered)
                         return;
@@ -393,15 +409,44 @@ PillSurface {
             Rectangle {
                 anchors.fill: parent
                 radius: 9 * root.s
-                visible: row.selected || rowHover.hovered
-                color: row.selected ? Theme.frameBg : Qt.rgba(0.94, 0.88, 0.84, 0.03)
-                border.width: row.selected ? 1 : 0
-                border.color: Theme.frameBorder
+                visible: row.selected || rowHover.hovered || row.isDragged
+                color: row.isDragged ? Qt.alpha(Theme.frameBg, 0.95) : (row.selected ? Theme.frameBg : Qt.rgba(0.94, 0.88, 0.84, 0.03))
+                border.width: (row.selected || row.isDragged) ? 1 : 0
+                border.color: row.isDragged ? Theme.vermLit : Theme.frameBorder
+            }
+
+            Rectangle {
+                id: dropIndicatorTop
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 6 * root.s
+                anchors.rightMargin: 6 * root.s
+                height: 2 * root.s
+                radius: 1 * root.s
+                color: Theme.vermLit
+                visible: root.isDragging && !row.isDragged && root.dragTargetIndex === row.index && root.dragTargetIndex < root.dragSourceIndex
+                z: 50
+            }
+
+            Rectangle {
+                id: dropIndicatorBottom
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 6 * root.s
+                anchors.rightMargin: 6 * root.s
+                height: 2 * root.s
+                radius: 1 * root.s
+                color: Theme.vermLit
+                visible: root.isDragging && !row.isDragged && root.dragTargetIndex === row.index && root.dragTargetIndex > root.dragSourceIndex
+                z: 50
             }
 
             MouseArea {
                 id: rowArea
                 anchors.fill: parent
+                enabled: !root.isDragging
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     root.selectedIndex = row.index;
@@ -488,26 +533,29 @@ PillSurface {
                     }
 
                     Item {
-                        id: moveUpBtn
+                        id: dragHandle
                         width: 16 * root.s
                         height: 16 * root.s
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: (row.selected || rowHover.hovered) && row.index > 0
-                        opacity: moveUpArea.containsMouse ? 1.0 : 0.6
+                        visible: row.selected || rowHover.hovered || isDraggingThis
+                        opacity: (dragMouse.containsMouse || isDraggingThis) ? 1.0 : 0.6
+
+                        readonly property bool isDraggingThis: root.dragSourceIndex === row.index
 
                         Tooltip {
                             s: root.s
                             placement: "left"
-                            title: "move up (Ctrl+Up)"
-                            show: moveUpArea.containsMouse
+                            title: "drag to reorder"
+                            show: dragMouse.containsMouse && !dragHandle.isDraggingThis
                         }
 
                         Text {
                             visible: Flags.showGlyphs
                             anchors.centerIn: parent
-                            text: "▲"
-                            color: moveUpArea.containsMouse ? Theme.cream : Theme.dim
-                            font.pixelSize: 10 * root.s
+                            text: "握"
+                            color: (dragMouse.containsMouse || dragHandle.isDraggingThis) ? Theme.cream : Theme.dim
+                            font.family: Theme.fontJp
+                            font.pixelSize: 11 * root.s
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
                         }
 
@@ -516,62 +564,62 @@ PillSurface {
                             anchors.centerIn: parent
                             width: 11 * root.s
                             height: 11 * root.s
-                            name: "chevron-up"
-                            color: moveUpArea.containsMouse ? Theme.cream : Theme.dim
+                            name: "grip"
+                            color: (dragMouse.containsMouse || dragHandle.isDraggingThis) ? Theme.cream : Theme.dim
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
                         }
 
                         MouseArea {
-                            id: moveUpArea
+                            id: dragMouse
                             anchors.fill: parent
                             anchors.margins: -4 * root.s
                             hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.moveItem(row.index, -1)
-                        }
-                    }
+                            cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                            preventStealing: true
 
-                    Item {
-                        id: moveDownBtn
-                        width: 16 * root.s
-                        height: 16 * root.s
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: (row.selected || rowHover.hovered) && row.index < root.results.length - 1
-                        opacity: moveDownArea.containsMouse ? 1.0 : 0.6
+                            property real startSceneY: 0
 
-                        Tooltip {
-                            s: root.s
-                            placement: "left"
-                            title: "move down (Ctrl+Down)"
-                            show: moveDownArea.containsMouse
-                        }
+                            onPressed: (mouse) => {
+                                var pt = dragHandle.mapToItem(null, mouse.x, mouse.y);
+                                startSceneY = pt.y;
+                                root.dragSourceIndex = row.index;
+                                root.dragTargetIndex = row.index;
+                                root.dragOffsetY = 0;
+                            }
 
-                        Text {
-                            visible: Flags.showGlyphs
-                            anchors.centerIn: parent
-                            text: "▼"
-                            color: moveDownArea.containsMouse ? Theme.cream : Theme.dim
-                            font.pixelSize: 10 * root.s
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
-                        }
+                            onPositionChanged: (mouse) => {
+                                if (pressed && root.dragSourceIndex === row.index) {
+                                    var pt = dragHandle.mapToItem(null, mouse.x, mouse.y);
+                                    root.dragOffsetY = pt.y - startSceneY;
+                                    var ptInList = list.contentItem.mapFromItem(null, pt.x, pt.y);
+                                    var rawTarget = list.indexAt(list.width / 2, ptInList.y);
+                                    if (rawTarget !== -1) {
+                                        root.dragTargetIndex = Math.max(0, Math.min(root.results.length - 1, rawTarget));
+                                    } else {
+                                        if (ptInList.y <= 0) root.dragTargetIndex = 0;
+                                        else if (ptInList.y >= list.contentHeight) root.dragTargetIndex = root.results.length - 1;
+                                    }
+                                }
+                            }
 
-                        GlyphIcon {
-                            visible: !Flags.showGlyphs
-                            anchors.centerIn: parent
-                            width: 11 * root.s
-                            height: 11 * root.s
-                            name: "chevron-down"
-                            color: moveDownArea.containsMouse ? Theme.cream : Theme.dim
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
-                        }
+                            onReleased: {
+                                if (root.dragSourceIndex === row.index) {
+                                    if (root.dragTargetIndex >= 0 && root.dragTargetIndex !== root.dragSourceIndex) {
+                                        root.reorderItem(root.dragSourceIndex, root.dragTargetIndex);
+                                    }
+                                    root.dragSourceIndex = -1;
+                                    root.dragTargetIndex = -1;
+                                    root.dragOffsetY = 0;
+                                }
+                            }
 
-                        MouseArea {
-                            id: moveDownArea
-                            anchors.fill: parent
-                            anchors.margins: -4 * root.s
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.moveItem(row.index, 1)
+                            onCanceled: {
+                                if (root.dragSourceIndex === row.index) {
+                                    root.dragSourceIndex = -1;
+                                    root.dragTargetIndex = -1;
+                                    root.dragOffsetY = 0;
+                                }
+                            }
                         }
                     }
 

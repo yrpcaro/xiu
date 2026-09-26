@@ -142,6 +142,24 @@ def save_manifest(manifest):
     atomic_write_bytes(manifest_path(), json.dumps(manifest, indent=2).encode("utf-8"))
 
 
+def target_path(config_root, rel):
+    """
+    Map repo configs/ relative path to actual deployed path in config_root.
+    Mirrors installer/deploy.py DEPLOY_SET:
+      - kde/kdeglobals -> config_root / kdeglobals
+      - portals/... -> config_root / xdg-desktop-portal / ...
+      - browser-integration/... -> config_root / xiu / browser-integration / ...
+    """
+    config_root = Path(config_root)
+    if rel == "kde/kdeglobals":
+        return config_root / "kdeglobals"
+    if rel.startswith("portals/"):
+        return config_root / "xdg-desktop-portal" / rel[len("portals/"):]
+    if rel.startswith("browser-integration/"):
+        return config_root / "xiu" / "browser-integration" / rel[len("browser-integration/"):]
+    return config_root / rel
+
+
 def backup_protected(config_root):
     """
     Snapshot every live protected file into one timestamped dir under the data dir
@@ -153,7 +171,7 @@ def backup_protected(config_root):
     dest_root = data_dir().parent / "xiu-update-backup" / stamp
     made = None
     for rel in PROTECTED:
-        live = config_root / rel
+        live = target_path(config_root, rel)
         if not live.exists():
             continue
         dest = dest_root / rel
@@ -204,7 +222,7 @@ def ensure_clone(remote, do_fetch):
         if current and current != remote:
             git(clone, "remote", "set-url", "origin", remote)
         if do_fetch:
-            git(clone, "fetch", "origin", "main")
+            git(clone, "fetch", "origin")
         return clone
     clone.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(
@@ -331,18 +349,39 @@ def reconcile_protected(clone, config_root, manifest, head, apply, take):
     conflicts = []
     sha_updates = {}
     for rel in PROTECTED:
+        new = show_at(clone, head, rel)
+        if new is None:
+            continue
+        live_path = target_path(config_root, rel)
+        if not live_path.exists():
+            if apply:
+                atomic_write_bytes(live_path, new)
+                sha_updates[rel] = head
+            rows.append({"name": module_name(rel), "path": rel, "state": "update"})
+            continue
         base_sha = manifest.get("modules", {}).get(rel)
         if not base_sha:
+            base_sha = manifest.get("syncedSha")
+        if not base_sha:
+            theirs = live_path.read_bytes()
+            if theirs == new:
+                rows.append({"name": module_name(rel), "path": rel, "state": "clean"})
+            elif rel in take or apply:
+                if apply:
+                    atomic_write_bytes(live_path, new)
+                    sha_updates[rel] = head
+                rows.append({"name": module_name(rel), "path": rel, "state": "update"})
+            else:
+                rows.append({"name": module_name(rel), "path": rel, "state": "conflict"})
+                conflicts.append(rel)
             continue
-        new = show_at(clone, head, rel)
         base = show_at(clone, base_sha, rel)
-        if new is None or base is None:
-            continue
+        if base is None:
+            base = new
         if new == base:
             rows.append({"name": module_name(rel), "path": rel, "state": "clean"})
             continue
-        live_path = config_root / rel
-        theirs = live_path.read_bytes() if live_path.exists() else base
+        theirs = live_path.read_bytes()
         if theirs == base:
             if apply:
                 atomic_write_bytes(live_path, new)
@@ -383,7 +422,7 @@ def sync_code(clone, config_root, head, apply):
         new = show_at(clone, head, rel)
         if new is None:
             continue
-        live_path = config_root / rel
+        live_path = target_path(config_root, rel)
         current = live_path.read_bytes() if live_path.exists() else None
         if current == new:
             continue
@@ -727,18 +766,20 @@ def run(mode, remote, config_root, take, install_ids):
 
     if first_run:
         code_changed = sync_code(clone, config_root, head, apply)
-        rows = [{"name": module_name(rel), "path": rel, "state": "clean"}
-                for rel in PROTECTED]
+        rows, conflicts, sha_updates = reconcile_protected(
+            clone, config_root, manifest, head, apply, take)
         if apply:
             baseline_modules(manifest, head)
+            manifest.setdefault("modules", {}).update(sha_updates)
             manifest["syncedSha"] = head
             save_manifest(manifest)
+        protected_changed = any(r["state"] in ("update", "merged") for r in rows)
         return {
             "status": "ok", "behind": behind, "fromDate": from_date, "toDate": to_date,
             "version": version, "changelog": changelog, "codeChanged": code_changed,
-            "modules": rows, "conflicts": [], "missingDeps": missing,
+            "modules": rows, "conflicts": conflicts, "missingDeps": missing,
             "depFailures": dep_failures, "applied": apply,
-            "restartNeeded": code_changed, "error": None,
+            "restartNeeded": code_changed or protected_changed, "error": None,
         }
 
     if apply:

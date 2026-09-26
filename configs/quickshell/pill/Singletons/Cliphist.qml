@@ -215,19 +215,24 @@ Singleton {
         return 999999;
     }
 
-    function swapEntries(a, b, currentResults) {
-        if (!a || !b) return;
+    function moveEntry(a, b, currentResults) {
+        if (!a || !b || a.id === b.id) return;
         var isAPinned = root.isPinned(a);
         var isBPinned = root.isPinned(b);
 
-        if (isAPinned && isBPinned) {
+        if (isAPinned && !isBPinned) {
+            root.unpin(a);
+        } else if (!isAPinned && isBPinned) {
+            root.pin(a);
+        }
+
+        if (root.isPinned(a) && root.isPinned(b)) {
             var idxA = root.pinnedIndex(a);
             var idxB = root.pinnedIndex(b);
-            if (idxA !== -1 && idxB !== -1) {
+            if (idxA !== -1 && idxB !== -1 && idxA !== idxB) {
                 var nextPins = pinnedLines.slice();
-                var tmp = nextPins[idxA];
-                nextPins[idxA] = nextPins[idxB];
-                nextPins[idxB] = tmp;
+                var pItem = nextPins.splice(idxA, 1)[0];
+                nextPins.splice(idxB, 0, pItem);
                 pinnedLines = nextPins;
                 pinnedStore.setText(JSON.stringify(pinnedLines));
                 pinnedStore.waitForJob();
@@ -238,38 +243,47 @@ Singleton {
         var keyB = root._entryKey(b);
         var list = currentResults || entries;
         var newOrder = [];
+        var seen = {};
         if (manualOrder && manualOrder.length > 0) {
-            newOrder = manualOrder.slice();
-        } else {
-            for (var k = 0; k < list.length; k++) {
-                newOrder.push(root._entryKey(list[k]));
+            for (var m = 0; m < manualOrder.length; m++) {
+                newOrder.push(manualOrder[m]);
+                seen[manualOrder[m]] = true;
+            }
+        }
+        for (var k = 0; k < list.length; k++) {
+            var kKey = root._entryKey(list[k]);
+            if (!seen[kKey]) {
+                newOrder.push(kKey);
+                seen[kKey] = true;
             }
         }
         var mIdxA = newOrder.indexOf(keyA);
         var mIdxB = newOrder.indexOf(keyB);
-        if (mIdxA === -1) { newOrder.push(keyA); mIdxA = newOrder.length - 1; }
-        if (mIdxB === -1) { newOrder.push(keyB); mIdxB = newOrder.length - 1; }
-        var mTmp = newOrder[mIdxA];
-        newOrder[mIdxA] = newOrder[mIdxB];
-        newOrder[mIdxB] = mTmp;
-        manualOrder = newOrder;
-        orderStore.setText(JSON.stringify(manualOrder));
-        orderStore.waitForJob();
+        if (mIdxA !== -1 && mIdxB !== -1 && mIdxA !== mIdxB) {
+            var mItem = newOrder.splice(mIdxA, 1)[0];
+            newOrder.splice(mIdxB, 0, mItem);
+            manualOrder = newOrder;
+            orderStore.setText(JSON.stringify(manualOrder));
+            orderStore.waitForJob();
+        }
 
         var eIdxA = -1, eIdxB = -1;
         for (var i = 0; i < entries.length; i++) {
             if (entries[i].id === a.id) eIdxA = i;
             if (entries[i].id === b.id) eIdxB = i;
         }
-        if (eIdxA !== -1 && eIdxB !== -1) {
+        if (eIdxA !== -1 && eIdxB !== -1 && eIdxA !== eIdxB) {
             var nextEntries = entries.slice();
-            var eTmp = nextEntries[eIdxA];
-            nextEntries[eIdxA] = nextEntries[eIdxB];
-            nextEntries[eIdxB] = eTmp;
+            var eItem = nextEntries.splice(eIdxA, 1)[0];
+            nextEntries.splice(eIdxB, 0, eItem);
             entries = nextEntries;
         } else {
             entries = entries.slice();
         }
+    }
+
+    function swapEntries(a, b, currentResults) {
+        root.moveEntry(a, b, currentResults);
     }
 
     function kickStore() {
