@@ -62,7 +62,11 @@ ShellRoot {
         clearSelection();
         activeTool = t;
         var s = toolStyle[t];
-        activeColor = s ? s.color : Theme.vermilion;
+        if (s && s.color && s.color !== "#e0563b" && s.color !== "#ffc799") {
+            activeColor = s.color;
+        } else {
+            activeColor = Theme.vermilion;
+        }
         activeWidth = s ? s.width : 4;
         activeFill = s ? (s.filled === true) : false;
     }
@@ -133,7 +137,7 @@ ShellRoot {
         target: Theme
         function onVermilionChanged() {
             var s = root.toolStyle[root.activeTool];
-            if (!s || !s.color)
+            if (!s || !s.color || s.color === "#e0563b" || s.color === "#ffc799")
                 root.activeColor = Theme.vermilion;
         }
     }

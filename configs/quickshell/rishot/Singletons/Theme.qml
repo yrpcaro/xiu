@@ -13,26 +13,6 @@ Singleton {
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
-
-        JsonAdapter {
-            id: dyn
-            property string surface: ""
-            property string surface_container: ""
-            property string surface_container_low: ""
-            property string surface_container_high: ""
-            property string surface_container_highest: ""
-            property string primary: ""
-            property string primary_container: ""
-            property string on_primary_container: ""
-            property string outline: ""
-            property string outline_variant: ""
-            property string cream: ""
-            property string bright: ""
-            property string subtle: ""
-            property string dim: ""
-            property string faint: ""
-            property string icon_dim: ""
-        }
     }
 
     FileView {
@@ -42,46 +22,50 @@ Singleton {
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
-
-        JsonAdapter {
-            id: dynXiu
-            property string surface: ""
-            property string surface_container: ""
-            property string surface_container_low: ""
-            property string surface_container_high: ""
-            property string surface_container_highest: ""
-            property string primary: ""
-            property string primary_container: ""
-            property string on_primary_container: ""
-            property string outline: ""
-            property string outline_variant: ""
-            property string cream: ""
-            property string bright: ""
-            property string subtle: ""
-            property string dim: ""
-            property string faint: ""
-            property string icon_dim: ""
-        }
     }
 
-    readonly property color vermilion: dyn.primary || dynXiu.primary || "#e0563b"
-    readonly property color white:     dyn.bright || dynXiu.bright || "#fff6f0"
-    readonly property color idle:      dyn.cream || dynXiu.cream || "#e6d6cb"
-    readonly property color sep:       dyn.outline_variant || dynXiu.outline_variant || "#3a2a22"
+    function _readColors() {
+        try {
+            var t = colorFile.text();
+            if (t && t.length > 0) {
+                var o = JSON.parse(t);
+                if (o && o.primary) return o;
+            }
+        } catch (e) {}
+        try {
+            var tx = colorFileXiu.text();
+            if (tx && tx.length > 0) {
+                var ox = JSON.parse(tx);
+                if (ox && ox.primary) return ox;
+            }
+        } catch (e) {}
+        return {};
+    }
 
-    readonly property color dim:        Qt.rgba(8 / 255, 10 / 255, 16 / 255, 0.62)
-    readonly property color glassBg:    Qt.alpha(dyn.surface_container || dynXiu.surface_container || "#251f17", 0.94)
-    readonly property color glassBorder: dyn.outline_variant || dynXiu.outline_variant || "#3a2a22"
-    readonly property color panelBg:    Qt.alpha(dyn.surface_container_high || dynXiu.surface_container_high || "#302921", 0.98)
-    readonly property color panelBorder: dyn.outline_variant || dynXiu.outline_variant || "#4f4539"
+    readonly property var dyn: {
+        void colorFile.text;
+        void colorFileXiu.text;
+        return theme._readColors();
+    }
 
-    readonly property color dimIcon: dyn.icon_dim || dynXiu.icon_dim || Qt.rgba(0.77, 0.80, 0.85, 0.55)
+    readonly property color vermilion: dyn.primary || "#e0563b"
+    readonly property color white:     dyn.bright || "#fff6f0"
+    readonly property color idle:      dyn.cream || "#e6d6cb"
+    readonly property color sep:       dyn.outline_variant || "#3a2a22"
+
+    readonly property color dim:        Qt.alpha(dyn.surface || "#18120b", 0.62)
+    readonly property color glassBg:    Qt.alpha(dyn.surface_container || "#251f17", 0.94)
+    readonly property color glassBorder: dyn.outline_variant || "#3a2a22"
+    readonly property color panelBg:    Qt.alpha(dyn.surface_container_high || "#302921", 0.98)
+    readonly property color panelBorder: dyn.outline_variant || "#4f4539"
+
+    readonly property color dimIcon: dyn.icon_dim || dyn.dim || Qt.rgba(0.77, 0.80, 0.85, 0.55)
     readonly property color winFill: Qt.alpha(vermilion, 0.16)
-    readonly property color markerYellow: dyn.on_primary_container || dynXiu.on_primary_container || "#f5d020"
+    readonly property color markerYellow: dyn.on_primary_container || "#f5d020"
     readonly property color stepText: white
 
     readonly property var swatches: [
-        vermilion, white, dyn.surface || dynXiu.surface || "#18120b", "#e23b3b", "#f2c14e", "#5bbf73", "#4f8fe0"
+        vermilion, white, dyn.surface || "#18120b", dyn.on_primary_container || "#f2c14e", dyn.primary_container || "#e23b3b", "#5bbf73", "#4f8fe0"
     ]
 
     readonly property string monoFamily: pick(
