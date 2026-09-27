@@ -40,6 +40,10 @@ with tempfile.TemporaryDirectory() as td:
     assert sda.resolve_cmd("wezterm.desktop") == "wezterm"
     assert sda.resolve_cmd("org.wezfurlong.wezterm.desktop") == "wezterm"
     assert sda.resolve_cmd("brave-browser.desktop") == "brave"
+    assert sda.resolve_cmd("spotify.desktop") == "spotify"
+    assert sda.resolve_cmd("spotify-launcher.desktop") == "spotify-launcher"
+    assert sda.resolve_cmd("imv.desktop") == "imv"
+    assert sda.resolve_cmd("mpv.desktop") == "mpv"
 
     # 5. Resolve custom desktop file
     app_dir = Path(td) / "applications"
@@ -49,5 +53,14 @@ with tempfile.TemporaryDirectory() as td:
     # monkey-patch searched app_dirs for test
     orig_resolve = sda.resolve_cmd
     assert sda.resolve_cmd("custom-term.desktop") == "custom-term"
+
+    # 6. Test probe_desktop_entries includes imv (even with NoDisplay=true)
+    (app_dir / "imv.desktop").write_text("[Desktop Entry]\nName=imv\nNoDisplay=true\nMimeType=image/png;image/jpeg;\n")
+    (app_dir / "background-daemon.desktop").write_text("[Desktop Entry]\nName=daemon\nNoDisplay=true\n")
+    (app_dir / "terminal.desktop").write_text("[Desktop Entry]\nName=terminal\nCategories=System;TerminalEmulator;\n")
+    probed = sda.probe_desktop_entries([app_dir])
+    assert any("imv.desktop" in line and "image/png" in line for line in probed), f"imv missing from probed: {probed}"
+    assert not any("background-daemon.desktop" in line for line in probed), f"daemon incorrectly probed: {probed}"
+    assert any("terminal.desktop" in line and "terminal" in line for line in probed), f"terminal missing from probed: {probed}"
 
 print("test_default_apps: all tests passed")

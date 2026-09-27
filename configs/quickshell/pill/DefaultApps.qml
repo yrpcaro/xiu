@@ -27,21 +27,22 @@ SettingsSurface {
     readonly property string mimeappsPath: Quickshell.env("HOME") + "/.config/mimeapps.list"
     /** One representative mime per category — the one xdg-mime asks about. */
     readonly property var categories: [
-        { label: "Browser", key: "x-scheme-handler/http", mimes: ["x-scheme-handler/http", "x-scheme-handler/https"], icon: "ethernet", discover: "x-scheme-handler/http" },
+        { label: "Browser", key: "x-scheme-handler/http", mimes: ["x-scheme-handler/http", "x-scheme-handler/https", "text/html"], icon: "ethernet", discover: "x-scheme-handler/http" },
         { label: "Terminal", key: "x-scheme-handler/terminal", mimes: ["x-scheme-handler/terminal"], icon: "keyboard", discover: "terminal" },
-        { label: "Folders", key: "inode/directory", mimes: ["inode/directory"], icon: "app-window" },
-        { label: "Images", key: "image/png", mimes: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"], icon: "palette" },
-        { label: "Documents", key: "application/pdf", mimes: ["application/pdf", "application/epub+zip"], icon: "layers" },
-        { label: "Media", key: "video/x-matroska", mimes: ["video/x-matroska", "audio/mpeg", "audio/ogg", "video/mp4"], icon: "music", discover: "audio/" }
+        { label: "Folders", key: "inode/directory", mimes: ["inode/directory"], icon: "app-window", discover: "inode/directory" },
+        { label: "Images", key: "image/png", mimes: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"], icon: "palette", discover: "image/" },
+        { label: "Documents", key: "application/pdf", mimes: ["application/pdf", "application/epub+zip"], icon: "layers", discover: "application/pdf" },
+        { label: "Music player", key: "audio/mpeg", mimes: ["audio/mpeg", "audio/flac", "audio/ogg", "audio/mp4", "audio/x-wav", "audio/wav", "audio/aac"], icon: "music", discover: "audio/" },
+        { label: "Video player", key: "video/mp4", mimes: ["video/mp4", "video/x-matroska", "video/webm", "video/quicktime", "video/x-msvideo"], icon: "video", discover: "video/" }
     ]
 
     /** The rice's curated picks per category, offered first when installed. */
     readonly property var preferred: {
         var p = {
-            "inode/directory": ["xiu-yazi.desktop", "org.kde.dolphin.desktop", "thunar.desktop"],
-            "image/png": ["imv.desktop", "imv-dir.desktop", "org.gnome.Loupe.desktop", "feh.desktop"],
-            "application/pdf": ["org.pwmt.zathura.desktop", "org.pwmt.zathura-pdf-mupdf.desktop", "org.gnome.Papers.desktop"],
-            "x-scheme-handler/http": [],
+            "inode/directory": ["xiu-yazi.desktop", "org.kde.dolphin.desktop", "thunar.desktop", "nautilus.desktop"],
+            "image/png": ["imv.desktop", "imv-dir.desktop", "org.gnome.Loupe.desktop", "feh.desktop", "org.kde.gwenview.desktop", "viewnior.desktop"],
+            "application/pdf": ["org.pwmt.zathura.desktop", "org.pwmt.zathura-pdf-mupdf.desktop", "org.gnome.Papers.desktop", "org.kde.okular.desktop", "evince.desktop"],
+            "x-scheme-handler/http": ["brave-browser.desktop", "firefox.desktop", "chromium.desktop", "google-chrome.desktop", "zen.desktop"],
             "x-scheme-handler/terminal": [
                 "com.mitchellh.ghostty.desktop", "ghostty.desktop",
                 "foot.desktop", "footclient.desktop",
@@ -50,7 +51,8 @@ SettingsSurface {
                 "kitty.desktop",
                 "org.wezfurlong.wezterm.desktop", "wezterm.desktop"
             ],
-            "video/x-matroska": []
+            "audio/mpeg": ["spotify.desktop", "spotify-launcher.desktop", "amberol.desktop", "io.bassi.Amberol.desktop", "org.gnome.Lollypop.desktop", "rhythmbox.desktop", "clementine.desktop"],
+            "video/mp4": ["mpv.desktop", "vlc.desktop", "org.gnome.Totem.desktop", "io.github.celluloid_player.Celluloid.desktop"]
         };
         return p;
     }
@@ -178,17 +180,7 @@ SettingsSurface {
     Process {
         id: desktopProc
         property var exists: []
-        command: ["sh", "-c",
-            "for d in /usr/share/applications /usr/local/share/applications \"$HOME/.local/share/applications\"; do "
-            + "[ -d \"$d\" ] || continue; "
-            + "for f in \"$d\"/*.desktop; do "
-            + "[ -f \"$f\" ] || continue; "
-            + "id=$(basename \"$f\"); "
-            + "grep -q '^NoDisplay=true' \"$f\" && continue; "
-            + "[ \"$id\" = \"foot-server.desktop\" ] && continue; "
-            + "mimes=$(grep -h '^MimeType=' \"$f\" | cut -d= -f2); "
-            + "grep -q -e 'TerminalEmulator' -e 'x-scheme-handler/terminal' \"$f\" && ! grep -q '^Terminal=true' \"$f\" && term=\" terminal\" || term=\"\"; "
-            + "echo \"$id: $mimes$term\"; done; done"]
+        command: ["python3", root.setAppScript, "--probe"]
         stdout: StdioCollector { id: desktopCollected }
         onExited: {
             var lines = desktopCollected.text.split("\n");
