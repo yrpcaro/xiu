@@ -91,7 +91,8 @@ Item {
         "pin-filled": { d: "M12 17v5 M9 2h6l1 7 3 2v2H5v-2l3-2 1-7z", fill: true },
         "pin-off": { d: "M12 17v5 M9 2h6l1 7 3 2v2H5v-2l3-2 1-7z M3 3l18 18", fill: false },
         "sort": { d: "M11 5h10 M11 9h7 M11 13h4 M3 17l3 3 3-3 M6 18V4", fill: false },
-        "grip": { d: "M7 8h10 M7 12h10 M7 16h10", fill: false }
+        "grip": { d: "M7 8h10 M7 12h10 M7 16h10", fill: false },
+        "user": { d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", fill: false }
     })
 
     readonly property var g: glyphs[name] !== undefined ? glyphs[name] : ({ d: "", fill: false })

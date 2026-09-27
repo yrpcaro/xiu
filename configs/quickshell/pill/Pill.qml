@@ -79,12 +79,13 @@ Item {
     readonly property bool idlelockOpen: surface === "idlelock"
     readonly property bool animationOpen: surface === "animation"
     readonly property bool defaultappsOpen: surface === "defaultapps"
+    readonly property bool userOpen: surface === "user"
     readonly property bool weatherOpen: surface === "weather"
     readonly property bool emojiOpen: surface === "emoji"
     readonly property bool fontpickerOpen: surface === "fontpicker"
     readonly property bool settingsLike: settingsOpen || appearanceOpen || updatesOpen
         || lookOpen || inputOpen || displayOpen || animationOpen || idlelockOpen
-        || defaultappsOpen || weatherOpen || emojiOpen || fontpickerOpen
+        || defaultappsOpen || userOpen || weatherOpen || emojiOpen || fontpickerOpen
     readonly property bool hasMedia: Players.list.length > 0
 
     readonly property var netDevices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
@@ -198,6 +199,7 @@ Item {
     readonly property real idlelockW: 392 * s
     readonly property real animationW: 392 * s
     readonly property real defaultappsW: 392 * s
+    readonly property real userW: 392 * s
     readonly property real weatherW: 392 * s
     readonly property real emojiW: 392 * s
     readonly property real fontpickerW: 360 * s
@@ -263,6 +265,7 @@ Item {
         look:       { size: () => Qt.size(lookW, surfaceItem(ldLook).implicitHeight + 29 * s), ame: () => surfaceItem(ldLook) },
         idlelock:   { size: () => Qt.size(idlelockW, surfaceItem(ldIdlelock).implicitHeight + 29 * s), ame: () => surfaceItem(ldIdlelock) },
         defaultapps: { size: () => Qt.size(defaultappsW, surfaceItem(ldDefaultapps).implicitHeight + 29 * s), ame: () => surfaceItem(ldDefaultapps) },
+        user:        { size: () => Qt.size(userW, surfaceItem(ldUser).implicitHeight + 29 * s), ame: () => surfaceItem(ldUser) },
         weather:    { size: () => Qt.size(weatherW, surfaceItem(ldWeather).implicitHeight + 29 * s), ame: () => surfaceItem(ldWeather) },
         emoji:      { size: () => Qt.size(emojiW, Math.min(480 * s, surfaceItem(ldEmoji).implicitHeight + 29 * s)), ame: () => surfaceItem(ldEmoji) },
         animation:  { size: () => Qt.size(animationW, surfaceItem(ldAnimation).implicitHeight + 29 * s), ame: () => surfaceItem(ldAnimation) },
@@ -336,6 +339,8 @@ Item {
             return ldIdlelock.item;
         if (pill.defaultappsOpen)
             return ldDefaultapps.item;
+        if (pill.userOpen)
+            return ldUser.item;
         if (pill.weatherOpen)
             return ldWeather.item;
         if (pill.emojiOpen)
@@ -478,7 +483,7 @@ Item {
         // The weather surface is not a settings page — its entry point is the
         // pill's weather glance — so its back target is the fallthrough below:
         // close to the pill, never the settings index.
-        if (pill.appearanceOpen || pill.updatesOpen || pill.displayOpen || pill.inputOpen || pill.lookOpen || pill.idlelockOpen || pill.animationOpen || pill.workspacesOpen || pill.defaultappsOpen) {
+        if (pill.appearanceOpen || pill.updatesOpen || pill.displayOpen || pill.inputOpen || pill.lookOpen || pill.idlelockOpen || pill.animationOpen || pill.workspacesOpen || pill.defaultappsOpen || pill.userOpen) {
             pill.requestSurface("settings");
             return;
         }
@@ -2370,6 +2375,19 @@ Item {
         sourceComponent: DefaultApps {
             s: pill.s
             open: pill.defaultappsOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
+        }
+    }
+
+    Loader {
+        id: ldUser
+        active: false
+        anchors.fill: parent
+        sourceComponent: User {
+            s: pill.s
+            open: pill.userOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
             onRequestSurface: (name) => pill.requestSurface(name)
