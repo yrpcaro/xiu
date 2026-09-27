@@ -69,20 +69,22 @@ function Linemode:size_and_mtime()
 end
 
 -- Global guard: intercept deprecated File:icon() across all plugins (e.g. root.yazi)
-if File then
-    File.icon = function(self, opts)
-        if th and th.icon then
-            local ok, icon = pcall(function() return th.icon:match(self, opts) end)
-            if ok and icon then return icon end
-            local ok2, icon2 = pcall(function() return th.icon.match(self, opts) end)
-            if ok2 and icon2 then return icon2 end
+pcall(function()
+    if type(File) == "table" then
+        File.icon = function(self, opts)
+            if th and th.icon then
+                local ok, icon = pcall(function() return th.icon:match(self, opts) end)
+                if ok and icon then return icon end
+                local ok2, icon2 = pcall(function() return th.icon.match(self, opts) end)
+                if ok2 and icon2 then return icon2 end
+            end
+            return nil
         end
-        return nil
     end
-end
+end)
 
 -- 4. Modern Header with breadcrumb folder icon
-if Header and Header.cwd then
+if type(Header) == "table" and Header.cwd then
     Header.cwd = function(self)
         local max = (self._area and self._area.w or 80) - (self._right_width or 0)
         if max <= 0 then return "" end
