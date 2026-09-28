@@ -41,7 +41,6 @@ SettingsSurface {
     implicitHeight: content.implicitHeight
 
     readonly property string monitorsPath: Quickshell.env("HOME") + "/.config/hypr/modules/monitors.lua"
-    readonly property string helper: Quickshell.env("HOME") + "/.config/hypr/scripts/display-apply.sh"
 
     property var monitors: []
     property string pendingOut: ""
@@ -307,9 +306,7 @@ SettingsSurface {
         property string mode: ""
         property string position: ""
         property real scale: 1
-        command: ["sh", "-c",
-            "sh \"$1\" apply \"$2\" \"$3\" \"$4\" \"$5\"",
-            "sh", root.helper, out, mode, position, String(scale)]
+        command: ["xiu", "display", "apply", out, mode, position, String(scale)]
         onExited: (exitCode) => {
             if (exitCode === 0) {
                 root.startCountdown();
@@ -323,13 +320,13 @@ SettingsSurface {
     Process {
         id: keepProc
         property string out: ""
-        command: ["sh", "-c", "sh \"$1\" keep \"$2\"", "sh", root.helper, out]
+        command: ["xiu", "display", "keep", out]
     }
 
     Process {
         id: revertProc
         property string out: ""
-        command: ["sh", "-c", "sh \"$1\" revert \"$2\"", "sh", root.helper, out]
+        command: ["xiu", "display", "revert", out]
     }
 
     /** Drags each live workspace onto its new monitor after a main swap. */

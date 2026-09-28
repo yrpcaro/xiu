@@ -28,7 +28,7 @@ for _, sp in ipairs(spaces) do
         if type(sp.key) == "string" and sp.key ~= "" then
             hl.bind("SUPER + " .. sp.key, hl.dsp.workspace.toggle_special(id))
             hl.bind("SUPER + SHIFT + " .. sp.key,
-                hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh " .. id))
+                hl.dsp.exec_cmd("xiu special " .. id))
         end
     end
 end

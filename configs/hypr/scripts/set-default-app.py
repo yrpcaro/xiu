@@ -5,6 +5,7 @@ and reload Hyprland.
 """
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -184,4 +185,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if shutil.which("xiu"):
+        res = subprocess.run(["xiu", "default-app"] + sys.argv[1:])
+        sys.exit(res.returncode)
     main()

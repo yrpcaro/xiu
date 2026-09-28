@@ -209,7 +209,7 @@ PillSurface {
             if (dlProc.running)
                 return;
             dlProc.target = entry.image;
-            dlProc.command = ["bash", root.searchScript, "download", entry.image];
+            dlProc.command = ["xiu", "wallpaper", "download", entry.image];
             dlProc.running = true;
         } else {
             Walls.apply(entry.path);
@@ -272,8 +272,6 @@ PillSurface {
                 root.focusIndex = Math.max(0, Walls.count - 1);
         }
     }
-
-    readonly property string searchScript: Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper-search.sh"
 
     /**
      * Remote video previews. Qt's MediaPlayer chokes on streaming https, so
@@ -379,7 +377,7 @@ PillSurface {
                 root.ddgResults = [];
                 return;
             }
-            searchProc.command = ["bash", root.searchScript, "search", root.query, root.kindFilter];
+            searchProc.command = ["xiu", "wallpaper", "search", root.query, root.kindFilter];
             searchProc.running = true;
         }
     }

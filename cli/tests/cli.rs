@@ -278,3 +278,71 @@ fn update_check_runs() {
         .stderr(contains("unknown update action"));
 }
 
+#[test]
+fn default_app_probe_runs() {
+    let out = Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["default-app", "--probe"])
+        .assert()
+        .success()
+        .get_output()
+        .to_owned();
+    assert!(out.status.success());
+}
+
+#[test]
+fn mount_phone_rejects_unknown_action() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["mount-phone", "bogus"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("usage: xiu mount-phone"));
+}
+
+#[test]
+fn display_rejects_unknown_verb() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["display", "bogus", "DP-1"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown verb"));
+}
+
+#[test]
+fn special_runs_cleanly() {
+    let out = Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["special", "stash"])
+        .assert()
+        .get_output()
+        .to_owned();
+    assert!(out.status.code().is_some());
+}
+
+#[test]
+fn lock_command_runs_cleanly() {
+    let out = Command::cargo_bin("xiu")
+        .unwrap()
+        .arg("lock")
+        .assert()
+        .get_output()
+        .to_owned();
+    assert!(out.status.code().is_some());
+}
+
+#[test]
+fn launch_guard_runs_cleanly() {
+    let out = Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["launch-guard", "test", "", "", "true"])
+        .assert()
+        .get_output()
+        .to_owned();
+    assert_eq!(out.status.code(), Some(0));
+}
+
+

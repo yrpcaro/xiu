@@ -5,7 +5,6 @@
 
 use clap::{Parser, Subcommand};
 
-
 #[derive(Parser)]
 #[command(
     name = "xiu",
@@ -37,9 +36,9 @@ pub enum Commands {
         /// The surface to open
         surface: String,
     },
-    /// Wallpaper operations: init, set, next, prev, query, list (or flags: -p, -l, -f)
+    /// Wallpaper operations: init, set, next, prev, query, list, search, download, thumbs, resolve
     Wallpaper {
-        /// init, set, next, prev, query, list (default: random/next)
+        /// init, set, next, prev, query, list, search, download, thumbs, resolve
         action: Option<String>,
         /// Target image or argument
         target: Option<String>,
@@ -52,6 +51,8 @@ pub enum Commands {
         /// Set this image as the wallpaper
         #[arg(short, long)]
         file: Option<String>,
+        /// Extra argument (e.g. output or kind)
+        extra: Option<String>,
     },
     /// Active player (default), play, next, prev, stop, list
     Mpris {
@@ -70,9 +71,9 @@ pub enum Commands {
         /// Arguments for rishot
         args: Vec<String>,
     },
-    /// Clipboard manager: watch, get, thumbs, wipe (default: open clipboard surface)
+    /// Clipboard manager: watch, get, thumbs, wipe, paste-latest (default: open clipboard surface)
     Clipboard {
-        /// watch, get, thumbs, wipe
+        /// watch, get, thumbs, wipe, paste-latest
         action: Option<String>,
         /// Target entry ID for get
         target: Option<String>,
@@ -83,11 +84,13 @@ pub enum Commands {
         #[arg(default_value = "clear")]
         action: String,
     },
-    /// status (default), on, off, toggle
+    /// status (default), on, off, toggle, strip
     Gamemode {
         /// The gamemode action
         #[arg(default_value = "status")]
         action: String,
+        /// Optional target (e.g. on/off for strip)
+        target: Option<String>,
     },
     /// list, get, set <preset|dynamic> [-v VARIANT], preview <wallpaper> (engine: wallcolors.py)
     Scheme {
@@ -174,7 +177,103 @@ pub enum Commands {
         #[arg(default_value = "logout")]
         action: String,
     },
+    /// Default application query and selection (probe or category + desktop_id)
+    #[command(alias = "set-default-app", alias = "default-apps")]
+    DefaultApp {
+        /// Probe installed applications
+        #[arg(short, long)]
+        probe: bool,
+        /// Application category (e.g. x-scheme-handler/http)
+        category: Option<String>,
+        /// Target desktop file ID (e.g. firefox.desktop)
+        desktop_id: Option<String>,
+    },
+    /// Yazi terminal file chooser wrapper
+    YaziChooser {
+        /// Multiple selection allowed (1/0)
+        multiple: Option<String>,
+        /// Directory select mode (1/0)
+        directory: Option<String>,
+        /// Save mode (1/0)
+        save: Option<String>,
+        /// Recommended path
+        path: Option<String>,
+        /// Output file path
+        out: Option<String>,
+    },
+    /// Toggle window in/out of special workspace or scratchpad
+    #[command(alias = "special-toggle", alias = "scratchpad")]
+    Special {
+        /// Target special workspace name (e.g. stash, private)
+        name: Option<String>,
+    },
+    /// Toggle focused window between normal and minimized special workspace
+    #[command(alias = "minimize-toggle")]
+    Minimize,
+    /// Lock the session (grabs monitors and wakes lock surface)
+    #[command(alias = "idle")]
+    Lock,
+    /// Paste and type latest clipboard entry into active window
+    #[command(alias = "paste")]
+    PasteLatest,
+    /// Mount or unmount Android phone over MTP under ~/mnt/phone
+    #[command(alias = "phone")]
+    MountPhone {
+        /// up, down, or toggle (default: toggle)
+        #[arg(default_value = "toggle")]
+        action: String,
+    },
+    /// Display monitor mode apply, keep, and revert watchdog
+    #[command(alias = "display-apply")]
+    Display {
+        /// apply, keep, or revert
+        verb: String,
+        /// Target output name (e.g. DP-1)
+        out: Option<String>,
+        /// Mode string (e.g. 1920x1080@60)
+        mode: Option<String>,
+        /// Position string (e.g. 0x0)
+        position: Option<String>,
+        /// Scale factor (e.g. 1)
+        scale: Option<String>,
+    },
+    /// Supervise app launch and toast on crash
+    #[command(alias = "guard")]
+    LaunchGuard {
+        /// App display name
+        name: String,
+        /// Icon name
+        icon: Option<String>,
+        /// Working directory
+        wd: Option<String>,
+        /// Command and arguments to execute
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        cmd: Vec<String>,
+    },
+    /// Generate thumbnails for screen recordings
+    RecThumbs {
+        /// Directory containing recording_*.mp4 files
+        recdir: Option<String>,
+    },
+    /// Quickshell surface watchdog
+    Watchdog {
+        /// Surface name (pill or lock)
+        surface: String,
+    },
+    /// AppImage, package, archive, and font installer
+    #[command(alias = "appimage-install", alias = "app")]
+    AppInstall {
+        /// install, remove, or rename
+        action: String,
+        /// File path or slug
+        target: Option<String>,
+        /// New name for rename
+        extra: Option<String>,
+    },
+    /// Window resizer and PiP daemon
+    Resizer {
+        /// Arguments for xiu-resizer
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
 }
-
-// Flat aliases over the enum's struct variants, so the command modules
-// spell their arguments as `&cli::Shell` instead of the nested enum form.

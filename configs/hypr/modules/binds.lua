@@ -100,8 +100,8 @@ hl.bind("CTRL + ALT + code:119", hl.dsp.exec_cmd("xiu open power")) -- session m
 hl.bind(mod .. " + code:57", hl.dsp.exec_cmd("xiu open link")) -- notifications [N]
 hl.bind("CTRL + ALT + code:54", hl.dsp.exec_cmd("qs -c pill ipc call notifs clear")) -- clear notifications [C]
 hl.bind(mod .. " + code:45", hl.dsp.exec_cmd('qs -c pill ipc call pill peek ""')) -- peek the pill [K]
-hl.bind(mod .. " + code:46", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/lock.sh")) -- lock [L]
-hl.bind(mod .. " + ALT + code:46", hl.dsp.exec_cmd("sh -c 'qs -c pill kill; $HOME/.config/hypr/scripts/lock.sh'")) -- restart shell and lock [L]
+hl.bind(mod .. " + code:46", hl.dsp.exec_cmd("xiu lock")) -- lock [L]
+hl.bind(mod .. " + ALT + code:46", hl.dsp.exec_cmd("sh -c 'qs -c pill kill; xiu lock'")) -- restart shell and lock [L]
 hl.bind(mod .. " + SHIFT + code:46", hl.dsp.exec_cmd(vars.sleepCmd)) -- sleep [L]
 hl.bind("CTRL + SUPER + SHIFT + code:27", hl.dsp.exec_cmd("pkill -f watchdog.sh; qs -c pill kill; qs -c lock kill"), release) -- stop shells (no auto-restart) [R]
 hl.bind("CTRL + SUPER + ALT + code:27", hl.dsp.exec_cmd("qs -c pill kill; qs -c lock kill"), release) -- restart shells (watchdogs respawn them) [R]
@@ -118,7 +118,7 @@ hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), mouse) -- resize window
 hl.bind(mod .. " + code:33", hl.dsp.window.pin()) -- pin window [P]
 hl.bind("CTRL + SUPER + code:51", hl.dsp.window.center()) -- center window
 hl.bind("CTRL + SUPER + ALT + code:51", normalize_window()) -- normalize window
-hl.bind(mod .. " + ALT + code:51", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/xiu-resizer pip")) -- picture-in-picture
+hl.bind(mod .. " + ALT + code:51", hl.dsp.exec_cmd("xiu resizer pip")) -- picture-in-picture
 
 -- Focus and move by direction
 hl.bind(mod .. " + code:113", hl.dsp.focus({ direction = "left" })) -- focus left
@@ -211,12 +211,12 @@ hl.bind("CTRL + SUPER + SHIFT + code:113", hl.dsp.window.move({ workspace = "r-1
 
 -- Special workspaces
 hl.bind(mod .. " + code:39", hl.dsp.workspace.toggle_special("stash")) -- stash workspace [S]
-hl.bind(mod .. " + SHIFT + code:39", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh stash")) -- send window to stash [S]
-hl.bind("CTRL + SUPER + SHIFT + code:111", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh stash")) -- send window to stash
-hl.bind("CTRL + SUPER + SHIFT + code:116", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh stash")) -- take window back from stash
+hl.bind(mod .. " + SHIFT + code:39", hl.dsp.exec_cmd("xiu special stash")) -- send window to stash [S]
+hl.bind("CTRL + SUPER + SHIFT + code:111", hl.dsp.exec_cmd("xiu special stash")) -- send window to stash
+hl.bind("CTRL + SUPER + SHIFT + code:116", hl.dsp.exec_cmd("xiu special stash")) -- take window back from stash
 hl.bind(mod .. " + ALT + code:33", hl.dsp.workspace.toggle_special("private")) -- private workspace [P]
-hl.bind(mod .. " + SHIFT + code:33", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh private")) -- send window to private [P]
-hl.bind(mod .. " + ALT + code:58", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/minimize-toggle.sh")) -- minimize toggle [M]
+hl.bind(mod .. " + SHIFT + code:33", hl.dsp.exec_cmd("xiu special private")) -- send window to private [P]
+hl.bind(mod .. " + ALT + code:58", hl.dsp.exec_cmd("xiu minimize")) -- minimize toggle [M]
 hl.bind("CTRL + SUPER + code:58", hl.dsp.workspace.toggle_special("minimized")) -- minimized stash [M]
 
 -- App-category workspaces (see modules/toggles.lua)
@@ -235,7 +235,7 @@ hl.bind(mod .. " + code:32", hl.dsp.exec_cmd(vars.musicPlayer)) -- spotify [O]
 hl.bind("CTRL + ALT + code:55", hl.dsp.exec_cmd("xiu open mixer")) -- mixer [V]
 
 -- Wallpaper, capture, record
-hl.bind(mod .. " + code:56", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/wallpaper.sh")) -- random wallpaper [B]
+hl.bind(mod .. " + code:56", hl.dsp.exec_cmd("xiu wallpaper")) -- random wallpaper [B]
 hl.bind(mod .. " + SHIFT + code:56", hl.dsp.exec_cmd("xiu open wallpaper")) -- wallpaper picker [B]
 hl.bind(mod .. " + SHIFT + code:54", hl.dsp.exec_cmd("hyprpicker -a")) -- color picker [C]
 hl.bind(mod .. " + code:42", hl.dsp.exec_cmd("xiu open gameMode")) -- game mode [G]
@@ -243,7 +243,7 @@ hl.bind("CTRL + ALT + code:27", hl.dsp.exec_cmd("xiu record")) -- screen record 
 
 -- Clipboard
 hl.bind(mod .. " + code:55", hl.dsp.exec_cmd("xiu clipboard")) -- clipboard history [V]
-hl.bind("CTRL + SHIFT + ALT + code:55", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/paste-latest.sh"), locked) -- paste latest clipboard [V]
+hl.bind("CTRL + SHIFT + ALT + code:55", hl.dsp.exec_cmd("xiu paste-latest"), locked) -- paste latest clipboard [V]
 hl.bind(mod .. " + code:60", hl.dsp.exec_cmd("xiu open emoji")) -- emoji picker [.]
 
 -- Media keys (Quickshell globals registered by the pill's Players singleton)

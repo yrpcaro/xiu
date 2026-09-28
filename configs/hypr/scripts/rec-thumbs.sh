@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu rec-thumbs "$@"
+fi
 recdir="$1"
 [ -n "$recdir" ] || exit 0
 [ -d "$recdir" ] || exit 0

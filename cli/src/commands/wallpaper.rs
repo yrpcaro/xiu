@@ -1,9 +1,12 @@
-//! Wallpaper lifecycle, bag history, and backend communication.
+//! Wallpaper lifecycle, search, downloads, thumbnails, and backend communication.
+//!
+//! Replaces wallpaper.sh, wallpaper-search.sh, and wallpaper-thumbs.sh.
 
 use crate::helpers::{config_file, home_path, ipc_call, state_file};
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 const VALID_EXTENSIONS: &[&str] = &[
     "jpg", "jpeg", "png", "gif", "webp", "mp4", "webm", "mkv", "mov",
@@ -15,6 +18,7 @@ pub fn wallpaper(
     print: bool,
     list: bool,
     file: Option<&str>,
+    extra: Option<&str>,
 ) -> i32 {
     if print {
         return query();
@@ -30,9 +34,26 @@ pub fn wallpaper(
         None => next_wallpaper(),
         Some("query") | Some("get") => query(),
         Some("list") => list_wallpapers(),
+        Some("resolve") => resolve(),
+        Some("thumbs") => thumbs(),
+        Some("search") => {
+            if let Some(q) = target {
+                search(q, extra)
+            } else {
+                println!("[]");
+                0
+            }
+        }
+        Some("download") => {
+            if let Some(url) = target {
+                download(url)
+            } else {
+                1
+            }
+        }
         Some("set") => {
             if let Some(path) = target {
-                set_wallpaper(path, None)
+                set_wallpaper(path, extra)
             } else {
                 eprintln!("xiu wallpaper set: missing image path");
                 2
@@ -46,7 +67,7 @@ pub fn wallpaper(
                 set_wallpaper(other, target)
             } else {
                 eprintln!(
-                    "xiu wallpaper: unknown action '{other}' (init, set, next, prev, query, list)"
+                    "xiu wallpaper: unknown action '{other}' (init, set, next, prev, query, list, search, download, thumbs, resolve)"
                 );
                 2
             }
@@ -54,7 +75,7 @@ pub fn wallpaper(
     }
 }
 
-fn query() -> i32 {
+pub fn query() -> i32 {
     let xiu_state = state_file("xiu/wallpaper");
     if let Ok(content) = fs::read_to_string(&xiu_state) {
         let trimmed = content.trim();
@@ -77,7 +98,7 @@ fn query() -> i32 {
     ipc_call("wallpaper", &["get"])
 }
 
-fn set_wallpaper(path: &str, output: Option<&str>) -> i32 {
+pub fn set_wallpaper(path: &str, output: Option<&str>) -> i32 {
     let p = Path::new(path);
     if !p.is_file() {
         eprintln!("xiu wallpaper set: file not found: {path}");
@@ -116,7 +137,7 @@ fn set_wallpaper(path: &str, output: Option<&str>) -> i32 {
     0
 }
 
-fn next_wallpaper() -> i32 {
+pub fn next_wallpaper() -> i32 {
     record_history();
 
     let script = config_file(&["hypr", "scripts", "wallpaper.sh"]);
@@ -133,7 +154,7 @@ fn next_wallpaper() -> i32 {
     ipc_call("wallpaper", &["random"])
 }
 
-fn prev_wallpaper() -> i32 {
+pub fn prev_wallpaper() -> i32 {
     let hist_file = state_file("xiu/wallpaper-history");
     if !hist_file.is_file() {
         eprintln!("xiu wallpaper prev: no wallpaper history found");
@@ -176,7 +197,7 @@ fn prev_wallpaper() -> i32 {
     set_wallpaper(&prev_str, None)
 }
 
-fn init_wallpaper() -> i32 {
+pub fn init_wallpaper() -> i32 {
     let script = config_file(&["hypr", "scripts", "wallpaper.sh"]);
     if script.is_file() {
         let status = Command::new("bash").arg(&script).arg("init").status();
@@ -193,7 +214,7 @@ fn init_wallpaper() -> i32 {
     }
 }
 
-fn list_wallpapers() -> i32 {
+pub fn list_wallpapers() -> i32 {
     // 1. If quickshell is up, let it return the entries
     let res = ipc_call("wallpaper", &["list"]);
     if res == 0 {
@@ -226,6 +247,167 @@ fn list_wallpapers() -> i32 {
         }
     }
     0
+}
+
+pub fn resolve() -> i32 {
+    let dir = resolve_wallpaper_dir();
+    let resolved_state = state_file("ricelin-wallpaper-dir");
+    if let Some(parent) = resolved_state.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::write(&resolved_state, format!("{}\n", dir.display()));
+    println!("{}", dir.display());
+    0
+}
+
+pub fn thumbs() -> i32 {
+    let wpdir = resolve_wallpaper_dir();
+    let cache = std::env::var("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| home_path(&[".cache"]))
+        .join("ricelin-wp-thumbs");
+    let _ = fs::create_dir_all(&cache);
+
+    let policy_path = config_file(&["hypr", "scripts", "magick-policy"]);
+
+    // 1. Prune stale thumbnails
+    if wpdir.is_dir() {
+        let mut valid_names = HashSet::new();
+        if let Ok(entries) = fs::read_dir(&wpdir) {
+            for entry in entries.flatten() {
+                if let Some(name) = entry.file_name().to_str() {
+                    valid_names.insert(name.to_string());
+                }
+            }
+        }
+        if let Ok(entries) = fs::read_dir(&cache) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_file() && p.extension().and_then(|e| e.to_str()) == Some("png") {
+                    if let Some(stem) = p.file_stem().and_then(|s| s.to_str()) {
+                        if !valid_names.contains(stem) {
+                            let _ = fs::remove_file(p);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Generate thumbnails
+    if wpdir.is_dir() {
+        if let Ok(entries) = fs::read_dir(&wpdir) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if !p.is_file() {
+                    continue;
+                }
+                let ext = p
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("")
+                    .to_lowercase();
+                if !VALID_EXTENSIONS.contains(&ext.as_str()) {
+                    continue;
+                }
+                let Some(name) = p.file_name().and_then(|n| n.to_str()) else {
+                    continue;
+                };
+                let thumb = cache.join(format!("{name}.png"));
+                let needs_gen = match (fs::metadata(&p), fs::metadata(&thumb)) {
+                    (Ok(sm), Ok(tm)) => {
+                        tm.len() == 0
+                            || sm
+                                .modified()
+                                .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                                > tm
+                                    .modified()
+                                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                    }
+                    (Ok(_), Err(_)) => true,
+                    _ => false,
+                };
+
+                if needs_gen {
+                    let tmp = cache.join(format!("{name}.png.tmp"));
+                    let _ = fs::remove_file(&tmp);
+                    let is_video = matches!(ext.as_str(), "mp4" | "webm" | "mkv" | "mov");
+                    if is_video {
+                        let _ = Command::new("ffmpeg")
+                            .args([
+                                "-y",
+                                "-loglevel",
+                                "quiet",
+                                "-i",
+                                &p.to_string_lossy(),
+                                "-frames:v",
+                                "1",
+                                "-vf",
+                                "scale=512:-2",
+                                "-f",
+                                "image2",
+                                "-c:v",
+                                "png",
+                                &tmp.to_string_lossy(),
+                            ])
+                            .status();
+                    } else {
+                        let raw_arg = format!("{}[0]", p.to_string_lossy());
+                        let out_arg = format!("png:{}", tmp.to_string_lossy());
+                        let mut cmd = Command::new("magick");
+                        if policy_path.is_dir() {
+                            cmd.env("MAGICK_CONFIGURE_PATH", &policy_path);
+                        }
+                        let _ = cmd
+                            .args([&raw_arg, "-strip", "-resize", "512x", &out_arg])
+                            .stdout(Stdio::null())
+                            .stderr(Stdio::null())
+                            .status();
+                    }
+                    if fs::metadata(&tmp).map(|m| m.len() > 0).unwrap_or(false) {
+                        let _ = fs::rename(&tmp, &thumb);
+                    } else {
+                        let _ = fs::remove_file(&tmp);
+                    }
+                }
+            }
+        }
+    }
+
+    0
+}
+
+pub fn search(query: &str, kind: Option<&str>) -> i32 {
+    let script = config_file(&["hypr", "scripts", "wallpaper-search.sh"]);
+    if script.is_file() {
+        let mut cmd = Command::new("bash");
+        cmd.arg(&script).arg("search").arg(query);
+        if let Some(k) = kind {
+            cmd.arg(k);
+        }
+        return match cmd.status() {
+            Ok(s) => s.code().unwrap_or(0),
+            Err(_) => {
+                println!("[]");
+                0
+            }
+        };
+    }
+    println!("[]");
+    0
+}
+
+pub fn download(url: &str) -> i32 {
+    let script = config_file(&["hypr", "scripts", "wallpaper-search.sh"]);
+    if script.is_file() {
+        let mut cmd = Command::new("bash");
+        cmd.arg(&script).arg("download").arg(url);
+        return match cmd.status() {
+            Ok(s) => s.code().unwrap_or(0),
+            Err(_) => 1,
+        };
+    }
+    1
 }
 
 fn get_current_wallpaper() -> Option<String> {
@@ -308,4 +490,21 @@ fn resolve_wallpaper_dir() -> PathBuf {
     }
 
     home_path(&["Pictures", "xiu", "wallpapers"])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_wallpaper_dir() {
+        let dir = resolve_wallpaper_dir();
+        assert!(!dir.to_string_lossy().is_empty());
+    }
+
+    #[test]
+    fn test_search_empty_query() {
+        // Without args search returns empty array
+        assert_eq!(wallpaper(Some("search"), None, false, false, None, None), 0);
+    }
 }

@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu mount-phone "$@"
+fi
 # Mount or unmount an Android phone over MTP under ~/mnt/phone, the one
 # place yazi's phone opener and every file manager look. simple-mtpfs is the
 # FUSE tool (AUR); jmtpfs is an acceptable stand-in if that is what's

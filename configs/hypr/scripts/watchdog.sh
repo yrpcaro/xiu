@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu watchdog "$@"
+fi
 name="$1"
 exec 9>"${XDG_RUNTIME_DIR:-/tmp}/${name}-watchdog.lock"
 flock -n 9 || exit 0

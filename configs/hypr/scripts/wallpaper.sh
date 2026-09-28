@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu wallpaper "$@"
+fi
 set -euo pipefail
 
 flags_file="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin/flags.json"

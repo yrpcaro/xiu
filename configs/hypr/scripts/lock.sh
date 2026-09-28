@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu lock "$@"
+fi
 umask 077
 dir="${XDG_RUNTIME_DIR:-/tmp}"
 

@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu session logout "$@"
+fi
 # Clean session teardown for Xiu.
 # Stops systemd user units, terminates session daemons, cleans runtime lockfiles,
 # and cleanly exits Hyprland or uwsm.

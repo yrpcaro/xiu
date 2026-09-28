@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu special "$@"
+fi
 #
 # Toggle the focused window in and out of a special workspace. From a normal
 # workspace the window drops into special:<name> silently; a window already in

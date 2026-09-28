@@ -36,8 +36,6 @@ Singleton {
     readonly property string wpDir: Flags.wallpaperDir.length > 0 ? Flags.wallpaperDir
         : (resolvedDir.length > 0 ? resolvedDir : Quickshell.env("HOME") + "/Pictures/xiu/wallpapers")
     readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/ricelin-wp-thumbs/"
-    readonly property string thumbScript: Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper-thumbs.sh"
-    readonly property string setScript: Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper.sh"
     readonly property string stateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin-wallpaper"
     readonly property string dirStateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin-wallpaper-dir"
 
@@ -69,7 +67,7 @@ Singleton {
             thumbProc.running = true;
             return;
         }
-        resolveProc.command = ["bash", root.setScript, "resolve"];
+        resolveProc.command = ["xiu", "wallpaper", "resolve"];
         resolveProc.running = true;
     }
 
@@ -79,7 +77,7 @@ Singleton {
     }
 
     /**
-     * wallpaper.sh blocks through the whole transition (awww wave, matugen,
+     * wallpaper operations block through the whole transition (awww wave, matugen,
      * reload), easily 1-2s; a pick landing in that window used to be silently
      * swallowed. Now the newest request is queued and replayed once the
      * running transition exits, so rapid iteration converges on the last pick.
@@ -96,8 +94,8 @@ Singleton {
             return;
         }
         applyProc.command = out.length > 0
-            ? ["bash", root.setScript, "set", path, out]
-            : ["bash", root.setScript, "set", path];
+            ? ["xiu", "wallpaper", "set", path, out]
+            : ["xiu", "wallpaper", "set", path];
         applyProc.running = true;
     }
 
@@ -107,7 +105,7 @@ Singleton {
             queuedRandom = true;
             return;
         }
-        applyProc.command = ["bash", root.setScript];
+        applyProc.command = ["xiu", "wallpaper", "next"];
         applyProc.running = true;
     }
 
@@ -131,7 +129,7 @@ Singleton {
 
     Process {
         id: thumbProc
-        command: ["sh", root.thumbScript]
+        command: ["xiu", "wallpaper", "thumbs"]
         onExited: listProc.running = true
     }
 
@@ -180,7 +178,7 @@ Singleton {
         onExited: {
             if (root.queuedRandom) {
                 root.queuedRandom = false;
-                applyProc.command = ["bash", root.setScript];
+                applyProc.command = ["xiu", "wallpaper", "next"];
                 applyProc.running = true;
                 return;
             }
@@ -190,8 +188,8 @@ Singleton {
                 root.queuedApply = "";
                 root.queuedOutput = "";
                 applyProc.command = nextOut.length > 0
-                    ? ["bash", root.setScript, "set", next, nextOut]
-                    : ["bash", root.setScript, "set", next];
+                    ? ["xiu", "wallpaper", "set", next, nextOut]
+                    : ["xiu", "wallpaper", "set", next];
                 applyProc.running = true;
                 return;
             }

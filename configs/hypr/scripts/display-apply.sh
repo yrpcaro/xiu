@@ -1,3 +1,7 @@
+#!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu display "$@"
+fi
 verb=$1
 out=$2
 

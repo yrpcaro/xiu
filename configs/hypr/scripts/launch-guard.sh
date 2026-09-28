@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-#
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu guard "$@"
+fi
+
 # Launch wrapper for the pill launcher. Runs the app, keeps the first 64K of
 # its stderr and, when it dies non-zero inside the first seconds, raises a
 # critical toast with a Copy action that puts exit code plus full stderr on the

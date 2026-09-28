@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu yazi-chooser "$@"
+fi
 # The FileChooser portal's yazi wrapper, mirroring the contract the
 # xdg-desktop-portal-termfilechooser backend passes to every wrapper:
 #   $1 multiple (1/0)   $2 directory (1/0)   $3 save (1/0)

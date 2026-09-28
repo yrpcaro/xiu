@@ -16,7 +16,6 @@ Singleton {
     id: root
 
     readonly property bool active: Flags.gameMode
-    readonly property string script: Quickshell.env("HOME") + "/.config/hypr/scripts/gamemode.sh"
     property string pending: ""
 
     onActiveChanged: active ? root.enter() : root.leave()
@@ -43,7 +42,7 @@ Singleton {
             root.pending = arg;
             return;
         }
-        proc.command = ["bash", root.script, arg];
+        proc.command = ["xiu", "gamemode", "strip", arg];
         proc.running = true;
     }
 
@@ -54,7 +53,7 @@ Singleton {
                 return;
             var a = root.pending;
             root.pending = "";
-            proc.command = ["bash", root.script, a];
+            proc.command = ["xiu", "gamemode", "strip", a];
             proc.running = true;
         }
     }

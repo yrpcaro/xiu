@@ -77,10 +77,9 @@ fn watchdog_up(surface: &str) -> bool {
 /// Launch a detached watchdog. A second one for the same surface hits the
 /// flock in watchdog.sh and exits at once, so this is safe when one runs.
 fn start_watchdog(surface: &str) {
-    let watchdog = home_path(&[".config", "hypr", "scripts", "watchdog.sh"]);
     let _ = Command::new("setsid")
-        .arg("sh")
-        .arg(watchdog)
+        .arg("xiu")
+        .arg("watchdog")
         .arg(surface)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -491,22 +490,9 @@ pub fn uninstall() -> i32 {
 pub fn session(action: &str) -> i32 {
     let k = skin();
     match action {
-        "lock" => {
-            let script = home_path(&[".config", "hypr", "scripts", "lock.sh"]);
-            if script.is_file() {
-                let _ = Command::new("sh").arg(script).status();
-            } else {
-                let _ = Command::new("hyprlock").status();
-            }
-            0
-        }
+        "lock" => crate::commands::session::lock(),
         "logout" => {
-            let script = home_path(&[".config", "hypr", "scripts", "session-logout.sh"]);
-            if script.is_file() {
-                let _ = Command::new("sh").arg(script).status();
-            } else {
-                teardown_session();
-            }
+            teardown_session();
             0
         }
         "stats" => {

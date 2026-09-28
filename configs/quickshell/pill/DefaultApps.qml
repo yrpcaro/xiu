@@ -147,18 +147,11 @@ SettingsSurface {
         syncVarsProc.running = true;
     }
 
-    readonly property string setAppScript: {
-        var rel = Qt.resolvedUrl("../../../hypr/scripts/set-default-app.py").toString();
-        if (rel.indexOf("file://") === 0)
-            return rel.substring(7);
-        return Quickshell.env("HOME") + "/.config/hypr/scripts/set-default-app.py";
-    }
-
     Process {
         id: syncVarsProc
         property string catKey: ""
         property string desktopId: ""
-        command: ["python3", root.setAppScript, catKey, desktopId]
+        command: ["xiu", "default-app", catKey, desktopId]
     }
 
     FileView {
@@ -180,7 +173,7 @@ SettingsSurface {
     Process {
         id: desktopProc
         property var exists: []
-        command: ["python3", root.setAppScript, "--probe"]
+        command: ["xiu", "default-app", "--probe"]
         stdout: StdioCollector { id: desktopCollected }
         onExited: {
             var lines = desktopCollected.text.split("\n");

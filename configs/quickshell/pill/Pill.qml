@@ -937,7 +937,7 @@ Item {
         pill.installLine = "";
         pill.installProto = "";
         pill.installPct = "";
-        installProc.command = ["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/app-install.sh", "install", next];
+        installProc.command = ["xiu", "app-install", "install", next];
         installProc.running = true;
     }
 

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu app-install "$@"
+fi
 #
 # AppImage installer for the pill launcher. Given a dropped .AppImage it copies
 # the binary into ~/Applications, pulls the bundled name and icon out of the

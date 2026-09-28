@@ -63,15 +63,124 @@ pub fn notifs(action: &str) -> i32 {
     }
 }
 
-pub fn gamemode(action: &str) -> i32 {
+pub fn gamemode(action: &str, target: Option<&str>) -> i32 {
     match action {
+        "strip" | "apply" => gamemode_strip(target.unwrap_or("on")),
         "status" => ipc_call("gamemode", &["status"]),
-        "on" => ipc_call("gamemode", &["on"]),
-        "off" => ipc_call("gamemode", &["off"]),
+        "on" => {
+            if target.is_some() {
+                gamemode_strip("on")
+            } else {
+                ipc_call("gamemode", &["on"])
+            }
+        }
+        "off" => {
+            if target.is_some() {
+                gamemode_strip("off")
+            } else {
+                ipc_call("gamemode", &["off"])
+            }
+        }
         "toggle" => ipc_call("gamemode", &["toggle"]),
         other => {
             eprintln!("xiu gamemode: unknown action '{other}'");
             2
+        }
+    }
+}
+
+pub fn gamemode_strip(mode: &str) -> i32 {
+    let state_dir = std::env::var("XDG_STATE_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| crate::helpers::home_path(&[".local", "state"]))
+        .join("ricelin");
+    let _ = std::fs::create_dir_all(&state_dir);
+    let snap_path = state_dir.join("gamemode-snapshot.json");
+
+    match mode {
+        "on" => {
+            if !snap_path.is_file() {
+                let get_int = |opt: &str| -> i64 {
+                    Command::new("hyprctl")
+                        .args(["getoption", opt, "-j"])
+                        .output()
+                        .ok()
+                        .and_then(|o| crate::json::parse(&String::from_utf8_lossy(&o.stdout)).ok())
+                        .and_then(|j| j.get("int").and_then(crate::json::Json::as_i64))
+                        .unwrap_or(0)
+                };
+                let get_bool = |opt: &str| -> bool {
+                    Command::new("hyprctl")
+                        .args(["getoption", opt, "-j"])
+                        .output()
+                        .ok()
+                        .and_then(|o| crate::json::parse(&String::from_utf8_lossy(&o.stdout)).ok())
+                        .and_then(|j| j.get("bool").and_then(crate::json::Json::as_bool))
+                        .unwrap_or(false)
+                };
+                let get_gap = |opt: &str| -> String {
+                    Command::new("hyprctl")
+                        .args(["getoption", opt, "-j"])
+                        .output()
+                        .ok()
+                        .and_then(|o| crate::json::parse(&String::from_utf8_lossy(&o.stdout)).ok())
+                        .and_then(|j| {
+                            j.get("css")
+                                .and_then(crate::json::Json::as_str)
+                                .map(|s| s.split_whitespace().next().unwrap_or("0").to_string())
+                        })
+                        .unwrap_or_else(|| "0".to_string())
+                };
+
+                let gi = get_gap("general:gaps_in");
+                let go = get_gap("general:gaps_out");
+                let bs = get_int("general:border_size");
+                let rd = get_int("decoration:rounding");
+                let bl = get_bool("decoration:blur:enabled");
+                let sh = get_bool("decoration:shadow:enabled");
+                let an = get_bool("animations:enabled");
+
+                let snap_json = format!(
+                    "{{\"gaps_in\":\"{gi}\",\"gaps_out\":\"{go}\",\"border_size\":{bs},\"rounding\":{rd},\"blur\":{bl},\"shadow\":{sh},\"anim\":{an}}}"
+                );
+                let _ = std::fs::write(&snap_path, snap_json);
+            }
+
+            let _ = Command::new("hyprctl")
+                .args([
+                    "eval",
+                    "hl.config({ general = { gaps_in = 0, gaps_out = 0, border_size = 0 }, decoration = { rounding = 0, blur = { enabled = false }, shadow = { enabled = false } }, animations = { enabled = false } })",
+                ])
+                .status();
+            0
+        }
+        "off" => {
+            if snap_path.is_file() {
+                if let Ok(content) = std::fs::read_to_string(&snap_path) {
+                    if let Ok(j) = crate::json::parse(&content) {
+                        let gi = j.get("gaps_in").and_then(crate::json::Json::as_str).unwrap_or("0");
+                        let go = j.get("gaps_out").and_then(crate::json::Json::as_str).unwrap_or("0");
+                        let bs = j.get("border_size").and_then(crate::json::Json::as_i64).unwrap_or(0);
+                        let rd = j.get("rounding").and_then(crate::json::Json::as_i64).unwrap_or(0);
+                        let bl = j.get("blur").and_then(crate::json::Json::as_bool).unwrap_or(false);
+                        let sh = j.get("shadow").and_then(crate::json::Json::as_bool).unwrap_or(false);
+                        let an = j.get("anim").and_then(crate::json::Json::as_bool).unwrap_or(false);
+
+                        let restore_cmd = format!(
+                            "hl.config({{ general = {{ gaps_in = {gi}, gaps_out = {go}, border_size = {bs} }}, decoration = {{ rounding = {rd}, blur = {{ enabled = {bl} }}, shadow = {{ enabled = {sh} }} }}, animations = {{ enabled = {an} }} }})"
+                        );
+                        let _ = Command::new("hyprctl").args(["eval", &restore_cmd]).status();
+                    }
+                }
+                let _ = std::fs::remove_file(&snap_path);
+            } else {
+                let _ = Command::new("hyprctl").arg("reload").status();
+            }
+            0
+        }
+        _ => {
+            eprintln!("xiu gamemode strip: usage: xiu gamemode strip on|off");
+            1
         }
     }
 }

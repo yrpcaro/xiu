@@ -61,7 +61,7 @@ Singleton {
     readonly property string envPath: Quickshell.env("HOME") + "/.config/hypr/modules/env.lua"
     readonly property string autostartPath: Quickshell.env("HOME") + "/.config/hypr/modules/autostart.lua"
     readonly property string hypridlePath: Quickshell.env("HOME") + "/.config/hypr/hypridle.conf"
-    readonly property string lockScript: Quickshell.env("HOME") + "/.config/hypr/scripts/lock.sh"
+    readonly property string lockScript: "xiu lock"
 
     property string _decoText: ""
     property string _inputText: ""

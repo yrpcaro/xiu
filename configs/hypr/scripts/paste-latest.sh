@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu paste-latest "$@"
+fi
 #
 # CTRL+SHIFT+ALT+V paste-latest: put the newest clipboard history entry back on
 # the clipboard, then type it into whatever had focus, so the key works in apps

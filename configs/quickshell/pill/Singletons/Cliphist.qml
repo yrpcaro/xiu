@@ -51,9 +51,6 @@ Singleton {
     property bool backendMissing: false
 
     readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/clipvault-thumbs/"
-    readonly property string thumbScript: Quickshell.env("HOME") + "/.config/hypr/scripts/cliphist-thumbs.sh"
-    readonly property string watchScript: Quickshell.env("HOME") + "/.config/hypr/scripts/cliphist-watch.sh"
-
     readonly property string stateDir: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/xiu"
     property var pinnedLines: []
     property var manualOrder: []
@@ -287,7 +284,7 @@ Singleton {
     }
 
     function kickStore() {
-        Quickshell.execDetached(["sh", root.watchScript]);
+        Quickshell.execDetached(["xiu", "clipboard", "watch"]);
     }
 
     function refresh() {
@@ -409,7 +406,7 @@ Singleton {
 
     Process {
         id: thumbProc
-        command: ["sh", root.thumbScript]
+        command: ["xiu", "clipboard", "thumbs"]
         onExited: listProc.running = true
     }
 

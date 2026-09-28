@@ -74,8 +74,7 @@ ShellRoot {
                     if (rawPath.indexOf("~") === 0) {
                         rawPath = (Quickshell.env("HOME") || "") + rawPath.substring(1);
                     }
-                    var script = (Quickshell.env("HOME") || "") + "/.config/hypr/scripts/app-install.sh";
-                    Quickshell.execDetached(["bash", script, "install", rawPath]);
+                    Quickshell.execDetached(["xiu", "app-install", "install", rawPath]);
                     root.shown = false;
                     return;
                 }

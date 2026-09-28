@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu wallpaper thumbs "$@"
+fi
 MAGICK_CONFIGURE_PATH="$(dirname "$0")/magick-policy"
 export MAGICK_CONFIGURE_PATH
 

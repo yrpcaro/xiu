@@ -1,12 +1,12 @@
 hl.on("hyprland.start", function()
-    hl.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/cliphist-watch.sh")
-    hl.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/wallpaper.sh init")
-    hl.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/xiu-resizer --daemon")
+    hl.exec_cmd("xiu clipboard watch")
+    hl.exec_cmd("xiu wallpaper init")
+    hl.exec_cmd("xiu resizer --daemon")
     hl.exec_cmd("hyprctl setcursor Bibata-Modern-Ice 24")
     hl.exec_cmd("systemctl --user start hyprland-session.target")
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
-    hl.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/watchdog.sh pill")
-    hl.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/watchdog.sh lock")
+    hl.exec_cmd("xiu watchdog pill")
+    hl.exec_cmd("xiu watchdog lock")
     hl.exec_cmd("systemctl --user restart hypridle")
 
     -- Monthly trash cleanup (trash-cli). Off by default: uncomment to have

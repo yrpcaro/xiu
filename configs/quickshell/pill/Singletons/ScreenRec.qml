@@ -48,7 +48,6 @@ Singleton {
     readonly property string home: Quickshell.env("HOME")
     readonly property string defaultDir: home + "/Videos/Screenrecording"
     readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (home + "/.cache")) + "/ricelin/rec-thumbs/"
-    readonly property string thumbScript: home + "/.config/hypr/scripts/rec-thumbs.sh"
     readonly property string outDir: {
         var d = Flags.recordDir;
         return d && d.length > 0 ? d : defaultDir;
@@ -431,7 +430,7 @@ Singleton {
 
     Process {
         id: thumbProc
-        command: ["sh", root.thumbScript, root.outDir]
+        command: ["xiu", "rec-thumbs", root.outDir]
         onExited: listProc.running = true
     }
 

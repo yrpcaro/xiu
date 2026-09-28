@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu gamemode strip "$@"
+fi
 #
 # Game mode visual strip for Hyprland. `on` snapshots the current decoration and
 # animation values, then strips them live through hl.config eval (no reload, so no

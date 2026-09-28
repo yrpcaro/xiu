@@ -1,4 +1,7 @@
 #!/bin/sh
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu minimize "$@"
+fi
 #
 # SUPER+M minimize toggle. A window on the desktop drops into the special
 # "minimized" stash; the same key on a window already in the stash brings it

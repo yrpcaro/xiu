@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu wallpaper "$@"
+fi
 UA="Mozilla/5.0 (X11; Linux x86_64) Gecko/20100101 Firefox/126.0"
 
 search_moewalls() {

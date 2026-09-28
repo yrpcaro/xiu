@@ -48,9 +48,6 @@ PillSurface {
     /** Row index currently in AppImage edit mode (rename plus armed delete), -1 when none. */
     property int editIndex: -1
 
-    readonly property string appimageScript: Quickshell.env("HOME") + "/.config/hypr/scripts/app-install.sh"
-    readonly property string guardScript: Quickshell.env("HOME") + "/.config/hypr/scripts/launch-guard.sh"
-
     /**
      * entry.execute() is fire and forget, so an app that dies on startup fails
      * silently. The guard watches the first seconds and toasts exit code plus
@@ -61,7 +58,7 @@ PillSurface {
             entry.execute();
             return;
         }
-        Quickshell.execDetached(["bash", root.guardScript, entry.name, entry.icon || "", entry.workingDirectory || ""].concat(entry.command));
+        Quickshell.execDetached(["xiu", "guard", entry.name, entry.icon || "", entry.workingDirectory || ""].concat(entry.command));
     }
 
     function appimageSlug(entry) {
@@ -133,7 +130,7 @@ PillSurface {
             if (rawPath.indexOf("~") === 0) {
                 rawPath = (Quickshell.env("HOME") || "") + rawPath.substring(1);
             }
-            appimageProc.command = ["bash", root.appimageScript, "install", rawPath];
+            appimageProc.command = ["xiu", "app-install", "install", rawPath];
             appimageProc.running = true;
             root.requestClose();
             return;
@@ -490,7 +487,7 @@ PillSurface {
                             }
                             var slug = root.appimageSlug(appRow.entry);
                             if (slug) {
-                                appimageProc.command = ["bash", root.appimageScript, "remove", slug];
+                                appimageProc.command = ["xiu", "app-install", "remove", slug];
                                 appimageProc.running = true;
                             }
                             root.editIndex = -1;
@@ -545,7 +542,7 @@ PillSurface {
                                 var slug = root.appimageSlug(appRow.entry);
                                 var nm = nameEdit.text.trim();
                                 if (slug && nm.length > 0 && nm !== appRow.entry.name) {
-                                    appimageProc.command = ["bash", root.appimageScript, "rename", slug, nm];
+                                    appimageProc.command = ["xiu", "app-install", "rename", slug, nm];
                                     appimageProc.running = true;
                                 }
                                 root.editIndex = -1;

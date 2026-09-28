@@ -27,7 +27,11 @@ fn main() {
 
 fn dispatch(cli: &cli::Cli) -> i32 {
     use cli::Commands;
-    use commands::{check, clipboard, control, keybinds, layout, shell, theme, wallpaper};
+    use commands::{
+        app_install, check, clipboard, control, default_app, device, display, guard,
+        keybinds, layout, media, resizer, session, shell, theme, wallpaper, watchdog,
+        window, yazi,
+    };
     match &cli.command {
         Commands::Shell { kill, target, args } => shell::shell(*kill, target.as_deref(), args),
         Commands::Open { surface } => shell::open(surface),
@@ -37,12 +41,14 @@ fn dispatch(cli: &cli::Cli) -> i32 {
             print,
             list,
             file,
+            extra,
         } => wallpaper::wallpaper(
             action.as_deref(),
             target.as_deref(),
             *print,
             *list,
             file.as_deref(),
+            extra.as_deref(),
         ),
         Commands::Mpris { action } => shell::mpris(action),
         Commands::Record { stop } => shell::record(*stop),
@@ -51,7 +57,7 @@ fn dispatch(cli: &cli::Cli) -> i32 {
             clipboard::clipboard(action.as_deref(), target.as_deref())
         }
         Commands::Notifs { action } => shell::notifs(action),
-        Commands::Gamemode { action } => shell::gamemode(action),
+        Commands::Gamemode { action, target } => shell::gamemode(action, target.as_deref()),
         Commands::Scheme {
             action,
             value,
@@ -80,5 +86,55 @@ fn dispatch(cli: &cli::Cli) -> i32 {
         Commands::Status => control::status(),
         Commands::Uninstall => control::uninstall(),
         Commands::Session { action } => control::session(action),
+        Commands::DefaultApp {
+            probe,
+            category,
+            desktop_id,
+        } => default_app::default_app(*probe, category.as_deref(), desktop_id.as_deref()),
+        Commands::YaziChooser {
+            multiple,
+            directory,
+            save,
+            path,
+            out,
+        } => yazi::yazi_chooser(
+            multiple.as_deref(),
+            directory.as_deref(),
+            save.as_deref(),
+            path.as_deref(),
+            out.as_deref(),
+        ),
+        Commands::Special { name } => window::special(name.as_deref()),
+        Commands::Minimize => window::minimize(),
+        Commands::Lock => session::lock(),
+        Commands::PasteLatest => clipboard::paste_latest(),
+        Commands::MountPhone { action } => device::mount_phone(action),
+        Commands::Display {
+            verb,
+            out,
+            mode,
+            position,
+            scale,
+        } => display::display(
+            verb,
+            out.as_deref(),
+            mode.as_deref(),
+            position.as_deref(),
+            scale.as_deref(),
+        ),
+        Commands::LaunchGuard {
+            name,
+            icon,
+            wd,
+            cmd,
+        } => guard::launch_guard(name, icon.as_deref(), wd.as_deref(), cmd),
+        Commands::RecThumbs { recdir } => media::rec_thumbs(recdir.as_deref()),
+        Commands::Watchdog { surface } => watchdog::watchdog(surface),
+        Commands::AppInstall {
+            action,
+            target,
+            extra,
+        } => app_install::app_install(action, target.as_deref(), extra.as_deref()),
+        Commands::Resizer { args } => resizer::resizer(args),
     }
 }

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+if command -v xiu >/dev/null 2>&1; then
+    exec xiu app-install "$@"
+fi
 #
 # Drop-installer for the pill launcher. Extends the AppImage handler to every
 # file type the pill accepts as a drop: native packages, flatpakref, userland
