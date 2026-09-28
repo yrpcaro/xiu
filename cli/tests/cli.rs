@@ -345,4 +345,45 @@ fn launch_guard_runs_cleanly() {
     assert_eq!(out.status.code(), Some(0));
 }
 
+#[test]
+fn resizer_help_prints() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["resizer", "--help"])
+        .assert()
+        .success()
+        .stdout(contains("resizer"));
+}
+
+#[test]
+fn resizer_empty_args_usage() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .arg("resizer")
+        .assert()
+        .success()
+        .stdout(contains("use --daemon to start"));
+}
+
+#[test]
+fn screenshot_help_prints() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["screenshot", "--help"])
+        .assert()
+        .success()
+        .stdout(contains("rishot"));
+}
+
+#[test]
+fn screenshot_rejects_unknown_mode() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["screenshot", "bogus"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown argument: bogus"));
+}
+
 

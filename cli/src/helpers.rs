@@ -10,6 +10,7 @@ pub fn ipc_call(target: &str, args: &[&str]) -> i32 {
     run_status(Command::new("qs").args(["-c", "pill", "ipc", "call", target]).args(args))
 }
 
+#[allow(dead_code)]
 pub fn passthrough(bin: &str, args: &[String]) -> i32 {
     run_status(Command::new(bin).args(args))
 }

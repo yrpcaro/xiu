@@ -632,7 +632,7 @@ fn teardown_session() {
 
     // 4. Gracefully terminate session daemons in parallel with combined regex calls
     let _ = Command::new("pkill")
-        .args(["-TERM", "-f", "cliphist-watch\\.sh|clipboard-watch\\.sh|wallpaper\\.sh|launch-guard\\.sh|xiu-resizer"])
+        .args(["-TERM", "-f", "cliphist-watch\\.sh|clipboard-watch\\.sh|wallpaper\\.sh|launch-guard\\.sh|xiu-resizer|xiu resizer"])
         .status();
     let _ = Command::new("pkill")
         .args(["-TERM", "-x", "clipvault|wl-paste|awww-daemon|swww-daemon|cava|quickshell|qs"])
@@ -683,7 +683,7 @@ fn teardown_session() {
 
     // Force kill remaining daemons and Xwayland
     let _ = Command::new("pkill")
-        .args(["-KILL", "-f", "cliphist-watch\\.sh|clipboard-watch\\.sh|wallpaper\\.sh|launch-guard\\.sh|xiu-resizer"])
+        .args(["-KILL", "-f", "cliphist-watch\\.sh|clipboard-watch\\.sh|wallpaper\\.sh|launch-guard\\.sh|xiu-resizer|xiu resizer"])
         .status();
     let _ = Command::new("pkill")
         .args(["-KILL", "-x", "clipvault|wl-paste|awww-daemon|swww-daemon|cava|quickshell|qs|Xwayland"])

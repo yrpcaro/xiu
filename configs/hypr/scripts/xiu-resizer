@@ -31,6 +31,7 @@
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -527,4 +528,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    if shutil.which("xiu"):
+        res = subprocess.run(["xiu", "resizer"] + sys.argv[1:])
+        sys.exit(res.returncode)
     main()

@@ -1,7 +1,7 @@
 //! The shell-facing commands: everything that talks to the pill's IPC socket
 //! or shells out to the rice's own tools.
 
-use crate::helpers::{focused_monitor, ipc_call, passthrough, run_status};
+use crate::helpers::{focused_monitor, ipc_call, run_status};
 use std::process::Command;
 
 pub fn shell(kill: bool, target: Option<&str>, args: &[String]) -> i32 {
@@ -48,7 +48,124 @@ pub fn record(stop: bool) -> i32 {
 }
 
 pub fn screenshot(args: &[String]) -> i32 {
-    passthrough("rishot", args)
+    let mut mode = "region";
+    if let Some(first) = args.first() {
+        match first.as_str() {
+            "monitor" | "--monitor" | "-m" => mode = "monitor",
+            "region" | "--region" | "-r" | "" => mode = "region",
+            "-h" | "--help" => {
+                println!(
+                    "rishot - screenshot + annotate\n\n\
+usage: rishot [mode]\n\n\
+modes:\n  \
+(none), region   drag a region, or click a window to grab it (default)\n  \
+monitor          click a monitor to grab the whole output\n\n\
+options:\n  \
+-h, --help       show this help\n\n\
+env:\n  \
+RISHOT_CONFIG_DIR  override the Quickshell config dir (must hold shell.qml)\n  \
+RISHOT_UPLOAD      override the upload endpoint (https form-post target)\n  \
+RISHOT_SAVEDIR     override the auto-save directory\n  \
+RISHOT_KEYBIND_FILE  write the in-app rebind here instead of autodetecting"
+                );
+                return 0;
+            }
+            other => {
+                eprintln!("rishot: unknown argument: {other}");
+                eprintln!(
+                    "rishot - screenshot + annotate\n\n\
+usage: rishot [mode]\n\n\
+modes:\n  \
+(none), region   drag a region, or click a window to grab it (default)\n  \
+monitor          click a monitor to grab the whole output\n\n\
+options:\n  \
+-h, --help       show this help"
+                );
+                return 2;
+            }
+        }
+    }
+
+    let config_dir = if let Ok(dir) = std::env::var("RISHOT_CONFIG_DIR") {
+        if !dir.is_empty() {
+            Some(std::path::PathBuf::from(dir))
+        } else {
+            find_rishot_dir()
+        }
+    } else {
+        find_rishot_dir()
+    };
+
+    let dir = match config_dir {
+        Some(d) if d.join("shell.qml").is_file() => d,
+        _ => {
+            eprintln!("rishot: could not locate the config dir (set RISHOT_CONFIG_DIR)");
+            return 1;
+        }
+    };
+
+    if !crate::helpers::on_path("qs") {
+        eprintln!("rishot: 'qs' (quickshell) not found in PATH");
+        return 1;
+    }
+
+    let rundir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| {
+        let home = std::env::var("HOME").unwrap_or_default();
+        format!("{home}/.cache")
+    });
+    let _ = std::fs::create_dir_all(&rundir);
+    let lock_path = std::path::PathBuf::from(&rundir).join("rishot.lock");
+    let lock_file = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(&lock_path)
+        .or_else(|_| {
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(false)
+                .open("/tmp/rishot.lock")
+        });
+
+    if let Ok(file) = lock_file {
+        use std::os::unix::io::AsRawFd;
+        let fd = file.as_raw_fd();
+        extern "C" {
+            fn flock(fd: i32, operation: i32) -> i32;
+        }
+        let lock_res = unsafe { flock(fd, 2 | 4) }; // LOCK_EX | LOCK_NB
+        if lock_res != 0 {
+            eprintln!("rishot: already running");
+            return 0;
+        }
+    }
+
+    let mut cmd = Command::new("qs");
+    cmd.env("RISHOT_MODE", mode)
+        .arg("-p")
+        .arg(dir);
+    run_status(&mut cmd)
+}
+
+fn find_rishot_dir() -> Option<std::path::PathBuf> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let xdg_config = std::env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| format!("{home}/.config"));
+    let candidates = [
+        format!("{xdg_config}/quickshell/rishot"),
+        format!("{home}/xiu/configs/quickshell/rishot"),
+        "/home/yrp/xiu/configs/quickshell/rishot".to_string(),
+        format!("{home}/.local/share/rishot/src"),
+        "/usr/share/rishot/src".to_string(),
+        "/usr/lib/rishot/src".to_string(),
+    ];
+    for c in &candidates {
+        let p = std::path::PathBuf::from(c);
+        if p.join("shell.qml").is_file() {
+            return Some(p);
+        }
+    }
+    None
 }
 
 

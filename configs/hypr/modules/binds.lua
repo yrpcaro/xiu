@@ -98,13 +98,13 @@ hl.bind("SHIFT + code:108", hl.dsp.exec_cmd("hyprctl switchxkblayout current nex
 -- Session, notifications, lock
 hl.bind("CTRL + ALT + code:119", hl.dsp.exec_cmd("xiu open power")) -- session menu
 hl.bind(mod .. " + code:57", hl.dsp.exec_cmd("xiu open link")) -- notifications [N]
-hl.bind("CTRL + ALT + code:54", hl.dsp.exec_cmd("qs -c pill ipc call notifs clear")) -- clear notifications [C]
+hl.bind("CTRL + ALT + code:54", hl.dsp.exec_cmd("xiu notifs clear")) -- clear notifications [C]
 hl.bind(mod .. " + code:45", hl.dsp.exec_cmd('qs -c pill ipc call pill peek ""')) -- peek the pill [K]
 hl.bind(mod .. " + code:46", hl.dsp.exec_cmd("xiu lock")) -- lock [L]
 hl.bind(mod .. " + ALT + code:46", hl.dsp.exec_cmd("sh -c 'qs -c pill kill; xiu lock'")) -- restart shell and lock [L]
 hl.bind(mod .. " + SHIFT + code:46", hl.dsp.exec_cmd(vars.sleepCmd)) -- sleep [L]
-hl.bind("CTRL + SUPER + SHIFT + code:27", hl.dsp.exec_cmd("pkill -f watchdog.sh; qs -c pill kill; qs -c lock kill"), release) -- stop shells (no auto-restart) [R]
-hl.bind("CTRL + SUPER + ALT + code:27", hl.dsp.exec_cmd("qs -c pill kill; qs -c lock kill"), release) -- restart shells (watchdogs respawn them) [R]
+hl.bind("CTRL + SUPER + SHIFT + code:27", hl.dsp.exec_cmd("xiu stop"), release) -- stop shells (no auto-restart) [R]
+hl.bind("CTRL + SUPER + ALT + code:27", hl.dsp.exec_cmd("xiu restart all"), release) -- restart shells (watchdogs respawn them) [R]
 
 -- Window actions
 hl.bind(mod .. " + code:24", hl.dsp.window.close()) -- close window [Q]

@@ -66,7 +66,8 @@ pub enum Commands {
         #[arg(short, long)]
         stop: bool,
     },
-    /// rishot passthrough
+    /// Screenshot and annotation overlay (rishot)
+    #[command(alias = "rishot")]
     Screenshot {
         /// Arguments for rishot
         args: Vec<String>,

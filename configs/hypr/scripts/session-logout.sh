@@ -24,7 +24,7 @@ if command -v systemctl >/dev/null 2>&1; then
 fi
 
 # 4. Gracefully terminate session daemons in parallel with combined regex calls
-pkill -TERM -f "cliphist-watch\.sh|clipboard-watch\.sh|wallpaper\.sh|launch-guard\.sh|xiu-resizer" 2>/dev/null || true
+pkill -TERM -f "cliphist-watch\.sh|clipboard-watch\.sh|wallpaper\.sh|launch-guard\.sh|xiu-resizer|xiu resizer" 2>/dev/null || true
 pkill -TERM -x "clipvault|wl-paste|awww-daemon|swww-daemon|cava|quickshell|qs" 2>/dev/null || true
 
 # 5. Clean up session lockfiles, sockets, and temporary files
@@ -52,5 +52,5 @@ if pgrep -x Hyprland >/dev/null 2>&1; then
 fi
 
 # Force kill any remaining daemons and Xwayland
-pkill -KILL -f "cliphist-watch\.sh|clipboard-watch\.sh|wallpaper\.sh|launch-guard\.sh|xiu-resizer" 2>/dev/null || true
+pkill -KILL -f "cliphist-watch\.sh|clipboard-watch\.sh|wallpaper\.sh|launch-guard\.sh|xiu-resizer|xiu resizer" 2>/dev/null || true
 pkill -KILL -x "clipvault|wl-paste|awww-daemon|swww-daemon|cava|quickshell|qs|Xwayland" 2>/dev/null || true
