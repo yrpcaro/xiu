@@ -97,21 +97,8 @@ pub fn default_rules() -> Vec<WindowRule> {
     ]
 }
 
-pub fn load_window_rules() -> Vec<WindowRule> {
-    let config_path = config_file(&["xiu", "resizer.json"]);
-    if !config_path.is_file() {
-        return default_rules();
-    }
-
-    let content = match std::fs::read_to_string(&config_path) {
-        Ok(c) => c,
-        Err(_) => {
-            eprintln!("xiu-resizer: invalid resizer.json, falling back to default rules");
-            return default_rules();
-        }
-    };
-
-    let parsed = match crate::json::parse(&content) {
+pub fn parse_window_rules(content: &str) -> Vec<WindowRule> {
+    let parsed = match crate::json::parse(content) {
         Ok(j) => j,
         Err(_) => {
             eprintln!("xiu-resizer: invalid resizer.json, falling back to default rules");
@@ -119,44 +106,63 @@ pub fn load_window_rules() -> Vec<WindowRule> {
         }
     };
 
-    if let Some(resizer) = parsed.get("resizer") {
-        if let Some(rules_arr) = resizer.get("rules").and_then(Json::as_arr) {
-            let mut rules = Vec::new();
-            for r in rules_arr {
-                let name = r.get("name").and_then(Json::as_str).unwrap_or("").to_string();
-                let match_type = r
-                    .get("matchType")
-                    .or_else(|| r.get("match_type"))
-                    .and_then(Json::as_str)
-                    .unwrap_or("")
-                    .to_string();
-                let width = r.get("width").and_then(Json::as_str).unwrap_or("").to_string();
-                let height = r.get("height").and_then(Json::as_str).unwrap_or("").to_string();
-                let actions = r
-                    .get("actions")
-                    .and_then(Json::as_arr)
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(Json::as_str)
-                            .map(String::from)
-                            .collect()
-                    })
-                    .unwrap_or_default();
+    let rules_arr = parsed
+        .get("resizer")
+        .and_then(|r| r.get("rules"))
+        .or_else(|| parsed.get("rules"))
+        .and_then(Json::as_arr);
 
-                rules.push(WindowRule {
-                    name,
-                    match_type,
-                    width,
-                    height,
-                    actions,
-                });
-            }
-            return rules;
+    if let Some(rules_arr) = rules_arr {
+        let mut rules = Vec::new();
+        for r in rules_arr {
+            let name = r.get("name").and_then(Json::as_str).unwrap_or("").to_string();
+            let match_type = r
+                .get("matchType")
+                .or_else(|| r.get("match_type"))
+                .and_then(Json::as_str)
+                .unwrap_or("")
+                .to_string();
+            let width = r.get("width").and_then(Json::as_str).unwrap_or("").to_string();
+            let height = r.get("height").and_then(Json::as_str).unwrap_or("").to_string();
+            let actions = r
+                .get("actions")
+                .and_then(Json::as_arr)
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(Json::as_str)
+                        .map(String::from)
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            rules.push(WindowRule {
+                name,
+                match_type,
+                width,
+                height,
+                actions,
+            });
         }
+        return rules;
     }
 
     eprintln!("xiu-resizer: invalid resizer.json, falling back to default rules");
     default_rules()
+}
+
+pub fn load_window_rules() -> Vec<WindowRule> {
+    let config_path = config_file(&["xiu", "resizer.json"]);
+    if !config_path.is_file() {
+        return default_rules();
+    }
+
+    match std::fs::read_to_string(&config_path) {
+        Ok(c) => parse_window_rules(&c),
+        Err(_) => {
+            eprintln!("xiu-resizer: invalid resizer.json, falling back to default rules");
+            default_rules()
+        }
+    }
 }
 
 pub fn match_window_rule<'a>(
@@ -291,13 +297,10 @@ fn apply_pip_action(window_id: &str) {
         None => return,
     };
 
-    let monitor_id = match workspace
+    let monitor_id = workspace
         .get("monitorID")
-        .and_then(|m| m.as_i64().or_else(|| m.as_f64().map(|v| v as i64)))
-    {
-        Some(id) => id,
-        None => return,
-    };
+        .and_then(|m| m.as_i64().or_else(|| m.as_f64().map(|v| v as i64)));
+    let monitor_name = workspace.get("monitor").and_then(Json::as_str);
 
     let monitors_result = match hyprctl_json("monitors") {
         Some(Json::Arr(arr)) => arr,
@@ -305,9 +308,17 @@ fn apply_pip_action(window_id: &str) {
     };
 
     let monitor = match monitors_result.into_iter().find(|m| {
-        m.get("id")
-            .and_then(|id| id.as_i64().or_else(|| id.as_f64().map(|v| v as i64)))
-            == Some(monitor_id)
+        if let Some(id) = monitor_id {
+            if m.get("id").and_then(|mid| mid.as_i64().or_else(|| mid.as_f64().map(|v| v as i64))) == Some(id) {
+                return true;
+            }
+        }
+        if let Some(name) = monitor_name {
+            if m.get("name").and_then(Json::as_str) == Some(name) {
+                return true;
+            }
+        }
+        false
     }) {
         Some(m) => m,
         None => return,
@@ -427,10 +438,10 @@ fn apply_window_actions(window_id: &str, width: &str, height: &str, actions: &[S
 }
 
 pub fn handle_title_event(event: &str, rules: &[WindowRule], limiter: &mut RateLimiter) {
-    let data = if let Some(idx) = event.find(">>>") {
-        &event[idx + 3..]
-    } else if let Some(idx) = event.find(">>") {
-        &event[idx + 2..]
+    let data = if let Some(stripped) = event.strip_prefix("windowtitle>>>") {
+        stripped
+    } else if let Some(stripped) = event.strip_prefix("windowtitle>>") {
+        stripped
     } else {
         return;
     };
@@ -842,5 +853,22 @@ mod tests {
     #[test]
     fn test_resizer_cli_empty_args() {
         assert_eq!(resizer(&[]), 0);
+    }
+
+    #[test]
+    fn test_parse_window_rules_top_level_and_nested() {
+        let nested = r#"{"resizer": {"rules": [{"name": "Test", "matchType": "titleExact", "width": "50%", "height": "50%", "actions": ["center"]}]}}"#;
+        let rules1 = parse_window_rules(nested);
+        assert_eq!(rules1.len(), 1);
+        assert_eq!(rules1[0].name, "Test");
+
+        let top_level = r#"{"rules": [{"name": "Test2", "match_type": "titleContains", "width": "20%", "height": "20%", "actions": ["float"]}]}"#;
+        let rules2 = parse_window_rules(top_level);
+        assert_eq!(rules2.len(), 1);
+        assert_eq!(rules2[0].name, "Test2");
+
+        let invalid = r#"{"invalid": true}"#;
+        let rules3 = parse_window_rules(invalid);
+        assert_eq!(rules3, default_rules());
     }
 }

@@ -128,7 +128,7 @@ options:\n  \
                 .open("/tmp/rishot.lock")
         });
 
-    if let Ok(file) = lock_file {
+    let _lock = if let Ok(file) = lock_file {
         use std::os::unix::io::AsRawFd;
         let fd = file.as_raw_fd();
         extern "C" {
@@ -139,7 +139,10 @@ options:\n  \
             eprintln!("rishot: already running");
             return 0;
         }
-    }
+        Some(file)
+    } else {
+        None
+    };
 
     let mut cmd = Command::new("qs");
     cmd.env("RISHOT_MODE", mode)
@@ -151,14 +154,22 @@ options:\n  \
 fn find_rishot_dir() -> Option<std::path::PathBuf> {
     let home = std::env::var("HOME").unwrap_or_default();
     let xdg_config = std::env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| format!("{home}/.config"));
-    let candidates = [
+    let mut candidates = vec![
         format!("{xdg_config}/quickshell/rishot"),
         format!("{home}/xiu/configs/quickshell/rishot"),
-        "/home/yrp/xiu/configs/quickshell/rishot".to_string(),
         format!("{home}/.local/share/rishot/src"),
         "/usr/share/rishot/src".to_string(),
         "/usr/lib/rishot/src".to_string(),
     ];
+    if let Ok(cwd) = std::env::current_dir() {
+        candidates.push(cwd.join("configs/quickshell/rishot").to_string_lossy().to_string());
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            candidates.push(parent.join("../../configs/quickshell/rishot").to_string_lossy().to_string());
+            candidates.push(parent.join("../configs/quickshell/rishot").to_string_lossy().to_string());
+        }
+    }
     for c in &candidates {
         let p = std::path::PathBuf::from(c);
         if p.join("shell.qml").is_file() {

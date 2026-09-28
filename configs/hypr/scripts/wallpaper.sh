@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-if command -v xiu >/dev/null 2>&1; then
+if [ -z "${_XIU_DELEGATE:-}" ] && command -v xiu >/dev/null 2>&1; then
     exec xiu wallpaper "$@"
 fi
 set -euo pipefail

@@ -124,6 +124,7 @@ pub fn set_wallpaper(path: &str, output: Option<&str>) -> i32 {
     let script = config_file(&["hypr", "scripts", "wallpaper.sh"]);
     if script.is_file() {
         let mut cmd = Command::new("bash");
+        cmd.env("_XIU_DELEGATE", "1");
         cmd.arg(&script).arg("set").arg(&canonical);
         if let Some(out) = output {
             cmd.arg(out);
@@ -142,7 +143,9 @@ pub fn next_wallpaper() -> i32 {
 
     let script = config_file(&["hypr", "scripts", "wallpaper.sh"]);
     if script.is_file() {
-        let status = Command::new("bash").arg(&script).status();
+        let mut cmd = Command::new("bash");
+        cmd.env("_XIU_DELEGATE", "1");
+        let status = cmd.arg(&script).status();
         if let Ok(s) = status {
             if s.success() {
                 return 0;
@@ -200,7 +203,9 @@ pub fn prev_wallpaper() -> i32 {
 pub fn init_wallpaper() -> i32 {
     let script = config_file(&["hypr", "scripts", "wallpaper.sh"]);
     if script.is_file() {
-        let status = Command::new("bash").arg(&script).arg("init").status();
+        let mut cmd = Command::new("bash");
+        cmd.env("_XIU_DELEGATE", "1");
+        let status = cmd.arg(&script).arg("init").status();
         match status {
             Ok(s) => s.code().unwrap_or(0),
             Err(e) => {
@@ -381,6 +386,7 @@ pub fn search(query: &str, kind: Option<&str>) -> i32 {
     let script = config_file(&["hypr", "scripts", "wallpaper-search.sh"]);
     if script.is_file() {
         let mut cmd = Command::new("bash");
+        cmd.env("_XIU_DELEGATE", "1");
         cmd.arg(&script).arg("search").arg(query);
         if let Some(k) = kind {
             cmd.arg(k);
@@ -401,6 +407,7 @@ pub fn download(url: &str) -> i32 {
     let script = config_file(&["hypr", "scripts", "wallpaper-search.sh"]);
     if script.is_file() {
         let mut cmd = Command::new("bash");
+        cmd.env("_XIU_DELEGATE", "1");
         cmd.arg(&script).arg("download").arg(url);
         return match cmd.status() {
             Ok(s) => s.code().unwrap_or(0),

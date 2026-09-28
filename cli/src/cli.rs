@@ -272,6 +272,14 @@ pub enum Commands {
         extra: Option<String>,
     },
     /// Window resizer and PiP daemon
+    #[command(
+        long_about = "xiu resizer — window resizer / PiP daemon.\n\n\
+Usage:\n  \
+xiu resizer [-d|--daemon]                    watch windowtitle/openwindow events and apply rules\n  \
+xiu resizer pip                              quick PiP on the active floating window\n  \
+xiu resizer PATTERN MATCH_TYPE WIDTH HEIGHT ACTIONS\n                                               \
+one-shot: apply to every matching window (\"active\" targets focused window)"
+    )]
     Resizer {
         /// Arguments for xiu-resizer
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]

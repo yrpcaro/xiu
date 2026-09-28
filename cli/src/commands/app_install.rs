@@ -9,6 +9,7 @@ pub fn app_install(action: &str, target: Option<&str>, extra: Option<&str>) -> i
     let script = config_file(&["hypr", "scripts", "app-install.sh"]);
     if script.is_file() {
         let mut cmd = Command::new("bash");
+        cmd.env("_XIU_DELEGATE", "1");
         cmd.arg(&script).arg(action);
         if let Some(t) = target {
             cmd.arg(t);
