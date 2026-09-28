@@ -12,7 +12,8 @@ Item {
 
     property real s: 1
     property string icon: ""
-    property real value: 0.5
+    property real value: 0
+    property bool animate: true
     property string valueLabel: ""
     property string subLabel: ""
     property bool subPersistent: true
@@ -77,7 +78,7 @@ Item {
                     GradientStop { position: 0.0; color: root.lit ? Theme.vermLit : Theme.vermDim }
                     GradientStop { position: 1.0; color: root.lit ? Theme.vermBurn : Theme.vermDimDeep }
                 }
-                Behavior on height { enabled: !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
+                Behavior on height { enabled: root.animate && !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
             }
         }
 
@@ -92,7 +93,7 @@ Item {
             color: Theme.tickRest
             opacity: root.focused ? 0 : 1
             Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-            Behavior on y { enabled: !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
+            Behavior on y { enabled: root.animate && !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
         }
 
         MouseArea {

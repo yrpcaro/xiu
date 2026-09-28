@@ -252,10 +252,10 @@ Item {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: parent.width * root.volume
+                width: parent.width * Math.max(0, Math.min(1, root.volume))
                 radius: parent.radius
                 color: root.muted ? Theme.vermDim : Theme.vermLit
-                Behavior on width { NumberAnimation { duration: Motion.fast } }
+                Behavior on width { enabled: root.flashing && root.opacity > 0.8; NumberAnimation { duration: Motion.fast } }
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
             }
         }
@@ -415,10 +415,10 @@ Item {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: parent.width * root.brightness
+                width: parent.width * Math.max(0, Math.min(1, root.brightness))
                 radius: parent.radius
                 color: Theme.vermLit
-                Behavior on width { NumberAnimation { duration: Motion.fast } }
+                Behavior on width { enabled: root.flashing && root.opacity > 0.8; NumberAnimation { duration: Motion.fast } }
             }
         }
     }
@@ -471,14 +471,14 @@ Item {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: parent.width * Battery.frac
+                width: parent.width * Math.max(0, Math.min(1, Battery.frac))
                 radius: parent.radius
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: Theme.vermDeep }
                     GradientStop { position: 1.0; color: Theme.flameGlow }
                 }
-                Behavior on width { NumberAnimation { duration: Motion.fast } }
+                Behavior on width { enabled: root.flashing && root.opacity > 0.8; NumberAnimation { duration: Motion.fast } }
 
                 Rectangle {
                     anchors.top: parent.top

@@ -338,6 +338,7 @@ PillSurface {
             anchors.verticalCenter: parent.verticalCenter
             s: root.s
             on: arow.on
+            animate: root.open && (root.settled || root.morphCloseness > 0.95)
             value: arow.level
             focused: arow.on && root.faderFocus === arow.faderIndex
             onMoved: (v) => arow.faderMoved(v)

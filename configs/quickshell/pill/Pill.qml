@@ -1285,10 +1285,10 @@ Item {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: parent.width * (osd.kind === "brightness" ? osd.brightness : osd.volume)
+                    width: parent.width * Math.max(0, Math.min(1, (osd.kind === "brightness" ? osd.brightness : osd.volume)))
                     radius: parent.radius
                     color: osd.kind === "volume" && osd.muted ? Theme.vermDim : Theme.accent
-                    Behavior on width { NumberAnimation { duration: Motion.fast } }
+                    Behavior on width { enabled: osd.flashing; NumberAnimation { duration: Motion.fast } }
                 }
             }
 

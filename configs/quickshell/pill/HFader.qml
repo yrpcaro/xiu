@@ -13,7 +13,8 @@ Item {
     id: root
 
     property real s: 1
-    property real value: 0.5
+    property real value: 0
+    property bool animate: true
     property bool focused: false
     property bool on: true
 
@@ -57,7 +58,7 @@ Item {
                 GradientStop { position: 0.0; color: root.on ? Theme.vermBurn : Theme.vermDimDeep }
                 GradientStop { position: 1.0; color: root.on ? Theme.vermLit : Theme.vermDim }
             }
-            Behavior on width { enabled: !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
+            Behavior on width { enabled: root.animate && !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
         }
 
         Rectangle {
@@ -68,7 +69,7 @@ Item {
             height: 11 * root.s
             radius: 2 * root.s
             color: Theme.tickRest
-            Behavior on x { enabled: !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
+            Behavior on x { enabled: root.animate && !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
         }
 
         MouseArea {

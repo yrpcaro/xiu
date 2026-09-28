@@ -498,7 +498,7 @@ PillSurface {
                 required property var modelData
                 required property int index
 
-                property int pct: 75
+                property int pct: Devices.backlightPresent ? Devices.backlightPct : 50
                 property real pendingPct: -1
 
                 width: faderRow.colW
@@ -507,6 +507,7 @@ PillSurface {
                 subLabel: "Brightness"
                 subPersistent: false
                 focused: root.focusIndex === index
+                animate: root.open && (root.settled || root.morphCloseness > 0.95)
                 value: pct / 100
                 valueLabel: pct + "%"
                 onMoved: (v) => pct = Math.max(5, Math.min(100, Math.round(v * 100)))
@@ -552,7 +553,8 @@ PillSurface {
                 subLabel: "Brightness"
                 subPersistent: false
                 focused: root.focusIndex === brRep.count
-                value: Devices.backlightPct / 100
+                animate: root.open && (root.settled || root.morphCloseness > 0.95)
+                value: Math.max(0, Math.min(1, Devices.backlightPct / 100))
                 valueLabel: Devices.backlightPct + "%"
                 onMoved: (v) => Devices.backlightPct = Math.max(1, Math.min(100, Math.round(v * 100)))
                 onCommitted: (v) => { root.pendingBacklight = Math.max(1, Math.min(100, Math.round(v * 100))); blDebounce.restart(); }
@@ -567,7 +569,8 @@ PillSurface {
             subLabel: "Vibrance"
             subPersistent: false
             focused: root.focusIndex === root.faderCount - 3
-            value: Devices.vibrance / 100
+            animate: root.open && (root.settled || root.morphCloseness > 0.95)
+            value: Math.max(0, Math.min(1, Devices.vibrance / 100))
             valueLabel: Devices.vibrance + "%"
             onMoved: (v) => Devices.vibrance = Math.round(v * 100)
             onCommitted: (v) => { root.pendingVibrance = v * 100; vibDebounce.restart(); }
@@ -580,7 +583,8 @@ PillSurface {
             subLabel: "Volume"
             subPersistent: false
             focused: root.focusIndex === root.faderCount - 2
-            value: root.sink && root.sink.audio ? root.sink.audio.volume : 0
+            animate: root.open && (root.settled || root.morphCloseness > 0.95)
+            value: root.sink && root.sink.audio ? Math.max(0, Math.min(1, root.sink.audio.volume)) : 0
             valueLabel: Math.round((root.sink && root.sink.audio ? root.sink.audio.volume : 0) * 100) + "%"
             onMoved: (v) => { if (root.sink && root.sink.audio) root.sink.audio.volume = v; }
         }
@@ -592,7 +596,8 @@ PillSurface {
             subLabel: "Microphone"
             subPersistent: false
             focused: root.focusIndex === root.faderCount - 1
-            value: root.source && root.source.audio ? root.source.audio.volume : 0
+            animate: root.open && (root.settled || root.morphCloseness > 0.95)
+            value: root.source && root.source.audio ? Math.max(0, Math.min(1, root.source.audio.volume)) : 0
             valueLabel: (root.source && root.source.audio && root.source.audio.muted)
                 ? "off"
                 : (Math.round((root.source && root.source.audio ? root.source.audio.volume : 0) * 100) + "%")
