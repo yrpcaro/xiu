@@ -71,6 +71,12 @@ hl.window_rule({
     idle_inhibit = "fullscreen",
 })
 
+hl.window_rule({
+    name      = "music-spotify",
+    match     = { class = "[Ss]potify" },
+    workspace = "special:music",
+})
+
 -- Keep the pill from fading when the session lock hides and restores its layer,
 -- so it never pops back in out of sync with the shot the lock morph collapses onto.
 hl.layer_rule({
