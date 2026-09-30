@@ -369,7 +369,7 @@ Singleton {
 
     Process {
         id: watchProc
-        command: ["wl-paste", "--watch", "echo", "x"]
+        command: ["wl-paste", "--watch", "sh", "-c", "cat >/dev/null; echo x"]
         running: true
         stdout: SplitParser {
             onRead: debounce.restart()
