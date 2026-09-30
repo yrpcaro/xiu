@@ -78,9 +78,12 @@ pub fn check() -> i32 {
 
     println!("health:");
     let tools = [
-        "Hyprland", "qs", "foot", "clipvault", "matugen", "swww", "rishot",
+        "Hyprland", "qs", "foot", "clipvault", "matugen", "rishot",
     ];
-    let missing: Vec<&str> = tools.iter().copied().filter(|t| !on_path(t)).collect();
+    let mut missing: Vec<&str> = tools.iter().copied().filter(|t| !on_path(t)).collect();
+    if !on_path("swww") && !on_path("awww") {
+        missing.push("swww / awww");
+    }
     if missing.is_empty() {
         println!("  all core tools on PATH");
     } else {
