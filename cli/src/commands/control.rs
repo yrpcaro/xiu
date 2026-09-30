@@ -64,9 +64,21 @@ fn surface_up(surface: &str) -> bool {
 }
 
 fn watchdog_up(surface: &str) -> bool {
+    if crate::commands::watchdog::is_watchdog_running(surface) {
+        return true;
+    }
+    let pgrep_xiu = Command::new("pgrep")
+        .args(["-f", &format!("watchdog {surface}")])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if pgrep_xiu {
+        return true;
+    }
     Command::new("pgrep")
-        .arg("-f")
-        .arg(format!("watchdog.sh {surface}"))
+        .args(["-f", &format!("watchdog.sh {surface}")])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
@@ -141,8 +153,12 @@ pub fn stop(target: Option<&str>) -> i32 {
     };
     for surface in targets {
         let _ = Command::new("pkill")
-            .arg("-f")
-            .arg(format!("watchdog.sh {surface}"))
+            .args(["-f", &format!("watchdog {surface}")])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        let _ = Command::new("pkill")
+            .args(["-f", &format!("watchdog.sh {surface}")])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
@@ -609,6 +625,7 @@ fn is_proc_running(name: &str) -> bool {
 fn teardown_session() {
     // 1. Kill watchdogs immediately so nothing can respawn
     let _ = Command::new("pkill").args(["-KILL", "-f", "watchdog.sh"]).status();
+    let _ = Command::new("pkill").args(["-KILL", "-f", "xiu watchdog"]).status();
 
     // 2. Dispatch exit to compositor immediately (closes Wayland sockets to all clients)
     if std::env::var("UWSM_ID").is_ok() {

@@ -16,6 +16,25 @@ extern "C" {
 
 const LOCK_EX: std::os::raw::c_int = 2;
 const LOCK_NB: std::os::raw::c_int = 4;
+const LOCK_UN: std::os::raw::c_int = 8;
+
+pub fn is_watchdog_running(surface: &str) -> bool {
+    let dir = std::env::var("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("/tmp"));
+    let lock_file = dir.join(format!("{surface}-watchdog.lock"));
+    if lock_file.exists() {
+        if let Ok(file) = fs::File::open(&lock_file) {
+            let fd = file.as_raw_fd();
+            let res = unsafe { flock(fd, LOCK_EX | LOCK_NB) };
+            if res != 0 {
+                return true;
+            }
+            unsafe { flock(fd, LOCK_UN) };
+        }
+    }
+    false
+}
 
 pub fn is_surface_alive(surface: &str) -> bool {
     Command::new("qs")
