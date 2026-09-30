@@ -113,14 +113,7 @@ pub fn set_wallpaper(path: &str, output: Option<&str>) -> i32 {
     // Push current wallpaper to history before updating
     record_history();
 
-    // 1. Try Quickshell IPC if available
-    if let Some(out) = output {
-        let _ = ipc_call("wallpaper", &["set", &canonical, out]);
-    } else {
-        let _ = ipc_call("wallpaper", &["set", &canonical]);
-    }
-
-    // 2. Invoke wallpaper.sh to synchronize visual layers, SDDM, and theme palette
+    // 1. Invoke wallpaper.sh to synchronize visual layers, SDDM, and theme palette
     let script = config_file(&["hypr", "scripts", "wallpaper.sh"]);
     if script.is_file() {
         let mut cmd = Command::new("bash");
@@ -132,8 +125,11 @@ pub fn set_wallpaper(path: &str, output: Option<&str>) -> i32 {
         let _ = cmd.status();
     }
 
-    // Ensure state files are kept in sync
+    // 2. Ensure state files are kept in sync
     update_state_files(&canonical);
+
+    // 3. Notify Quickshell to refresh its state without triggering a re-apply loop
+    let _ = ipc_call("wallpaper", &["refresh"]);
 
     0
 }

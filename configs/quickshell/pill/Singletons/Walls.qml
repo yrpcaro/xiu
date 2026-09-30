@@ -82,17 +82,23 @@ Singleton {
      * swallowed. Now the newest request is queued and replayed once the
      * running transition exits, so rapid iteration converges on the last pick.
      */
+    property string activeApplying: ""
     property string queuedApply: ""
     property string queuedOutput: ""
     property bool queuedRandom: false
 
     function apply(path, output) {
         var out = output === undefined ? "" : output;
+        if (path === root.current && out === "")
+            return;
         if (applyProc.running) {
+            if (path === activeApplying || path === queuedApply)
+                return;
             queuedApply = path;
             queuedOutput = out;
             return;
         }
+        activeApplying = path;
         applyProc.command = out.length > 0
             ? ["xiu", "wallpaper", "set", path, out]
             : ["xiu", "wallpaper", "set", path];
@@ -176,6 +182,7 @@ Singleton {
     Process {
         id: applyProc
         onExited: {
+            root.activeApplying = "";
             if (root.queuedRandom) {
                 root.queuedRandom = false;
                 applyProc.command = ["xiu", "wallpaper", "next"];
@@ -187,6 +194,7 @@ Singleton {
                 var nextOut = root.queuedOutput;
                 root.queuedApply = "";
                 root.queuedOutput = "";
+                root.activeApplying = next;
                 applyProc.command = nextOut.length > 0
                     ? ["xiu", "wallpaper", "set", next, nextOut]
                     : ["xiu", "wallpaper", "set", next];
@@ -210,7 +218,10 @@ Singleton {
                 out.push(root.entries[i].path);
             return out.join("\n");
         }
-        function set(path: string): void { root.apply(path); }
+        function set(path: string): void {
+            if (path !== root.current && path !== root.activeApplying)
+                root.apply(path);
+        }
         function random(): void { root.random(); }
         function refresh(): void { root.refresh(); }
     }
