@@ -30,6 +30,12 @@ hl.window_rule({
 })
 
 hl.window_rule({
+    name  = "float-pip",
+    match = { title = "^[Pp]icture(-| )in(-| )[Pp]icture$" },
+    float = true,
+})
+
+hl.window_rule({
     name   = "float-termfilechooser",
     match  = { class = "termfilechooser" },
     float  = true,

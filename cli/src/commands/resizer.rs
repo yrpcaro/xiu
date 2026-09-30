@@ -270,9 +270,7 @@ fn apply_pip_action(window_id: &str) {
         None => return,
     };
 
-    if window.get("floating").and_then(Json::as_bool) != Some(true) {
-        return;
-    }
+    let is_floating = window.get("floating").and_then(Json::as_bool) == Some(true);
 
     let workspaces_result = match hyprctl_json("workspaces") {
         Some(Json::Arr(arr)) => arr,
@@ -397,9 +395,14 @@ fn apply_pip_action(window_id: &str) {
     let move_x = m_x + monitor_width - (scaled_width as f64) - offset;
     let move_y = m_y + monitor_height - (scaled_height as f64) - offset;
 
-    let cmd1 = make_resize_cmd(&scaled_width.to_string(), &scaled_height.to_string(), &address);
-    let cmd2 = make_move_cmd(move_x as i32, move_y as i32, &address);
-    batch(&[&cmd1, &cmd2]);
+    let mut cmds = Vec::new();
+    if !is_floating {
+        cmds.push(make_float_cmd(&address));
+    }
+    cmds.push(make_resize_cmd(&scaled_width.to_string(), &scaled_height.to_string(), &address));
+    cmds.push(make_move_cmd(move_x as i32, move_y as i32, &address));
+    let cmd_refs: Vec<&str> = cmds.iter().map(String::as_str).collect();
+    batch(&cmd_refs);
 
     println!(
         "xiu-resizer: Applied PiP action to window {address}: {scaled_width}x{scaled_height} at ({move_x}, {move_y})"

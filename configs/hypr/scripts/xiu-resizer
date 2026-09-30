@@ -152,8 +152,10 @@ class Command:
                     window = c
                     break
 
-            if not window or not isinstance(window, dict) or not window.get("floating", False):
+            if not window or not isinstance(window, dict):
                 return
+
+            is_floating = window.get("floating", False)
 
             workspaces_result = hyprctl_json("workspaces")
             if not isinstance(workspaces_result, list):
@@ -227,7 +229,11 @@ class Command:
 
             command1 = self._make_resize_cmd(scaled_width, scaled_height, address)
             command2 = self._make_move_cmd(int(move_x), int(move_y), address)
-            batch(command1, command2)
+            commands = []
+            if not is_floating:
+                commands.append(self._make_float_cmd(address))
+            commands.extend([command1, command2])
+            batch(*commands)
 
             info(f"Applied PiP action to window {address}: {scaled_width}x{scaled_height} at ({move_x}, {move_y})")
 
