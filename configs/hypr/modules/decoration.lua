@@ -30,15 +30,9 @@ local group_text            = border(wc and wc.text_color, "#fff6f0")
     pill. Logo and splash off closes that crash surface.
 ]]
 hl.config({
-    render = {
-        direct_scanout             = 1,
-        new_render_scheduling      = true,
-        expand_undersized_textures = false,
-    },
     misc = {
         disable_hyprland_logo    = true,
         disable_splash_rendering = true,
-        vrr                      = 1,
     },
     debug = {
         vfr                      = true,
@@ -75,7 +69,7 @@ hl.config({
     },
     decoration = {
         rounding         = 12,
-        rounding_power   = 2,
+        rounding_power   = 4,
         active_opacity   = 1.00,
         inactive_opacity = 1.00,
         shadow = {
@@ -88,10 +82,8 @@ hl.config({
             enabled           = true,
             size              = 6,
             passes            = 2,
-            vibrancy          = 0.0,
-            noise             = 0.0,
-            xray              = true,
-            ignore_opacity    = true,
+            vibrancy          = 0.17,
+            noise             = 0.01,
             new_optimizations = true,
         },
     },

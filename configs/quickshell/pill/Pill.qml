@@ -1380,7 +1380,6 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: kanjiFill.baseline
                     s: pill.s
-                    visible: restKanji.barsOn
                     opacity: restKanji.barsOn ? 1 : 0
                     scale: restKanji.barsOn ? 1 : 0.7
                     Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }

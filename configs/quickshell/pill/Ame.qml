@@ -326,7 +326,7 @@ Item {
 
     Timer {
         running: root.visible && !root.busy && !Flags.reduceMotion && !Flags.gameMode
-        interval: root.blinking ? 33 : 150
+        interval: root.blinking ? 33 : 83
         repeat: true
         onTriggered: {
             root.swirl += interval * 0.0005;
@@ -577,7 +577,7 @@ Item {
      * is hidden (wallpaper strip, toast, plain hover) that's pure GPU tax on an
      * empty canvas, so the layer only exists while something is drawn or fading.
      */
-    layer.enabled: (opacity > 0.001) && (busy || root.blinking)
+    layer.enabled: opacity > 0.001 || busy
     layer.effect: MultiEffect {
         blurEnabled: true
         blur: 0.34

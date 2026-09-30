@@ -17,7 +17,6 @@ Row {
 
     height: span * s
     spacing: 1.2 * s
-    visible: opacity > 0.001
 
     Repeater {
         model: Cava.bars
@@ -36,7 +35,6 @@ Row {
             }
 
             Behavior on height {
-                enabled: root.visible
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutQuad }
             }
         }

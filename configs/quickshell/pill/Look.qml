@@ -147,7 +147,7 @@ SettingsSurface {
         var rd = parseInt(SetDeco.getField(t, "rounding"), 10);
         root.rounding = isNaN(rd) ? 12 : rd;
         var rp = parseInt(SetDeco.getField(t, "rounding_power"), 10);
-        root.roundingPower = isNaN(rp) ? 2 : rp;
+        root.roundingPower = isNaN(rp) ? 4 : rp;
         var bs = parseInt(SetDeco.getField(t, "border_size"), 10);
         root.borderSize = isNaN(bs) ? 2 : bs;
         root.resizeOnBorder = SetDeco.getField(t, "resize_on_border") === "true";
