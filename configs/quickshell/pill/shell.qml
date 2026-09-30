@@ -31,6 +31,7 @@ ShellRoot {
     property string openMon: ""
     property string openSurface: ""
     property string peekMon: ""
+    property bool hidden: false
 
     function refresh() {
         Hyprland.refreshMonitors();
@@ -213,7 +214,18 @@ ShellRoot {
                 root.toggleSurface(mon, "media");
         }
         function peek(mon: string): void { root.peek(mon); }
-        function hide(): void { root.close(); }
+        function hide(): void {
+            root.hidden = true;
+            root.close();
+        }
+        function show(): void {
+            root.hidden = false;
+        }
+        function toggle(): void {
+            root.hidden = !root.hidden;
+            if (root.hidden)
+                root.close();
+        }
 
         /** Opens any surface by name, settings sub-pages included; dev and scripting door. */
         function page(mon: string, name: string): void { root.toggleSurface(mon, name); }
@@ -258,11 +270,11 @@ ShellRoot {
             /** Don't map until flags.json is read: a commit made from the adapter defaults could reserve the band one frame before the real flag value re-sizes it. */
             visible: Flags.loaded
             /** Auto-hide gives the band back to the windows: nothing is reserved, so tiled clients climb to the screen edge and the pill floats over them on demand. */
-            exclusiveZone: Flags.gameMode ? gameBarH : (Flags.autoHide ? 0 : reservedH)
+            exclusiveZone: Flags.gameMode ? gameBarH : ((root.hidden || Flags.autoHide) ? 0 : reservedH)
             aboveWindows: true
 
             anchors { top: true; left: true; right: true }
-            implicitHeight: Flags.gameMode ? gameBarH : (Flags.autoHide ? 1 : reservedH)
+            implicitHeight: Flags.gameMode ? gameBarH : ((root.hidden || Flags.autoHide) ? 1 : reservedH)
 
             mask: emptyReserve
             Region { id: emptyReserve }
@@ -299,7 +311,7 @@ ShellRoot {
                 return false;
             }
             readonly property bool summoned: modal || root.peekMon === modelData.name
-            readonly property bool pillHidden: monFullscreen && !summoned
+            readonly property bool pillHidden: (root.hidden || monFullscreen) && !summoned
 
             /**
              * autoHide, CapsuleOS-style: the pill retracts off the top edge
