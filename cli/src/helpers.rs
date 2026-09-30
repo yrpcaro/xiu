@@ -52,10 +52,28 @@ pub fn on_path(bin: &str) -> bool {
 pub fn focused_monitor() -> String {
     if let Ok(out) = Command::new("hyprctl").args(["activeworkspace", "-j"]).output() {
         let s = String::from_utf8_lossy(&out.stdout);
-        if let Some(i) = s.find("\"monitor\":\"") {
-            let rest = &s[i + "\"monitor\":\"".len()..];
-            if let Some(end) = rest.find('"') {
-                return rest[..end].to_string();
+        if let Ok(val) = crate::json::parse(&s) {
+            if let Some(m) = val.get("monitor").and_then(|v| v.as_str()) {
+                if !m.is_empty() {
+                    return m.to_string();
+                }
+            }
+        }
+    }
+    if let Ok(out) = Command::new("hyprctl").args(["monitors", "-j"]).output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        if let Ok(crate::json::Json::Arr(monitors)) = crate::json::parse(&text) {
+            for mon in &monitors {
+                if mon.get("focused").and_then(crate::json::Json::as_bool) == Some(true) {
+                    if let Some(name) = mon.get("name").and_then(crate::json::Json::as_str) {
+                        return name.to_string();
+                    }
+                }
+            }
+            if let Some(first) = monitors.first() {
+                if let Some(name) = first.get("name").and_then(crate::json::Json::as_str) {
+                    return name.to_string();
+                }
             }
         }
     }

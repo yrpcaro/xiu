@@ -524,7 +524,12 @@ Singleton {
     IpcHandler {
         target: "recorder"
         function status(): string { return root.recording ? "recording" : (root.counting ? "counting" : "idle"); }
-        function stop(): void { if (root.recording) root.stop(); }
+        function stop(): void {
+            if (root.recording)
+                root.stop();
+            else if (root.counting)
+                root.cancel();
+        }
         function cancel(): void { if (root.counting) root.cancel(); }
     }
 }

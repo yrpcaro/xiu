@@ -199,6 +199,10 @@ ShellRoot {
                 ScreenRec.quickChoosing = false;
                 ScreenRec.quickScreenChoosing = false;
             } else {
+                if (!mon || mon.length === 0)
+                    mon = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
+                if ((!mon || mon.length === 0) && Quickshell.screens.length > 0)
+                    mon = Quickshell.screens[0].name;
                 ScreenRec.quickMon = mon;
                 ScreenRec.quickScreenChoosing = false;
                 ScreenRec.quickChoosing = true;
