@@ -24,6 +24,6 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 hl.env("QT_QPA_PLATFORMTHEME", "qtengine")
 hl.env("QT_PLUGIN_PATH", "/usr/lib/qt6/plugins:/usr/lib/qt5/plugins:/usr/lib/qt/plugins")
 
--- rishot's auto-save folder (it has no config file of its own; the env var
--- is the knob). Keep in sync with the dirs the pill creates at boot.
+-- rishot's auto-save folder and themed config dir.
 hl.env("RISHOT_SAVEDIR", os.getenv("HOME") .. "/Pictures/Screenshots")
+hl.env("RISHOT_CONFIG_DIR", os.getenv("HOME") .. "/.config/quickshell/rishot")

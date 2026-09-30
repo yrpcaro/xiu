@@ -922,6 +922,35 @@ def bridge_wallpaper_binary(dry):
     return True, "", True
 
 
+def bridge_rishot_binary(dry):
+    """
+    Point ~/.local/bin/rishot at the xiu rishot wrapper script in
+    ~/.config/hypr/scripts/rishot so screenshot keybinds, launcher, and desktop app
+    always follow the xiu theme.
+    """
+    if dry:
+        print("  would bridge: rishot -> ~/.config/hypr/scripts/rishot")
+        return True, "", False
+    script = Path.home() / ".config" / "hypr" / "scripts" / "rishot"
+    bindir = Path.home() / ".local" / "bin"
+    try:
+        bindir.mkdir(parents=True, exist_ok=True)
+        link = bindir / "rishot"
+        if script.exists():
+            try:
+                script.chmod(0o755)
+            except OSError:
+                pass
+            if link.is_symlink() or link.exists():
+                link.unlink()
+            link.symlink_to(script)
+            print(f"  bridged: rishot -> {script} (in {bindir})")
+            return True, "", True
+        return True, "", False
+    except OSError as exc:
+        return False, f"{exc}: bridge rishot", False
+
+
 def deploy_brave_theme(source, dry):
     """
     Copy the bundled Brave theme into ~/.config/xiu so the user can point Brave
@@ -1429,6 +1458,11 @@ def run(args):
         if bridged:
             notes.append("Linked awww to swww in ~/.local/bin. Make sure "
                          "~/.local/bin is on PATH so the wallpaper script finds it.")
+
+        # i2. bridge rishot onto the xiu wrapper so keybinds and launcher follow the theme
+        ok, detail, _ = bridge_rishot_binary(dry)
+        record(ok, detail, "Bridge rishot binary",
+               "Symlink ~/.local/bin/rishot to ~/.config/hypr/scripts/rishot yourself.")
 
         # j. fish as the login shell, kept even with --no-deps. Never chsh onto a
         #    binary that is not there: root's chsh skips the shell validation, so
