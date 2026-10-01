@@ -9,6 +9,8 @@ if not ok or type(spaces) ~= "table" then
     return
 end
 
+local toggles = require("modules.toggles")
+
 for _, sp in ipairs(spaces) do
     if type(sp) == "table" and type(sp.id) == "string" and sp.id ~= "" then
         local id = sp.id
@@ -26,7 +28,7 @@ for _, sp in ipairs(spaces) do
         end
 
         if type(sp.key) == "string" and sp.key ~= "" then
-            hl.bind("SUPER + " .. sp.key, hl.dsp.workspace.toggle_special(id))
+            hl.bind("SUPER + " .. sp.key, toggles.toggle(id))
             hl.bind("SUPER + SHIFT + " .. sp.key,
                 hl.dsp.exec_cmd("xiu special " .. id))
         end

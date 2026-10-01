@@ -18,6 +18,16 @@
 ]]
 local config_dir = os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")
 
+local function resolve_discord_cmd()
+    if os.execute("command -v discord >/dev/null 2>&1") == 0 then
+        return { "discord" }
+    elseif os.execute("command -v vesktop >/dev/null 2>&1") == 0 then
+        return { "vesktop" }
+    else
+        return { "discord" }
+    end
+end
+
 local defaults = {
     sysmon = {
         btop = { match = { { class = "btop", title = "btop" } },
@@ -28,6 +38,10 @@ local defaults = {
     },
     communication = {
         telegram = { match = { { class = "org.telegram.desktop" } }, command = { "Telegram" } },
+    },
+    discord = {
+        discord = { match = { { class = "discord" }, { class = "Discord" }, { class = "vesktop" }, { class = "Vesktop" } },
+                    command = resolve_discord_cmd() },
     },
     todo = {},
 }
@@ -58,7 +72,20 @@ local function matches(window, match)
         local hit = true
         for key, want in pairs(rule) do
             local got = field(window, key)
-            if got == nil or not tostring(got):find(tostring(want), 1, true) then
+            if got == nil then
+                hit = false
+                break
+            end
+            local s_got = tostring(got)
+            local s_want = tostring(want)
+            local found = s_got:find(s_want, 1, true) or s_got:lower():find(s_want:lower(), 1, true)
+            if not found then
+                local ok, regex_hit = pcall(function() return s_got:match(s_want) end)
+                if ok and regex_hit then
+                    found = true
+                end
+            end
+            if not found then
                 hit = false
                 break
             end
