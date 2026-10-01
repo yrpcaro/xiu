@@ -113,6 +113,28 @@ pub fn config_file(parts: &[&str]) -> std::path::PathBuf {
     path
 }
 
+pub fn wallcolors_script() -> std::path::PathBuf {
+    if let Ok(cwd) = std::env::current_dir() {
+        let cand = cwd.join("configs/hypr/scripts/wallcolors.py");
+        if cand.is_file() {
+            return cand;
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            let cand1 = parent.join("../../configs/hypr/scripts/wallcolors.py");
+            if cand1.is_file() {
+                return cand1;
+            }
+            let cand2 = parent.join("../configs/hypr/scripts/wallcolors.py");
+            if cand2.is_file() {
+                return cand2;
+            }
+        }
+    }
+    config_file(&["hypr", "scripts", "wallcolors.py"])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

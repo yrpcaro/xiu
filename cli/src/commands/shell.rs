@@ -317,19 +317,18 @@ pub fn gamemode_strip(mode: &str) -> i32 {
 /// state survives wallpaper changes in its own state file, and an explicit
 /// change flips the pill's paletteMode so the shell actually listens.
 pub fn scheme(action: &str, value: Option<&str>, variant: Option<&str>) -> i32 {
-    let home = std::env::var("HOME").unwrap_or_default();
-    let script = format!("{home}/.config/hypr/scripts/wallcolors.py");
-    let run = |flags: Vec<&str>| run_status(Command::new("python3").arg(&script).args(&flags));
+    let script = crate::helpers::wallcolors_script();
+    let run = |flags: &[&str]| run_status(Command::new("python3").arg(&script).args(flags));
 
     match action {
-        "list" => run(vec!["--list-presets"]),
-        "get" => run(vec!["--state"]),
+        "list" => run(&["--list-presets"]),
+        "get" => run(&["--state"]),
         "preview" => {
             let Some(wallpaper) = value else {
                 eprintln!("xiu scheme preview: needs a wallpaper path");
                 return 2;
             };
-            run(vec!["--preview", wallpaper])
+            run(&["--preview", wallpaper])
         }
         "set" => {
             let Some(preset) = value else {
@@ -342,10 +341,35 @@ pub fn scheme(action: &str, value: Option<&str>, variant: Option<&str>) -> i32 {
                 flags.push(v.to_string());
             }
             let refs: Vec<&str> = flags.iter().map(String::as_str).collect();
-            run(refs)
+            let res = run(&refs);
+            if res == 0 {
+                let _ = crate::commands::theme::live_reload();
+            }
+            res
+        }
+        "dark" => {
+            let res = run(&["--mode", "dark"]);
+            if res == 0 {
+                let _ = crate::commands::theme::live_reload();
+            }
+            res
+        }
+        "light" => {
+            let res = run(&["--mode", "light"]);
+            if res == 0 {
+                let _ = crate::commands::theme::live_reload();
+            }
+            res
+        }
+        "toggle" => {
+            let res = run(&["--toggle"]);
+            if res == 0 {
+                let _ = crate::commands::theme::live_reload();
+            }
+            res
         }
         other => {
-            eprintln!("xiu scheme: unknown action '{other}' (list, get, set, preview)");
+            eprintln!("xiu scheme: unknown action '{other}' (list, get, set, preview, dark, light, toggle)");
             2
         }
     }

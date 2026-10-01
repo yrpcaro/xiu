@@ -1,6 +1,6 @@
 //! Palette generation, 24-bit TrueColor token computation, template rendering, and live OSC broadcast.
 
-use crate::helpers::{cache_file, config_file, run_status};
+use crate::helpers::{cache_file, run_status, wallcolors_script};
 use std::fs;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
@@ -17,12 +17,47 @@ pub fn theme(
     match action {
         "live" => live_reload(),
         "generate" | "preview" => generate(target, preset, variant),
+        "dark" => set_mode("dark"),
+        "light" => set_mode("light"),
+        "toggle" => toggle_mode(),
         "apply" => apply(target, preset, variant),
         other => {
-            eprintln!("xiu theme: unknown action '{other}' (generate, apply, live)");
+            eprintln!("xiu theme: unknown action '{other}' (generate, apply, live, dark, light, toggle)");
             2
         }
     }
+}
+
+fn set_mode(mode: &str) -> i32 {
+    let script = wallcolors_script();
+    if !script.is_file() {
+        eprintln!("xiu theme: wallcolors.py not found ({})", script.display());
+        return 1;
+    }
+    let mut cmd = Command::new("python3");
+    cmd.arg(&script).arg("--mode").arg(mode);
+    let status = run_status(&mut cmd);
+    if status == 0 {
+        let _ = live_reload();
+        let _ = Command::new("hyprctl").arg("reload").status();
+    }
+    status
+}
+
+fn toggle_mode() -> i32 {
+    let script = wallcolors_script();
+    if !script.is_file() {
+        eprintln!("xiu theme: wallcolors.py not found ({})", script.display());
+        return 1;
+    }
+    let mut cmd = Command::new("python3");
+    cmd.arg(&script).arg("--toggle");
+    let status = run_status(&mut cmd);
+    if status == 0 {
+        let _ = live_reload();
+        let _ = Command::new("hyprctl").arg("reload").status();
+    }
+    status
 }
 
 pub fn live_reload() -> i32 {
@@ -73,7 +108,7 @@ pub fn live_reload() -> i32 {
 }
 
 fn generate(target: Option<&str>, preset: Option<&str>, variant: Option<&str>) -> i32 {
-    let script = config_file(&["hypr", "scripts", "wallcolors.py"]);
+    let script = wallcolors_script();
     if !script.is_file() {
         eprintln!("xiu theme generate: wallcolors.py not found ({})", script.display());
         return 1;
@@ -104,7 +139,7 @@ fn generate(target: Option<&str>, preset: Option<&str>, variant: Option<&str>) -
 }
 
 fn apply(target: Option<&str>, preset: Option<&str>, variant: Option<&str>) -> i32 {
-    let script = config_file(&["hypr", "scripts", "wallcolors.py"]);
+    let script = wallcolors_script();
     if !script.is_file() {
         eprintln!("xiu theme apply: wallcolors.py not found ({})", script.display());
         return 1;
@@ -128,7 +163,7 @@ fn apply(target: Option<&str>, preset: Option<&str>, variant: Option<&str>) -> i
             }
         }
     } else {
-        // Apply current wallpaper or state
+        cmd.arg("--apply");
     }
 
     let status = run_status(&mut cmd);

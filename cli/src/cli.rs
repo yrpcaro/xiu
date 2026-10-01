@@ -93,9 +93,9 @@ pub enum Commands {
         /// Optional target (e.g. on/off for strip)
         target: Option<String>,
     },
-    /// list, get, set <preset|dynamic> [-v VARIANT], preview <wallpaper> (engine: wallcolors.py)
+    /// list, get, set <preset|dynamic> [-v VARIANT], preview <wallpaper>, dark, light, toggle (engine: wallcolors.py)
     Scheme {
-        /// The scheme action
+        /// The scheme action: list, get, set, preview, dark, light, toggle
         #[arg(default_value = "get")]
         action: String,
         /// The preset to set, or the wallpaper to preview
@@ -104,9 +104,9 @@ pub enum Commands {
         #[arg(short, long)]
         variant: Option<String>,
     },
-    /// Theme engine: generate, apply, live
+    /// Theme engine: generate, apply, live, dark, light, toggle
     Theme {
-        /// generate, apply, live
+        /// generate, apply, live, dark, light, toggle
         #[arg(default_value = "apply")]
         action: String,
         /// Wallpaper path or preset name
