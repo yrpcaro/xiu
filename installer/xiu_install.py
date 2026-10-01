@@ -1762,11 +1762,11 @@ def run_uninstall(args):
         print(f"  removed: {f}" if ok else f"  could not remove {f}, delete it yourself")
 
     for name in ("xiu", "ricelin"):
-        link = Path.home() / ".local" / "bin" / name
-        if link.is_symlink():
+        cli_bin = Path.home() / ".local" / "bin" / name
+        if cli_bin.is_file() or cli_bin.is_symlink():
             try:
-                link.unlink()
-                print(f"  removed: {link}")
+                cli_bin.unlink()
+                print(f"  removed: {cli_bin}")
             except OSError:
                 pass
     tui.info(["The repo clone in ~/.local/share/xiu and your wallpapers in "

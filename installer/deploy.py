@@ -541,10 +541,14 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
     return actions
 
 
-def uninstall(config_root=CONFIG_ROOT, apply=False):
+BIN_ROOT = Path.home() / ".local" / "bin"
+
+
+def uninstall(config_root=CONFIG_ROOT, bin_root=None, apply=False):
     """
     Remove every xiu-managed item from ~/.config and put its pristine .bak
     back. A dest without our marker is the user's own config, left untouched.
+    Also uninstalls the xiu CLI binary from ~/.local/bin.
     Returns the action list; nothing is removed unless apply is set.
     """
     config_root = Path(config_root)
@@ -570,6 +574,17 @@ def uninstall(config_root=CONFIG_ROOT, apply=False):
                 shutil.move(str(bak), str(dest))
             else:
                 _prune_empty(dest.parent, config_root)
+
+    # CLI binaries uninstall
+    target_bin_root = Path(bin_root) if bin_root is not None else (BIN_ROOT if config_root == CONFIG_ROOT else None)
+    if target_bin_root and target_bin_root.is_dir():
+        for name in ("xiu", "ricelin"):
+            dest = target_bin_root / name
+            if dest.exists() or dest.is_symlink():
+                actions.append({"item": name, "action": "remove",
+                                "dest": str(dest), "restored": None})
+                if apply:
+                    _rm(dest)
     return actions
 
 

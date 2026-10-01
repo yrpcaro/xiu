@@ -493,14 +493,28 @@ pub fn uninstall() -> i32 {
     let installer = match installer {
         Some(p) => p,
         None => {
+            let bin_dir = home_path(&[".local", "bin"]);
+            for name in &["xiu", "ricelin"] {
+                let p = bin_dir.join(name);
+                if p.is_file() || p.is_symlink() {
+                    let _ = std::fs::remove_file(&p);
+                }
+            }
             return ctl_die(
                 &k,
-                "installer not found; remove ~/.config/hypr and ~/.config/quickshell by hand, your originals sit next to them as .bak",
-            )
+                "installer not found; removed xiu-cli and configs must be removed by hand from ~/.config/hypr and ~/.config/quickshell",
+            );
         }
     };
-    let _ = Command::new("python3").arg(installer).arg("--uninstall").status();
-    0
+    let status = Command::new("python3").arg(installer).arg("--uninstall").status();
+    let bin_dir = home_path(&[".local", "bin"]);
+    for name in &["xiu", "ricelin"] {
+        let p = bin_dir.join(name);
+        if p.is_file() || p.is_symlink() {
+            let _ = std::fs::remove_file(&p);
+        }
+    }
+    status.map(|s| s.code().unwrap_or(0)).unwrap_or(0)
 }
 
 pub fn session(action: &str) -> i32 {
