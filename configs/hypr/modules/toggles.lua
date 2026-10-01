@@ -27,7 +27,7 @@ local defaults = {
         spotify = { match = { { class = "[Ss]potify" } }, command = { "spotify-launcher" } },
     },
     communication = {
-        telegram = { match = { { class = "org.telegram.desktop" } }, command = { "telegram-desktop" } },
+        telegram = { match = { { class = "org.telegram.desktop" } }, command = { "Telegram" } },
     },
     todo = {},
 }
