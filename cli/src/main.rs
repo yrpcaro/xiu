@@ -82,7 +82,9 @@ fn dispatch(cli: &cli::Cli) -> i32 {
         Commands::Start { target } => control::start(target.as_deref()),
         Commands::Stop { target } => control::stop(target.as_deref()),
         Commands::Log { target, args } => control::log(target.as_deref(), args),
-        Commands::Update { action, sha } => control::update(action.as_deref(), sha.as_deref()),
+        Commands::Update { action, sha, commit } => {
+            control::update(action.as_deref(), sha.as_deref().or(commit.as_deref()))
+        }
         Commands::Status => control::status(),
         Commands::Uninstall => control::uninstall(),
         Commands::Session { action } => control::session(action),

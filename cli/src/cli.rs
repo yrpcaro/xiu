@@ -165,8 +165,10 @@ pub enum Commands {
         /// check, apply, baseline
         action: Option<String>,
         /// Commit SHA for baseline
-        #[arg(short, long)]
         sha: Option<String>,
+        /// Commit SHA flag for baseline
+        #[arg(short, long)]
+        commit: Option<String>,
     },
     /// What's running and the installed version
     Status,

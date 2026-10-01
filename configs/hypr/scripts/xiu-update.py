@@ -453,11 +453,30 @@ def baseline(config_root, sha):
     updates through plain git and never wants a manifest at all.
     """
     if not sha:
+        clone = data_dir()
+        if (clone / ".git").exists():
+            try:
+                sha = origin_head(clone)
+            except Exception:
+                pass
+        if not sha:
+            repo = Path(__file__).resolve().parents[3]
+            if (repo / ".git").exists():
+                try:
+                    sha = git(repo, "rev-parse", "HEAD").strip()
+                except Exception:
+                    pass
+    if not sha:
         return error_result("error", "baseline needs --sha")
     if is_devmode(config_root):
         return {"status": "devmode", "syncedSha": ""}
     if manifest_path().exists():
-        return {"status": "kept", "syncedSha": ""}
+        try:
+            m = load_manifest()
+            return {"status": "kept", "syncedSha": m.get("syncedSha") or sha}
+        except Exception:
+            pass
+        return {"status": "kept", "syncedSha": sha}
     manifest = {"syncedSha": sha, "modules": {rel: sha for rel in PROTECTED}}
     save_manifest(manifest)
     return {"status": "baselined", "syncedSha": sha}
@@ -537,6 +556,34 @@ def manifest_at(clone, sha):
         return None
 
 
+_INSTALLED_CACHE = None
+
+
+def get_installed_set(family):
+    global _INSTALLED_CACHE
+    if _INSTALLED_CACHE is not None:
+        return _INSTALLED_CACHE
+    installed = set()
+    try:
+        if family == "arch":
+            r = subprocess.run(["pacman", "-Qq"], capture_output=True, text=True)
+            if r.returncode == 0:
+                installed = set(r.stdout.splitlines())
+        elif family == "debian":
+            r = subprocess.run(["dpkg-query", "-W", "-f=${Package} ${Status}\n"],
+                               capture_output=True, text=True)
+            if r.returncode == 0:
+                installed = {line.split()[0] for line in r.stdout.splitlines() if "install ok installed" in line}
+        elif family in ("fedora", "suse"):
+            r = subprocess.run(["rpm", "-qa", "--qf", "%{NAME}\n"], capture_output=True, text=True)
+            if r.returncode == 0:
+                installed = set(r.stdout.splitlines())
+    except (OSError, subprocess.SubprocessError):
+        pass
+    _INSTALLED_CACHE = installed
+    return installed
+
+
 def pkg_installed(name, family):
     """
     Whether the native package is installed, read-only and quiet. A failed query
@@ -547,12 +594,12 @@ def pkg_installed(name, family):
     package the box already carries under another name.
     """
     try:
+        installed = get_installed_set(family)
+        if name in installed:
+            return True
         if family == "arch":
-            for candidate in (name, f"{name}-bin"):
-                r = subprocess.run(["pacman", "-Qq", candidate],
-                                   capture_output=True, text=True)
-                if r.returncode == 0:
-                    return True
+            if f"{name}-bin" in installed:
+                return True
             r = subprocess.run(["pacman", "-T", name],
                                capture_output=True, text=True)
             return r.returncode == 0
@@ -856,20 +903,34 @@ def parse_args(argv):
         elif arg == "--sha":
             i += 1
             sha = take_value(argv, i, "--sha")
+        elif arg.startswith("--sha="):
+            sha = arg.split("=", 1)[1]
         elif arg == "--remote":
             i += 1
             remote = take_value(argv, i, "--remote")
+        elif arg.startswith("--remote="):
+            remote = arg.split("=", 1)[1]
         elif arg == "--config-root":
             i += 1
             config_root = Path(take_value(argv, i, "--config-root")).expanduser()
+        elif arg.startswith("--config-root="):
+            config_root = Path(arg.split("=", 1)[1]).expanduser()
         elif arg == "--take":
             i += 1
             value = take_value(argv, i, "--take")
+            take = {p.strip() for p in value.split(",") if p.strip()}
+        elif arg.startswith("--take="):
+            value = arg.split("=", 1)[1]
             take = {p.strip() for p in value.split(",") if p.strip()}
         elif arg == "--install-deps":
             i += 1
             value = take_value(argv, i, "--install-deps")
             install_ids = {p.strip() for p in value.split(",") if p.strip()}
+        elif arg.startswith("--install-deps="):
+            value = arg.split("=", 1)[1]
+            install_ids = {p.strip() for p in value.split(",") if p.strip()}
+        elif mode == "baseline" and sha is None and not arg.startswith("-"):
+            sha = arg
         i += 1
     return mode, remote, config_root, take, install_ids, sha
 
