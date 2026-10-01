@@ -214,21 +214,134 @@ pub fn thumbs() -> i32 {
 }
 
 pub fn wipe() -> i32 {
-    let mut cleared_db = false;
-    if on_path("clipvault") {
-        let status = Command::new("clipvault")
-            .arg("clear")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
-        if let Ok(s) = status {
-            if s.success() {
-                cleared_db = true;
+    let state_dir = std::env::var("XDG_STATE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| home_path(&[".local", "state"]))
+        .join("xiu");
+    let pinned_file = state_dir.join("clipboard-pinned.json");
+
+    // Load pinned entries (strings, lines, or ids)
+    let mut pinned_lines: Vec<String> = Vec::new();
+    if pinned_file.is_file() {
+        if let Ok(content) = fs::read_to_string(&pinned_file) {
+            if let Ok(json_val) = crate::json::parse(&content) {
+                if let Some(arr) = json_val.as_arr() {
+                    for item in arr {
+                        if let Some(s) = item.as_str() {
+                            if !s.is_empty() {
+                                pinned_lines.push(s.to_string());
+                            }
+                        } else if let Some(n) = item.as_i64() {
+                            pinned_lines.push(n.to_string());
+                        }
+                    }
+                }
             }
         }
     }
 
-    // Purge thumbnail cache
+    let db_path = std::env::var("CLIPVAULT_DB")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            let data = std::env::var("XDG_DATA_HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| home_path(&[".local", "share"]));
+            data.join("clipvault.db")
+        });
+
+    let mut pinned_ids: HashSet<i64> = HashSet::new();
+
+    // Query current clipvault entries
+    let list_out = Command::new("clipvault")
+        .arg("list")
+        .output()
+        .ok();
+
+    if let Some(out) = list_out {
+        if out.status.success() {
+            let text = String::from_utf8_lossy(&out.stdout);
+            for line in text.lines() {
+                if let Some(tab_pos) = line.find('\t') {
+                    let id_str = &line[..tab_pos];
+                    let preview = &line[tab_pos + 1..];
+                    if let Ok(id_num) = id_str.trim().parse::<i64>() {
+                        for p in &pinned_lines {
+                            if p == id_str || p == preview || p == line {
+                                pinned_ids.insert(id_num);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Direct numeric matches in pinned_lines
+    for p in &pinned_lines {
+        if let Ok(n) = p.trim().parse::<i64>() {
+            pinned_ids.insert(n);
+        }
+    }
+
+    let mut cleared_db = false;
+
+    if pinned_ids.is_empty() {
+        if on_path("clipvault") {
+            let status = Command::new("clipvault")
+                .arg("clear")
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+            if let Ok(s) = status {
+                if s.success() {
+                    cleared_db = true;
+                }
+            }
+        } else if db_path.is_file() && on_path("sqlite3") {
+            let _ = Command::new("sqlite3")
+                .arg(&db_path)
+                .arg("DELETE FROM clipboard; VACUUM;")
+                .status();
+            cleared_db = true;
+        }
+    } else {
+        if db_path.is_file() && on_path("sqlite3") {
+            let id_list: Vec<String> = pinned_ids.iter().map(|id| id.to_string()).collect();
+            let sql = format!("DELETE FROM clipboard WHERE id NOT IN ({}); VACUUM;", id_list.join(","));
+            let status = Command::new("sqlite3")
+                .arg(&db_path)
+                .arg(&sql)
+                .status();
+            if let Ok(s) = status {
+                if s.success() {
+                    cleared_db = true;
+                }
+            }
+        } else if on_path("clipvault") {
+            if let Ok(out) = Command::new("clipvault").arg("list").output() {
+                if out.status.success() {
+                    let text = String::from_utf8_lossy(&out.stdout);
+                    for line in text.lines() {
+                        if let Some(tab_pos) = line.find('\t') {
+                            let id_str = &line[..tab_pos];
+                            if let Ok(id_num) = id_str.trim().parse::<i64>() {
+                                if !pinned_ids.contains(&id_num) {
+                                    let _ = Command::new("clipvault")
+                                        .arg("delete")
+                                        .arg(line)
+                                        .status();
+                                }
+                            }
+                        }
+                    }
+                    cleared_db = true;
+                }
+            }
+        }
+    }
+
+    // Purge thumbnail cache (keeping thumbnails of pinned items)
     let thumb_dir = cache_file("clipvault-thumbs");
     let mut cleared_thumbs = 0;
     if thumb_dir.is_dir() {
@@ -236,16 +349,25 @@ pub fn wipe() -> i32 {
             for entry in entries.flatten() {
                 let p = entry.path();
                 if p.is_file() {
-                    let _ = fs::remove_file(p);
-                    cleared_thumbs += 1;
+                    let file_stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+                    let is_pinned_thumb = if let Ok(id_num) = file_stem.parse::<i64>() {
+                        pinned_ids.contains(&id_num)
+                    } else {
+                        false
+                    };
+                    if !is_pinned_thumb {
+                        let _ = fs::remove_file(p);
+                        cleared_thumbs += 1;
+                    }
                 }
             }
         }
     }
 
     println!(
-        "xiu clipboard: history {} and {cleared_thumbs} thumbnail(s) cleared",
-        if cleared_db { "wiped" } else { "database reset" }
+        "xiu clipboard: history {} (kept {} pinned) and {cleared_thumbs} thumbnail(s) cleared",
+        if cleared_db { "wiped" } else { "database reset" },
+        pinned_ids.len()
     );
     0
 }
@@ -300,5 +422,43 @@ mod tests {
     #[test]
     fn test_unknown_clipboard_action() {
         assert_eq!(clipboard(Some("invalid"), None), 2);
+    }
+
+    #[test]
+    fn test_wipe_with_pinned_items() {
+        let temp_dir = std::env::temp_dir().join(format!("xiu-clip-test-{}", std::process::id()));
+        let _ = fs::create_dir_all(&temp_dir);
+        let db_file = temp_dir.join("test-clip.db");
+        let state_dir = temp_dir.join("xiu");
+        let _ = fs::create_dir_all(&state_dir);
+        let pinned_file = state_dir.join("clipboard-pinned.json");
+
+        // Write pinned json: id 1 is pinned
+        let _ = fs::write(&pinned_file, "[\"1\", \"pinned text\"]");
+
+        if on_path("sqlite3") {
+            let init_sql = "CREATE TABLE clipboard (id integer PRIMARY KEY, content blob NOT NULL UNIQUE, last_updated integer NOT NULL); INSERT INTO clipboard VALUES (1, 'pinned text', 100); INSERT INTO clipboard VALUES (2, 'unpinned text', 200);";
+            let _ = Command::new("sqlite3").arg(&db_file).arg(init_sql).status();
+
+            unsafe {
+                std::env::set_var("CLIPVAULT_DB", &db_file);
+                std::env::set_var("XDG_STATE_HOME", &temp_dir);
+            }
+
+            assert_eq!(wipe(), 0);
+
+            let check_sql = "SELECT id FROM clipboard ORDER BY id;";
+            let out = Command::new("sqlite3").arg(&db_file).arg(check_sql).output().unwrap();
+            let ids = String::from_utf8_lossy(&out.stdout);
+            assert!(ids.contains('1'), "id 1 should be kept");
+            assert!(!ids.contains('2'), "id 2 should be wiped");
+
+            unsafe {
+                std::env::remove_var("CLIPVAULT_DB");
+                std::env::remove_var("XDG_STATE_HOME");
+            }
+        }
+
+        let _ = fs::remove_dir_all(temp_dir);
     }
 }

@@ -58,6 +58,7 @@ DEPLOY_SET = [
     ("browser",    "browser-integration",                   "xiu/browser-integration"),
     ("kdeglobals", "kde/kdeglobals",                        "kdeglobals"),
     ("session",    "systemd/user/hyprland-session.target",  "systemd/user/hyprland-session.target"),
+    ("clipboard-cleanup", "systemd/user/xiu-clipboard-cleanup.service", "systemd/user/xiu-clipboard-cleanup.service"),
 ]
 
 # Personal bootloader entries that never deploy. A generic grub-theme installer

@@ -1,0 +1,13 @@
+[Unit]
+Description=Xiu clipboard session cleanup
+Documentation=man:xiu(1)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStop=/bin/sh -c 'exec xiu clipboard wipe'
+
+[Install]
+WantedBy=graphical-session.target

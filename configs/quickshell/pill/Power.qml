@@ -58,6 +58,9 @@ PillSurface {
     readonly property int splitAfter: 2
 
     function run(a) {
+        if (a.key === "reboot" || a.key === "shutdown" || a.key === "logout") {
+            Quickshell.execDetached(["xiu", "clipboard", "wipe"]);
+        }
         if (a.dispatch && a.dispatch.length)
             Hyprland.dispatch(a.dispatch);
         else

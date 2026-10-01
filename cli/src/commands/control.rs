@@ -637,6 +637,9 @@ fn is_proc_running(name: &str) -> bool {
 }
 
 fn teardown_session() {
+    // 0. Wipe unpinned clipboard history before ending session
+    let _ = crate::commands::clipboard::wipe();
+
     // 1. Kill watchdogs immediately so nothing can respawn
     let _ = Command::new("pkill").args(["-KILL", "-f", "watchdog.sh"]).status();
     let _ = Command::new("pkill").args(["-KILL", "-f", "xiu watchdog"]).status();
