@@ -51,6 +51,14 @@
       "names": { "arch": "hyprpolkitagent", "debian": "hyprpolkitagent", "fedora": "hyprpolkitagent", "suse": "hyprpolkitagent", "gentoo": "sys-auth/hyprpolkitagent" },
       "repo": { "gentoo": "overlay:hyproverlay", "fedora": "copr:solopasha/hyprland" }, "fallback": null },
 
+    { "id": "gnome-keyring", "group": "core", "required": true, "desc": "Encrypted keyring daemon providing Secret Service for gh, git, and apps", "aur": false,
+      "names": { "arch": "gnome-keyring", "debian": "gnome-keyring", "fedora": "gnome-keyring", "suse": "gnome-keyring", "gentoo": "gnome-base/gnome-keyring" },
+      "fallback": null },
+
+    { "id": "libsecret", "group": "core", "required": true, "desc": "Secret Service library and credential management tool", "aur": false,
+      "names": { "arch": "libsecret", "debian": "libsecret-tools", "fedora": "libsecret", "suse": "libsecret-tools", "gentoo": "app-crypt/libsecret" },
+      "fallback": null },
+
     { "id": "hypridle", "group": "core", "required": true, "desc": "Dims the screen and locks on idle", "aur": false,
       "names": { "arch": "hypridle", "debian": "hypridle", "fedora": "hypridle", "suse": "hypridle", "gentoo": "gui-apps/hypridle" },
       "repo": { "gentoo": "overlay:hyproverlay", "fedora": "copr:solopasha/hyprland" }, "fallback": null },

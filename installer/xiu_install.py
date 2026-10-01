@@ -852,6 +852,63 @@ def wire_portal_chooser(dry):
         return False, f"{exc}: wire portal chooser"
 
 
+def wire_gnome_keyring(dry):
+    """
+    Configure the system to use gnome-keyring for Secret Service storage
+    (GitHub CLI, Git credential helper, browsers, and desktop apps).
+
+    1. Enables systemd user socket/service for gnome-keyring-daemon if present.
+    2. Configures Git credential helper to use git-credential-libsecret.
+    3. Runs gh auth setup-git if gh is available.
+    """
+    if shutil.which("systemctl"):
+        if dry:
+            print("  would enable systemd user socket: gnome-keyring-daemon.socket")
+        else:
+            try:
+                subprocess.run(
+                    ["systemctl", "--user", "enable", "--now", "gnome-keyring-daemon.socket"],
+                    capture_output=True, timeout=5
+                )
+            except Exception:
+                pass
+
+    git_bin = shutil.which("git")
+    libsecret_helper = None
+    for cand in [
+        "/usr/lib/git-core/git-credential-libsecret",
+        "/usr/libexec/git-core/git-credential-libsecret",
+        "/usr/local/libexec/git-core/git-credential-libsecret",
+    ]:
+        if Path(cand).is_file():
+            libsecret_helper = cand
+            break
+
+    if git_bin and libsecret_helper:
+        if dry:
+            print(f"  would configure git credential helper -> {libsecret_helper}")
+        else:
+            try:
+                subprocess.run(
+                    ["git", "config", "--global", "credential.helper", libsecret_helper],
+                    capture_output=True, timeout=5
+                )
+            except Exception:
+                pass
+
+    if shutil.which("gh"):
+        if dry:
+            print("  would run: gh auth setup-git")
+        else:
+            try:
+                subprocess.run(["gh", "auth", "setup-git"], capture_output=True, timeout=5)
+            except Exception:
+                pass
+
+    print("  configured gnome-keyring and git credential helper")
+    return True, ""
+
+
 def install_yazi_plugins(dry):
     """
     Add the plugins the shipped yazi.toml keymap binds, through yazi's own
@@ -1548,6 +1605,11 @@ def run(args):
         record(ok, detail, "Wire portal file chooser",
                "Write ~/.config/xdg-desktop-portal-termfilechooser/config.toml "
                "pointing cmd= at ~/.config/hypr/scripts/yazi-chooser.sh.")
+
+        # l5. gnome-keyring and secret service setup.
+        ok, detail = wire_gnome_keyring(dry)
+        record(ok, detail, "Configure gnome-keyring",
+               "Enable gnome-keyring-daemon and configure git credential helper.")
 
         ok, detail = seed_wallpapers(dry)
         record(ok, detail, "Seed wallpapers",

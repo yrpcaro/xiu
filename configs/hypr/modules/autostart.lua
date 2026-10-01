@@ -1,4 +1,5 @@
 hl.on("hyprland.start", function()
+    hl.exec_cmd("gnome-keyring-daemon --start --components=secrets")
     hl.exec_cmd("xiu clipboard watch")
     hl.exec_cmd("xiu wallpaper init")
     hl.exec_cmd("xiu resizer --daemon")
