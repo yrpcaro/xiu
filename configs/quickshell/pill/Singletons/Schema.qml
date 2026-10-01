@@ -52,7 +52,8 @@ Singleton {
         appearance: ["clock", "palette", "shell"],
         idlelock: ["idle"],
         display: ["night"],
-        input: ["cursor"]
+        input: ["cursor"],
+        user: ["account"]
     })
 
     /** The visible title of each group in `groupOrder`. */
@@ -60,7 +61,8 @@ Singleton {
         appearance: { clock: "Clock & widgets", palette: "Palette", shell: "Shell" },
         idlelock: { idle: "Idle" },
         display: { night: "Night light" },
-        input: { cursor: "Cursor" }
+        input: { cursor: "Cursor" },
+        user: { account: "User settings" }
     })
 
     /** The visible title of one group, or "" for an ungrouped entry. */
@@ -287,6 +289,27 @@ Singleton {
                 { label: "Medium", value: "medium" },
                 { label: "Long", value: "long" }
             ]
+        },
+        // ── user & session ────────────────────────────────────────────────
+        userAvatar: {
+            page: "user", group: "account", order: 0,
+            label: "Profile picture", caption: "Set or remove user profile picture avatar",
+            control: "custom", type: "string", backend: "none", key: "avatar", def: ""
+        },
+        userPassword: {
+            page: "user", group: "account", order: 1,
+            label: "Password", caption: "Change login and sudo password",
+            control: "custom", type: "string", backend: "none", key: "passwd", def: ""
+        },
+        userShell: {
+            page: "user", group: "account", order: 2,
+            label: "Login shell", caption: "Change user login shell",
+            control: "custom", type: "string", backend: "none", key: "shell", def: ""
+        },
+        userName: {
+            page: "user", group: "account", order: 3,
+            label: "Full name", caption: "Change user full name and account details",
+            control: "custom", type: "string", backend: "none", key: "name", def: ""
         }
     })
 

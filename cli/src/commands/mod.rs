@@ -19,6 +19,7 @@ pub mod session;
 pub mod shell;
 pub mod theme;
 pub mod wallpaper;
+pub mod user;
 pub mod watchdog;
 pub mod window;
 pub mod yazi;

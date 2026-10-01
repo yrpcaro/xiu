@@ -20,7 +20,17 @@ pub fn shell(kill: bool, target: Option<&str>, args: &[String]) -> i32 {
 }
 
 pub fn open(surface: &str) -> i32 {
-    ipc_call("pill", &[surface, ""])
+    let mon = focused_monitor();
+    let pages = [
+        "user", "appearance", "look", "display", "input",
+        "animation", "keybinds", "workspaces", "idlelock",
+        "defaultapps", "updates",
+    ];
+    if pages.contains(&surface) {
+        ipc_call("pill", &["page", &mon, surface])
+    } else {
+        ipc_call("pill", &[surface, &mon])
+    }
 }
 
 

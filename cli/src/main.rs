@@ -29,7 +29,7 @@ fn dispatch(cli: &cli::Cli) -> i32 {
     use cli::Commands;
     use commands::{
         app_install, check, clipboard, control, default_app, device, display, guard,
-        keybinds, layout, media, resizer, session, shell, theme, wallpaper, watchdog,
+        keybinds, layout, media, resizer, session, shell, theme, user, wallpaper, watchdog,
         window, yazi,
     };
     match &cli.command {
@@ -138,5 +138,10 @@ fn dispatch(cli: &cli::Cli) -> i32 {
             extra,
         } => app_install::app_install(action, target.as_deref(), extra.as_deref()),
         Commands::Resizer { args } => resizer::resizer(args),
+        Commands::User {
+            action,
+            target,
+            value,
+        } => user::user(action, target.as_deref(), value.as_deref()),
     }
 }

@@ -386,4 +386,21 @@ fn screenshot_rejects_unknown_mode() {
         .stderr(contains("unknown argument: bogus"));
 }
 
+#[test]
+fn user_info_runs_cleanly() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .arg("user")
+        .assert()
+        .success()
+        .stdout(contains("User & Session").and(contains("username")));
+}
 
+#[test]
+fn user_avatar_status_runs_cleanly() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["user", "avatar", "status"])
+        .assert()
+        .success();
+}

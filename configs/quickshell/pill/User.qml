@@ -1,14 +1,16 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import "Singletons"
 
 /**
- * 人 USER & SESSION sub-surface: user profile information, active session
- * and desktop details, and quick management of user override configuration
- * files (~/.config/xiu/vars.lua and ~/.config/xiu/user.lua).
+ * 人 USER & SESSION sub-surface: user profile information, account management
+ * (profile picture, password, login shell, full name), active session and
+ * desktop details, and user override configuration files (~/.config/xiu/vars.lua
+ * and ~/.config/xiu/user.lua).
  */
 SettingsSurface {
     id: root
@@ -22,6 +24,11 @@ SettingsSurface {
     readonly property string userShell: Quickshell.env("SHELL") || "/bin/sh"
     readonly property string sessionType: Quickshell.env("XDG_SESSION_TYPE") || "wayland"
     readonly property string currentDesktop: Quickshell.env("XDG_CURRENT_DESKTOP") || "Hyprland"
+
+    property string faceUrl: ""
+    property bool hasFace: faceUrl.length > 0
+    property int faceNonce: 0
+    property string realName: ""
 
     readonly property string hostname: {
         var h = hostnameFile.text().trim();
@@ -73,11 +80,43 @@ SettingsSurface {
         printErrors: false
     }
 
+    Process {
+        id: probeFace
+        running: true
+        command: ["sh", "-c",
+            "h=\"$1\"; " +
+            "if [ -f \"$h/.face\" ]; then printf 'file://%s/.face' \"$h\"; " +
+            "elif [ -f \"$h/.face.icon\" ]; then printf 'file://%s/.face.icon' \"$h\"; fi",
+            "sh", root.homeDir]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var u = this.text.trim();
+                root.faceUrl = u.length > 0 ? (u + "?t=" + root.faceNonce) : "";
+            }
+        }
+    }
+
+    Process {
+        id: probeName
+        running: true
+        command: ["sh", "-c", "getent passwd \"$1\" | cut -d: -f5 | cut -d, -f1", "sh", root.username]
+        stdout: StdioCollector {
+            onStreamFinished: root.realName = this.text.trim()
+        }
+    }
+
+    function refreshFace() {
+        root.faceNonce += 1;
+        probeFace.running = true;
+    }
+
     onActiveChanged: {
         if (root.active) {
             varsView.reload();
             userView.reload();
             uptimeFile.reload();
+            root.refreshFace();
+            probeName.running = true;
         }
     }
 
@@ -105,6 +144,34 @@ SettingsSurface {
     Process {
         id: openDirProc
         command: ["sh", "-c", "mkdir -p \"$HOME/.config/xiu\" && (xdg-open \"$HOME/.config/xiu\" 2>/dev/null || true)"]
+    }
+
+    Process {
+        id: pickAvatarProc
+        command: ["xiu", "user", "avatar", "set"]
+        onExited: root.refreshFace()
+    }
+
+    Process {
+        id: removeAvatarProc
+        command: ["xiu", "user", "avatar", "remove"]
+        onExited: root.refreshFace()
+    }
+
+    Process {
+        id: passwdProc
+        command: ["xiu", "user", "passwd"]
+    }
+
+    Process {
+        id: shellProc
+        command: ["xiu", "user", "shell"]
+    }
+
+    Process {
+        id: nameProc
+        command: ["xiu", "user", "gecos"]
+        onExited: probeName.running = true
     }
 
     function openVars() {
@@ -154,17 +221,47 @@ SettingsSurface {
                     // Avatar Circle
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 36 * root.s
-                        height: 36 * root.s
+                        width: 44 * root.s
+                        height: 44 * root.s
                         radius: width / 2
                         color: Qt.alpha(Theme.accent, 0.15)
                         border.width: Metrics.hairW(root.s)
                         border.color: Qt.alpha(Theme.accent, 0.4)
+                        clip: true
+
+                        Image {
+                            id: faceImg
+                            anchors.fill: parent
+                            source: root.faceUrl
+                            fillMode: Image.PreserveAspectCrop
+                            smooth: true
+                            mipmap: true
+                            cache: false
+                            asynchronous: true
+                            visible: root.hasFace && faceImg.status === Image.Ready
+                            layer.enabled: true
+                            layer.effect: MultiEffect {
+                                maskEnabled: true
+                                maskSource: faceMask
+                            }
+                        }
+
+                        Item {
+                            id: faceMask
+                            anchors.fill: parent
+                            layer.enabled: true
+                            visible: false
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: width / 2
+                            }
+                        }
 
                         GlyphIcon {
                             anchors.centerIn: parent
-                            width: 18 * root.s
-                            height: 18 * root.s
+                            visible: !root.hasFace || faceImg.status !== Image.Ready
+                            width: 22 * root.s
+                            height: 22 * root.s
                             name: "user"
                             color: Theme.accent
                             stroke: 1.8
@@ -176,7 +273,7 @@ SettingsSurface {
                         spacing: 2 * root.s
 
                         Text {
-                            text: root.username
+                            text: root.realName.length > 0 ? root.realName : root.username
                             color: Theme.cream
                             font.family: Theme.font
                             font.pixelSize: Metrics.tTitle * root.s
@@ -217,6 +314,72 @@ SettingsSurface {
             }
         }
 
+        // Section: User Settings
+        SettingsGroupLabel {
+            s: root.s
+            leftPadding: 14 * root.s
+            text: "USER SETTINGS"
+        }
+
+        SettingsRow {
+            surface: root
+            icon: "user"
+            name: "Profile picture"
+            sub: root.hasFace ? "Custom avatar set (~/.face)" : "Default avatar icon"
+            control: Row {
+                spacing: 6 * root.s
+
+                SegPill {
+                    s: root.s
+                    option: ({ label: root.hasFace ? "Change" : "Set", value: "set" })
+                    onPicked: pickAvatarProc.running = true
+                }
+
+                SegPill {
+                    s: root.s
+                    visible: root.hasFace
+                    option: ({ label: "Remove", value: "remove" })
+                    onPicked: removeAvatarProc.running = true
+                }
+            }
+        }
+
+        SettingsRow {
+            surface: root
+            icon: "lock"
+            name: "Password"
+            sub: "Change login and sudo password"
+            control: SegPill {
+                s: root.s
+                option: ({ label: "Change", value: "passwd" })
+                onPicked: passwdProc.running = true
+            }
+        }
+
+        SettingsRow {
+            surface: root
+            icon: "keyboard"
+            name: "Login shell"
+            sub: root.userShell
+            control: SegPill {
+                s: root.s
+                option: ({ label: "Change", value: "shell" })
+                onPicked: shellProc.running = true
+            }
+        }
+
+        SettingsRow {
+            surface: root
+            icon: "type"
+            name: "Full name"
+            sub: root.realName.length > 0 ? root.realName : "Not set"
+            control: SegPill {
+                s: root.s
+                option: ({ label: "Edit", value: "name" })
+                onPicked: nameProc.running = true
+            }
+        }
+
         // Section: Session Details
         SettingsGroupLabel {
             s: root.s
@@ -231,19 +394,6 @@ SettingsSurface {
             sub: root.currentDesktop + " (" + root.sessionType + ")"
             control: Text {
                 text: "Wayland"
-                color: Theme.faint
-                font.family: Theme.font
-                font.pixelSize: Metrics.tBody * root.s
-            }
-        }
-
-        SettingsRow {
-            surface: root
-            icon: "keyboard"
-            name: "Login shell"
-            sub: root.userShell
-            control: Text {
-                text: root.userShell.split("/").pop()
                 color: Theme.faint
                 font.family: Theme.font
                 font.pixelSize: Metrics.tBody * root.s

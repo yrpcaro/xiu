@@ -287,4 +287,15 @@ one-shot: apply to every matching window (\"active\" targets focused window)"
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    /// User profile and account management (avatar, passwd, shell, gecos, info)
+    #[command(alias = "account")]
+    User {
+        /// avatar, passwd, shell, gecos, or info
+        #[arg(default_value = "info")]
+        action: String,
+        /// Sub-action (e.g. set, remove, status) or parameter
+        target: Option<String>,
+        /// Path or additional parameter
+        value: Option<String>,
+    },
 }
