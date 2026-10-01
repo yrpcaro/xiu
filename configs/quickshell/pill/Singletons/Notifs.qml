@@ -16,6 +16,7 @@ Singleton {
     property var userDismissed: ({})
     property var expireAt: ({})
     property var hookedIds: ({})
+    property bool dnd: Flags.dnd
 
     readonly property var tracked: server.trackedNotifications.values
     readonly property int count: tracked.length + history.length

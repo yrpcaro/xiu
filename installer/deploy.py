@@ -526,6 +526,16 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
                 if apply:
                     kde.write_text(new_text)
 
+    yamis_idx = Path.home() / ".local" / "share" / "icons" / icon_theme / "index.theme"
+    if yamis_idx.is_file():
+        idx_txt = yamis_idx.read_text()
+        if "Cosmic" in idx_txt:
+            cleaned = re.sub(r",?Cosmic,?", ",", idx_txt).replace(",,", ",").replace("=,", "=")
+            if cleaned != idx_txt:
+                actions.append({"step": "yamis-clean-cosmic", "path": str(yamis_idx)})
+                if apply:
+                    yamis_idx.write_text(cleaned)
+
     actions.append({"step": "grub-excluded", "files": GRUB_EXCLUDED,
                     "note": "personal bootloader entries, never deployed"})
     return actions

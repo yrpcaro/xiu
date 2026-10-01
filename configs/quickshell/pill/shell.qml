@@ -1,5 +1,3 @@
-//@ pragma UseQApplication
-
 import QtQuick
 import QtQuick.Effects
 import Quickshell

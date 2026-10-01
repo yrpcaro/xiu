@@ -302,6 +302,8 @@ def _yamis(pkg, family):
          "run": ["mkdir", "-p", ICON_DIR]},
         {"desc": "clone yet-another-monochrome-icon-set into user icon dir",
          "shell": f"rm -rf {shlex.quote(dest)} && git clone --depth=1 {shlex.quote(url)} {shlex.quote(dest)}"},
+        {"desc": "strip missing Cosmic theme from inheritance",
+         "shell": f"sed -i 's/Cosmic,//g; s/,Cosmic//g' {shlex.quote(os.path.join(dest, 'index.theme'))} 2>/dev/null || true"},
         {"desc": "build user icon theme cache",
          "shell": f"command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -f -t {shlex.quote(dest)} || true"},
     ]
