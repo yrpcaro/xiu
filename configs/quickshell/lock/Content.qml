@@ -31,21 +31,24 @@ Item {
     property bool reveal: false
 
     /**
-     * Avatar candidates, in order: the login-manager face icon, then
-     * AccountsService's copy. Falls through on load error, and when none load
-     * the ring shows the plain user glyph instead.
+     * Avatar resolution: probes the login-manager face icon, then
+     * AccountsService's copy, only loading when the file actually exists
+     * to avoid "Cannot open file" warnings.
      */
-    readonly property var faceCandidates: {
-        var home = Quickshell.env("HOME") || "";
-        var u = user.length > 0 ? user : (Quickshell.env("USER") || "");
-        var out = [];
-        if (home.length > 0)
-            out.push("file://" + home + "/.face");
-        if (u.length > 0)
-            out.push("file:///var/lib/AccountsService/icons/" + u);
-        return out;
+    property string faceUrl: ""
+
+    Process {
+        id: probeFace
+        running: true
+        command: ["sh", "-c",
+            "h=\"$1\"; u=\"$2\"; " +
+            "if [ -n \"$h\" ] && [ -f \"$h/.face\" ]; then printf 'file://%s/.face' \"$h\"; " +
+            "elif [ -n \"$u\" ] && [ -f \"/var/lib/AccountsService/icons/$u\" ]; then printf 'file:///var/lib/AccountsService/icons/%s' \"$u\"; fi",
+            "sh", Quickshell.env("HOME") || "", content.user.length > 0 ? content.user : (Quickshell.env("USER") || "")]
+        stdout: StdioCollector {
+            onStreamFinished: content.faceUrl = this.text.trim()
+        }
     }
-    property int faceIdx: 0
 
     /** Battery + network for the status bar. A desktop without a battery reports nothing. */
     readonly property var batDev: UPower.displayDevice
@@ -379,16 +382,12 @@ Item {
                 Image {
                     id: faceImg
                     anchors.fill: parent
-                    source: content.faceIdx < content.faceCandidates.length
-                        ? content.faceCandidates[content.faceIdx] : ""
+                    source: content.faceUrl
                     fillMode: Image.PreserveAspectCrop
                     smooth: true
                     mipmap: true
                     cache: false
                     asynchronous: true
-                    onStatusChanged: if (status === Image.Error
-                                          && content.faceIdx < content.faceCandidates.length - 1)
-                        content.faceIdx++
                     layer.enabled: true
                     layer.effect: MultiEffect {
                         maskEnabled: true
