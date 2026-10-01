@@ -83,6 +83,12 @@ hl.window_rule({
     workspace = "special:music",
 })
 
+hl.window_rule({
+    name      = "space-telegram",
+    match     = { class = "(org.telegram.desktop|TelegramDesktop)" },
+    workspace = "special:telegram",
+})
+
 -- Keep the pill from fading when the session lock hides and restores its layer,
 -- so it never pops back in out of sync with the shot the lock morph collapses onto.
 hl.layer_rule({

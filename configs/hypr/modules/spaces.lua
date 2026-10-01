@@ -4,6 +4,6 @@
 return {
 	-- key "D": Super+D for discord and discord workspace
 	{ id = "discord", name = "Discord", desc = "", key = "D", apps = { "discord", "vesktop" } },
-	-- No telegram space: Super+T spawns telegram directly (binds.lua);
-	-- strays herd back through the communication workspace toggle instead.
+	-- key "J": Super+J for telegram and telegram workspace
+	{ id = "telegram", name = "Telegram", desc = "", key = "J", apps = { "org.telegram.desktop", "TelegramDesktop" } },
 }

@@ -36,8 +36,16 @@ local defaults = {
     music = {
         spotify = { match = { { class = "[Ss]potify" } }, command = { "spotify-launcher" } },
     },
-    communication = {
-        telegram = { match = { { class = "org.telegram.desktop" } }, command = { "Telegram" } },
+    communication = {},
+    telegram = {
+        telegram = {
+            match = {
+                { class = "org.telegram.desktop" },
+                { class = "TelegramDesktop" },
+                { class = "telegram-desktop" },
+            },
+            command = { "Telegram" },
+        },
     },
     discord = {
         discord = { match = { { class = "discord" }, { class = "Discord" }, { class = "vesktop" }, { class = "Vesktop" } },
