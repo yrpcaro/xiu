@@ -1,11 +1,24 @@
 -- Xiu yazi init: plugin entry points and modern styling
 -- Uses th.icon.match(file) instead of deprecated file:icon()
 
--- 1. Full rounded borders for an ultra-modern aesthetic
+-- 1. Ultra-modern seamless rounded border layout (no sharp or mismatched edges)
 pcall(function()
-    require("full-border"):setup({
-        type = ui.Border.ROUNDED,
-    })
+    local old_build = Tab.build
+    Tab.build = function(self, ...)
+        local c = self._chunks
+        self._chunks = {
+            c[1]:pad(ui.Pad.y(1)),
+            c[2]:pad(ui.Pad.y(1)),
+            c[3]:pad(ui.Pad.y(1)),
+        }
+        local style = th.mgr.border_style
+        self._base = ya.list_merge(self._base or {}, {
+            ui.Border(ui.Edge.ALL):area(self._area):type(ui.Border.ROUNDED):style(style),
+            ui.Border(ui.Edge.RIGHT):area(c[1]):type(ui.Border.PLAIN):style(style),
+            ui.Border(ui.Edge.RIGHT):area(c[2]):type(ui.Border.PLAIN):style(style),
+        })
+        old_build(self, ...)
+    end
 end)
 
 -- 2. Modern statusline & deprecation guard (yatline)

@@ -48,6 +48,10 @@ Item {
     readonly property bool muted: sink && sink.audio ? sink.audio.muted : false
     readonly property real volume: sink && sink.audio ? Math.max(0, Math.min(1, sink.audio.volume)) : 0
 
+    readonly property var source: Pipewire.defaultAudioSource
+    readonly property bool micMuted: source && source.audio ? source.audio.muted : false
+    readonly property real micVolume: source && source.audio ? Math.max(0, Math.min(1, source.audio.volume)) : 0
+
     readonly property real desiredW: kind === "workspace" ? Math.max(120 * s, wsIndicator.implicitWidth + 40 * s)
         : (kind === "track" ? 344 * s : (kind === "record" ? 256 * s : 248 * s))
     readonly property real desiredH: kind === "track" ? 64 * s : 44 * s
@@ -105,7 +109,7 @@ Item {
             return false;
         if (which !== "workspace" && !onFocusedMonitor)
             return false;
-        if (which === "track" && flashing && (kind === "volume" || kind === "brightness"))
+        if (which === "track" && flashing && (kind === "volume" || kind === "brightness" || kind === "mic"))
             return false;
         if (which === "track")
             holdExtends = 0;
@@ -164,13 +168,19 @@ Item {
     }
 
     PwObjectTracker {
-        objects: [root.sink].filter(Boolean)
+        objects: [root.sink, root.source].filter(Boolean)
     }
 
     Connections {
         target: root.sink && root.sink.audio ? root.sink.audio : null
         function onVolumesChanged() { root.flash("volume"); }
         function onMutedChanged() { root.flash("volume"); }
+    }
+
+    Connections {
+        target: root.source && root.source.audio ? root.source.audio : null
+        function onVolumesChanged() { root.flash("mic"); }
+        function onMutedChanged() { root.flash("mic"); }
     }
 
     Connections {
@@ -255,6 +265,61 @@ Item {
                 width: parent.width * Math.max(0, Math.min(1, root.volume))
                 radius: parent.radius
                 color: root.muted ? Theme.vermDim : Theme.vermLit
+                Behavior on width { enabled: root.flashing && root.opacity > 0.8; NumberAnimation { duration: Motion.fast } }
+                Behavior on color { ColorAnimation { duration: Motion.fast } }
+            }
+        }
+    }
+
+    Item {
+        id: micRow
+        anchors.fill: parent
+        opacity: root.kind === "mic" ? 1 : 0
+        visible: opacity > 0.01
+        Behavior on opacity { NumberAnimation { duration: 150 } }
+
+        GlyphIcon {
+            id: micGlyph
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            width: 17 * root.s
+            height: 17 * root.s
+            name: root.micMuted ? "mic-off" : "mic"
+            color: root.micMuted ? Theme.dim : Theme.iconDim
+            stroke: 1.7
+        }
+
+        Text {
+            id: micPct
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            width: 32 * root.s
+            horizontalAlignment: Text.AlignRight
+            text: Math.round(root.micVolume * 100) + "%"
+            color: root.micMuted ? Theme.dim : Theme.cream
+            font.family: Theme.font
+            font.pixelSize: 11 * root.s
+            font.weight: Font.DemiBold
+            font.features: { "tnum": 1 }
+        }
+
+        Rectangle {
+            anchors.left: micGlyph.right
+            anchors.leftMargin: 12 * root.s
+            anchors.right: micPct.left
+            anchors.rightMargin: 12 * root.s
+            anchors.verticalCenter: parent.verticalCenter
+            height: 4 * root.s
+            radius: 2 * root.s
+            color: Theme.threadBg
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: parent.width * Math.max(0, Math.min(1, root.micVolume))
+                radius: parent.radius
+                color: root.micMuted ? Theme.vermDim : Theme.vermLit
                 Behavior on width { enabled: root.flashing && root.opacity > 0.8; NumberAnimation { duration: Motion.fast } }
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
             }

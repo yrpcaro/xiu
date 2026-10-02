@@ -34,6 +34,10 @@ prepend_keymap = [
     { on = ["g", "p"], run = "cd ~/mnt/phone", desc = "Go to the phone mount" },
 
     # ── power-user tails ──────────────────────────────────────────────
+    # drag and drop (ripdrag): drag selected or hovered files out, or open drop target
+    { on = "<C-d>", run = 'shell --confirm "ripdrag -x -i -T \"$@\""', desc = "Drag and drop selected files" },
+    { on = "<C-n>", run = 'shell --confirm "ripdrag -x -i -T \"$0\""', desc = "Drag and drop hovered file" },
+    { on = "<C-y>", run = 'shell --confirm "ripdrag -d \"$PWD\""', desc = "Drop files into current folder" },
     # recover from the trash (pairs with the rm→rip graveyard's `rip -u`)
     { on = "u", run = "plugin restore", desc = "Restore a trashed file" },
     # open a shell in the current directory (fish)

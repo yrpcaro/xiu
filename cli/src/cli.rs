@@ -203,6 +203,11 @@ pub enum Commands {
         path: Option<String>,
         /// Output file path
         out: Option<String>,
+        /// Debug or modal flag from xdg-desktop-portal-termfilechooser
+        debug: Option<String>,
+        /// Trailing arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        extra: Vec<String>,
     },
     /// Toggle window in/out of special workspace or scratchpad
     #[command(alias = "special-toggle", alias = "scratchpad")]

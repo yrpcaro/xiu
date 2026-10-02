@@ -119,6 +119,8 @@ fn pick_avatar_interactive() -> Option<PathBuf> {
         Some("0"),
         Some(&home),
         tmp_path.to_str(),
+        None,
+        &[],
     );
     if code == 0 && tmp_path.is_file() {
         if let Ok(content) = fs::read_to_string(&tmp_path) {

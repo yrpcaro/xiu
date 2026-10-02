@@ -69,6 +69,8 @@ pub fn yazi_chooser(
     save: Option<&str>,
     path: Option<&str>,
     out: Option<&str>,
+    _debug: Option<&str>,
+    _extra: &[String],
 ) -> i32 {
     let _multiple = multiple.unwrap_or("0");
     let directory = directory.unwrap_or("0");

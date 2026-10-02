@@ -133,10 +133,8 @@ Singleton {
             property int idleScreenOffMin: 6
             property int idleSuspendMin: 0
             property string weatherCity: ""
-            /** Weather source: "open-meteo" (keyless default) or "accuweather". */
+            /** Weather source: "open-meteo" (keyless default). */
             property string weatherBackend: "open-meteo"
-            /** AccuWeather API key; empty leaves the backend on Open-Meteo. */
-            property string weatherKey: ""
             property bool musicViz: true
             property bool gameMode: false
             property bool gamePrevDnd: false
