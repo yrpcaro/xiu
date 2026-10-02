@@ -20,19 +20,19 @@ EOF
 chmod +x "$fake"/notify-send "$fake"/wl-copy
 export PATH="$fake:$PATH"
 
-"$here/launch-guard.sh" Broken "" "" sh -c 'echo boom >&2; exit 127'
+xiu launch-guard Broken "" "" sh -c 'echo boom >&2; exit 127'
 grep -q 'Broken failed (exit 127)' "$fake/notify.args"
 grep -q '^boom$' "$fake/notify.args"
 grep -q '^Broken: exit 127$' "$fake/clip"
 grep -q '^boom$' "$fake/clip"
 
 rm -f "$fake/notify.args" "$fake/clip"
-"$here/launch-guard.sh" Fine "" "" sh -c 'echo warn >&2; exit 0'
+xiu launch-guard Fine "" "" sh -c 'echo warn >&2; exit 0'
 [ ! -e "$fake/notify.args" ]
 [ ! -e "$fake/clip" ]
 
 rm -f "$fake/notify.args"
-"$here/launch-guard.sh" Missing "" "" definitely-not-a-binary-xyz
+xiu launch-guard Missing "" "" definitely-not-a-binary-xyz
 grep -q 'Missing failed (exit 127)' "$fake/notify.args"
 
 echo ok

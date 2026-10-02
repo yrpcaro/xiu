@@ -672,8 +672,8 @@ def _selftest():
         check("?~/.cache/ricelin/ghostty-colors" in gh,
               "ghostty config-file uses the home-relative colors include")
         idletxt = (root / "hypr" / "hypridle.conf").read_text()
-        check(str(Path.home()) + "/.config/hypr/scripts/lock.sh" in idletxt,
-              "hypridle lock_cmd points at the real home")
+        check("xiu lock" in idletxt or str(Path.home()) + "/.config/hypr/scripts/lock.sh" in idletxt,
+              "hypridle lock_cmd invokes xiu lock")
         # ghosttype.lua ships in some upstream trees and not others; the
         # neutralize step is gated the same way, so only check when present.
         ght = root / "hypr" / "ghosttype.lua"
@@ -771,7 +771,7 @@ def _selftest():
         neutralize(config_root=root, apply=True)
         check((root / "fish" / "config.fish").read_text() != fish_user,
               "neutralize keeps the shipped config.fish, user fish gone for good")
-        check((root / "hypr" / "scripts" / "lock.sh").exists(),
+        check((root / "hypr" / "hyprland.lua").exists(),
               "non-protected code files still refreshed on re-deploy")
 
     # 11. drift guard: PRESERVED is a hand mirror of the update engine's PROTECTED
