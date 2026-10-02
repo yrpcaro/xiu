@@ -778,13 +778,23 @@ def _selftest():
     # (the engine ships standalone and can't be imported at runtime). Adding a
     # protected file to one list but not the other silently splits the two update
     # paths, so the selftest holds them byte-equal.
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(
-        "_xiu_update", REPO_ROOT / "configs" / "hypr" / "scripts" / "xiu-update.py")
-    engine = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(engine)
-    check(PRESERVED == engine.PROTECTED,
-          "PRESERVED matches the update engine's PROTECTED list")
+    rust_update = REPO_ROOT / "cli" / "src" / "commands" / "update.rs"
+    if rust_update.exists():
+        import re
+        txt = rust_update.read_text()
+        m = re.search(r"pub const PROTECTED:\s*&\[&str\]\s*=\s*&\[(.*?)\];", txt, re.DOTALL)
+        if m:
+            rust_protected = [s.strip().strip('"') for s in m.group(1).split(",") if s.strip().strip('"')]
+            check(PRESERVED == rust_protected,
+                  "PRESERVED matches the update engine's PROTECTED list")
+    elif (REPO_ROOT / "configs" / "hypr" / "scripts" / "xiu-update.py").exists():
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "_xiu_update", REPO_ROOT / "configs" / "hypr" / "scripts" / "xiu-update.py")
+        engine = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(engine)
+        check(PRESERVED == engine.PROTECTED,
+              "PRESERVED matches the update engine's PROTECTED list")
 
     print(f"\n:: all {passed} checks passed")
     return 0

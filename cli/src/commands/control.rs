@@ -7,8 +7,9 @@
 use crate::helpers::{git_out, run_status};
 use crate::json;
 use crate::ui::{act, ctl_die, gap, note, row, sec, skin};
+use std::collections::HashSet;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
@@ -29,13 +30,6 @@ pub fn state_file(name: &str) -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|_| home_path(&[".local", "state"]));
     base.join(name)
-}
-
-fn engine_path() -> PathBuf {
-    let base = std::env::var("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| home_path(&[".config"]));
-    base.join("hypr/scripts/xiu-update.py")
 }
 
 /// Expand a target argument into the surfaces it names, falling back to
@@ -247,52 +241,68 @@ pub fn status() -> i32 {
     0
 }
 
-/// Run the update engine and parse its single-JSON-object output. The engine
-/// always exits 0 with an error object for handled failures, so a non-zero
-/// exit here is a hard failure (python missing, engine crashed).
-fn engine_call(mode: &str, extra: &[&str]) -> Result<json::Json, String> {
-    let engine = engine_path();
-    if !engine.is_file() {
-        return Err(format!("update engine missing ({})", engine.display()));
-    }
-    let output = Command::new("python3")
-        .arg(&engine)
-        .arg(mode)
-        .args(extra)
-        .output()
-        .map_err(|e| format!("python3 unavailable ({e})"))?;
-    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if output.status.success() {
-        if let Ok(value) = json::parse(&text) {
-            return Ok(value);
-        }
-    }
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    Err(if stderr.is_empty() {
-        format!("update {mode} produced no result")
-    } else {
-        stderr
-    })
-}
-
-pub fn update(action: Option<&str>, sha: Option<&str>) -> i32 {
+pub fn update(
+    action: Option<&str>,
+    sha: Option<&str>,
+    remote: Option<&str>,
+    config_root: Option<&str>,
+    take: Option<&str>,
+    install_deps: Option<&str>,
+    json_out: bool,
+) -> i32 {
     let k = skin();
+    let remote_str = remote.unwrap_or(crate::commands::update::DEFAULT_REMOTE);
+    let config_root_path = config_root
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home_path(&[".config"]));
+
+    let take_set: HashSet<String> = take
+        .unwrap_or("")
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .collect();
+
+    let install_set: HashSet<String> = install_deps
+        .unwrap_or("")
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .collect();
+
+    if json_out {
+        let res = match action {
+            Some("baseline") => crate::commands::update::baseline(
+                &config_root_path,
+                sha.map(str::to_string),
+            ),
+            _ => crate::commands::update::run(
+                action.unwrap_or("check"),
+                remote_str,
+                &config_root_path,
+                take_set,
+                install_set,
+            ),
+        };
+        println!("{}", res.to_json());
+        return 0;
+    }
+
     match action {
-        None => interactive_update(&k),
-        Some("check") => run_update_check(&k),
-        Some("apply") => run_update_apply(&k),
-        Some("baseline") => run_update_baseline(&k, sha),
+        None => interactive_update(&k, remote_str, &config_root_path),
+        Some("check") => run_update_check(&k, remote_str, &config_root_path),
+        Some("apply") => run_update_apply(&k, remote_str, &config_root_path, take_set, install_set),
+        Some("baseline") => run_update_baseline(&k, &config_root_path, sha),
         Some(other) => {
             ctl_die(&k, &format!("unknown update action '{other}' (check, apply or baseline)"))
         }
     }
 }
 
-fn run_update_check(k: &crate::ui::Skin) -> i32 {
-    let check = match engine_call("check", &[]) {
-        Ok(v) => v,
-        Err(e) => return ctl_die(k, &e),
-    };
+fn run_update_check(k: &crate::ui::Skin, remote: &str, config_root: &Path) -> i32 {
+    let check = crate::commands::update::run("check", remote, config_root, HashSet::new(), HashSet::new());
     let status = check.get("status").and_then(json::Json::as_str).unwrap_or("error");
     match status {
         "devmode" => {
@@ -327,12 +337,14 @@ fn run_update_check(k: &crate::ui::Skin) -> i32 {
     }
 }
 
-fn run_update_apply(k: &crate::ui::Skin) -> i32 {
-    let result = match engine_call("apply", &[]) {
-        Ok(v) => v,
-        Err(e) => return ctl_die(k, &format!("apply failed: {e}")),
-    };
-
+fn run_update_apply(
+    k: &crate::ui::Skin,
+    remote: &str,
+    config_root: &Path,
+    take: HashSet<String>,
+    install_deps: HashSet<String>,
+) -> i32 {
+    let result = crate::commands::update::run("apply", remote, config_root, take, install_deps);
     let status = result.get("status").and_then(json::Json::as_str).unwrap_or("ok");
     let version = result.get("version").and_then(json::Json::as_str).unwrap_or("");
     act(k, "update apply", &format!("{status} {version}"));
@@ -342,29 +354,16 @@ fn run_update_apply(k: &crate::ui::Skin) -> i32 {
     0
 }
 
-fn run_update_baseline(k: &crate::ui::Skin, sha: Option<&str>) -> i32 {
-    let mut args = Vec::new();
-    let flag;
-    if let Some(s) = sha {
-        flag = format!("--sha={s}");
-        args.push(flag.as_str());
-    }
-    let result = match engine_call("baseline", &args) {
-        Ok(v) => v,
-        Err(e) => return ctl_die(k, &format!("baseline failed: {e}")),
-    };
-
+fn run_update_baseline(k: &crate::ui::Skin, config_root: &Path, sha: Option<&str>) -> i32 {
+    let result = crate::commands::update::baseline(config_root, sha.map(str::to_string));
     let status = result.get("status").and_then(json::Json::as_str).unwrap_or("ok");
     let sha_val = result.get("syncedSha").and_then(json::Json::as_str).unwrap_or("");
     act(k, "baseline", &format!("{status} {sha_val}"));
     0
 }
 
-fn interactive_update(k: &crate::ui::Skin) -> i32 {
-    let check = match engine_call("check", &[]) {
-        Ok(v) => v,
-        Err(e) => return ctl_die(k, &e),
-    };
+fn interactive_update(k: &crate::ui::Skin, remote: &str, config_root: &Path) -> i32 {
+    let check = crate::commands::update::run("check", remote, config_root, HashSet::new(), HashSet::new());
     let status = check.get("status").and_then(json::Json::as_str).unwrap_or("error");
     match status {
         "devmode" => {
@@ -439,27 +438,16 @@ fn interactive_update(k: &crate::ui::Skin) -> i32 {
         }
     }
 
-    let ids: Vec<String> = check
-        .get("missingDeps")
-        .and_then(json::Json::as_arr)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|d| d.get("id").and_then(json::Json::as_str))
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default();
-    let joined = ids.join(",");
-    let result = if !joined.is_empty() {
-        engine_call("apply", &["--install-deps", &joined])
-    } else {
-        engine_call("apply", &[])
-    };
-    let result = match result {
-        Ok(v) => v,
-        Err(e) => return ctl_die(k, &format!("apply failed: {e}")),
-    };
+    let mut install_ids = HashSet::new();
+    if let Some(items) = check.get("missingDeps").and_then(json::Json::as_arr) {
+        for d in items {
+            if let Some(id) = d.get("id").and_then(json::Json::as_str) {
+                install_ids.insert(id.to_string());
+            }
+        }
+    }
+
+    let result = crate::commands::update::run("apply", remote, config_root, HashSet::new(), install_ids);
 
     if let Some(failures) = result.get("depFailures").and_then(json::Json::as_arr) {
         if !failures.is_empty() {

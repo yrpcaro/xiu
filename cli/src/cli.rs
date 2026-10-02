@@ -169,6 +169,21 @@ pub enum Commands {
         /// Commit SHA flag for baseline
         #[arg(short, long)]
         commit: Option<String>,
+        /// Remote git URL override
+        #[arg(long)]
+        remote: Option<String>,
+        /// Config root directory override
+        #[arg(long)]
+        config_root: Option<String>,
+        /// Comma-separated list of protected files to take upstream for
+        #[arg(long)]
+        take: Option<String>,
+        /// Comma-separated list of package IDs to install
+        #[arg(long)]
+        install_deps: Option<String>,
+        /// Output single raw JSON object
+        #[arg(long)]
+        json: bool,
     },
     /// What's running and the installed version
     Status,

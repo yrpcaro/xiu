@@ -266,13 +266,24 @@ def _check_token_mirrors():
         assert set(m.group(1).split()) == set(_FAMILY_TOKENS[fam]), \
             f"install.sh {var} drifted from _FAMILY_TOKENS[{fam!r}]"
 
-    engine_path = os.path.join(root, "configs", "hypr", "scripts", "xiu-update.py")
-    spec = importlib.util.spec_from_file_location("_xiu_update", engine_path)
-    engine = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(engine)
-    for fam in _FAMILY_TOKENS:
-        assert set(engine.FAMILY_TOKENS[fam]) == set(_FAMILY_TOKENS[fam]), \
-            f"engine FAMILY_TOKENS[{fam!r}] drifted from distro.py"
+    rust_update = os.path.join(root, "cli", "src", "commands", "update.rs")
+    if os.path.exists(rust_update):
+        txt = open(rust_update).read()
+        for fam, var in (("arch", "ARCH_IDS"), ("debian", "DEBIAN_IDS"),
+                         ("fedora", "FEDORA_IDS"), ("suse", "SUSE_IDS"),
+                         ("gentoo", "GENTOO_IDS")):
+            m = re.search(var + r":\s*&\[&str\]\s*=\s*&\[(.*?)\];", txt, re.DOTALL)
+            assert m, f"{var} missing from update.rs"
+            tokens = {s.strip().strip('"') for s in m.group(1).split(",") if s.strip().strip('"')}
+            assert tokens == set(_FAMILY_TOKENS[fam]), \
+                f"engine {var} drifted from distro.py"
+    elif os.path.exists(engine_path):
+        spec = importlib.util.spec_from_file_location("_xiu_update", engine_path)
+        engine = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(engine)
+        for fam in _FAMILY_TOKENS:
+            assert set(engine.FAMILY_TOKENS[fam]) == set(_FAMILY_TOKENS[fam]), \
+                f"engine FAMILY_TOKENS[{fam!r}] drifted from distro.py"
 
 
 if __name__ == "__main__":

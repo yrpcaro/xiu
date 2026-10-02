@@ -5,17 +5,154 @@ network, no touching the user's real config. Builds a fake origin with a couple 
 commits (some carrying changelog: trailers, some not) and a fake live config, then
 drives check/apply through the engine and asserts the merge classes behave.
 """
-import importlib.util
+import json
 import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-spec = importlib.util.spec_from_file_location("xiu_update", HERE / "xiu-update.py")
-ru = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(ru)
+
+class XiuUpdateCLI:
+    @staticmethod
+    def data_dir():
+        base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+        return Path(base) / "xiu-update"
+
+    @staticmethod
+    def manifest_path():
+        base = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+        return Path(base) / "xiu" / "update.json"
+
+    @staticmethod
+    def git(repo, *args, check=True):
+        return subprocess.run(
+            ["git", "-C", str(repo), *args],
+            capture_output=True, text=True, check=check,
+        ).stdout
+
+    @staticmethod
+    def target_path(config_root, rel):
+        config_root = Path(config_root)
+        if rel == "kde/kdeglobals":
+            return config_root / "kdeglobals"
+        if rel.startswith("portals/"):
+            return config_root / "xdg-desktop-portal" / rel[len("portals/"):]
+        if rel.startswith("browser-integration/"):
+            return config_root / "xiu" / "browser-integration" / rel[len("browser-integration/"):]
+        return config_root / rel
+
+    @staticmethod
+    def is_devmode(config_root):
+        config_root = Path(config_root)
+        for name in ("hypr", "quickshell"):
+            sub = config_root / name
+            if sub.is_symlink():
+                try:
+                    out = subprocess.run(
+                        ["git", "-C", str(sub.resolve()), "rev-parse", "--is-inside-work-tree"],
+                        capture_output=True, text=True, check=False,
+                    ).stdout.strip()
+                    if out == "true":
+                        return True
+                except OSError:
+                    pass
+        return False
+
+    @staticmethod
+    def migrate_legacy():
+        share = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+        new_clone = Path(share) / "xiu-update"
+        if not (new_clone / ".git").exists():
+            old_clone = Path(share) / "ricelin-update"
+            if (old_clone / ".git").exists():
+                try:
+                    os.rename(old_clone, new_clone)
+                except OSError:
+                    pass
+        new_man = XiuUpdateCLI.manifest_path()
+        if not new_man.exists():
+            state = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+            old_man = Path(state) / "ricelin" / "update.json"
+            if old_man.exists():
+                try:
+                    new_man.parent.mkdir(parents=True, exist_ok=True)
+                    os.rename(old_man, new_man)
+                except OSError:
+                    pass
+
+    @staticmethod
+    def load_manifest():
+        XiuUpdateCLI.migrate_legacy()
+        path = XiuUpdateCLI.manifest_path()
+        if not path.exists():
+            return {"syncedSha": None, "modules": {}}
+        return json.loads(path.read_text())
+
+    @staticmethod
+    def ensure_clone(remote, do_fetch=True):
+        clone = XiuUpdateCLI.data_dir()
+        if (clone / ".git").exists():
+            current = XiuUpdateCLI.git(clone, "remote", "get-url", "origin", check=False).strip()
+            if current and current != remote:
+                XiuUpdateCLI.git(clone, "remote", "set-url", "origin", remote)
+            if do_fetch:
+                XiuUpdateCLI.git(clone, "fetch", "origin")
+            return clone
+        clone.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            ["git", "clone", "--quiet", remote, str(clone)],
+            capture_output=True, text=True, check=True,
+        )
+        return clone
+
+    @staticmethod
+    def origin_head(clone):
+        for ref in ("origin/xiu", "origin/main"):
+            sha = XiuUpdateCLI.git(clone, "rev-parse", "--verify", f"{ref}^{{commit}}", check=False).strip()
+            if sha:
+                return sha
+        return XiuUpdateCLI.git(clone, "rev-parse", "HEAD").strip()
+
+    @staticmethod
+    def _sha_known(clone, sha):
+        if not sha:
+            return False
+        return subprocess.run(
+            ["git", "-C", str(clone), "cat-file", "-e", f"{sha}^{{commit}}"],
+            capture_output=True).returncode == 0
+
+    @staticmethod
+    def run(mode, remote, config_root, take, install_ids):
+        cmd = ["xiu", "update", mode, "--json", "--remote", str(remote), "--config-root", str(config_root)]
+        if take:
+            cmd.extend(["--take", ",".join(take)])
+        if install_ids:
+            cmd.extend(["--install-deps", ",".join(install_ids)])
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            return json.loads(res.stdout)
+        except Exception:
+            return {"status": "error", "error": res.stderr}
+
+    @staticmethod
+    def main(argv):
+        cmd = ["xiu", "update", "--json"] + [str(a) for a in argv]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode == 0 and res.stdout.strip():
+            print(res.stdout, end="")
+            return 0
+        out = {
+            "status": "error", "behind": 0, "fromDate": "", "toDate": "", "version": "",
+            "changelog": [], "codeChanged": False, "modules": [], "conflicts": [],
+            "missingDeps": [], "depFailures": [], "applied": False,
+            "restartNeeded": False, "error": res.stderr.strip() or "bad args"
+        }
+        print(json.dumps(out))
+        return 0
+
+
+ru = XiuUpdateCLI()
 
 
 def git(repo, *args):

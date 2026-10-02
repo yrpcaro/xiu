@@ -61,6 +61,54 @@ impl Json {
             _ => None,
         }
     }
+
+    /// Serialize this Json value into a standard JSON string.
+    pub fn to_json(&self) -> String {
+        match self {
+            Json::Null => "null".to_string(),
+            Json::Bool(b) => if *b { "true".to_string() } else { "false".to_string() },
+            Json::Num(n) => {
+                if n.fract() == 0.0 && *n >= i64::MIN as f64 && *n <= i64::MAX as f64 {
+                    format!("{}", *n as i64)
+                } else {
+                    format!("{n}")
+                }
+            }
+            Json::Str(s) => {
+                let mut out = String::with_capacity(s.len() + 2);
+                out.push('"');
+                for c in s.chars() {
+                    match c {
+                        '"' => out.push_str("\\\""),
+                        '\\' => out.push_str("\\\\"),
+                        '\n' => out.push_str("\\n"),
+                        '\r' => out.push_str("\\r"),
+                        '\t' => out.push_str("\\t"),
+                        '\x08' => out.push_str("\\b"),
+                        '\x0C' => out.push_str("\\f"),
+                        c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+                        c => out.push(c),
+                    }
+                }
+                out.push('"');
+                out
+            }
+            Json::Arr(items) => {
+                let parts: Vec<String> = items.iter().map(|it| it.to_json()).collect();
+                format!("[{}]", parts.join(","))
+            }
+            Json::Obj(pairs) => {
+                let parts: Vec<String> = pairs
+                    .iter()
+                    .map(|(k, v)| {
+                        let k_esc = Json::Str(k.clone()).to_json();
+                        format!("{}:{}", k_esc, v.to_json())
+                    })
+                    .collect();
+                format!("{{{}}}", parts.join(","))
+            }
+        }
+    }
 }
 
 impl fmt::Display for Json {
@@ -352,5 +400,14 @@ mod tests {
             .unwrap();
         assert_eq!(v.get("syncedSha").and_then(Json::as_str), Some(sha));
         assert!(v.get("modules").and_then(Json::as_arr).is_none());
+    }
+
+    #[test]
+    fn round_trips_to_json() {
+        let text = r#"{"applied":true,"behind":42,"changelog":["fix: something"],"status":"ok"}"#;
+        let v = parse(text).unwrap();
+        let serialized = v.to_json();
+        let v2 = parse(&serialized).unwrap();
+        assert_eq!(v, v2);
     }
 }

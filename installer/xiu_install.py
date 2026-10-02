@@ -1199,14 +1199,17 @@ def _seed_update_baseline(source, config_root, dry):
             capture_output=True, text=True, check=True).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return True, ""
+    if not head:
+        return True, ""
     engine = Path(config_root) / "hypr" / "scripts" / "xiu-update.py"
-    if not head or not engine.exists():
+    if shutil.which("xiu"):
+        cmd = ["xiu", "update", "baseline", "--sha", head, "--config-root", str(config_root)]
+    elif engine.exists():
+        cmd = [sys.executable, str(engine), "baseline", "--sha", head, "--config-root", str(config_root)]
+    else:
         return True, ""
     try:
-        result = subprocess.run(
-            [sys.executable, str(engine), "baseline", "--sha", head,
-             "--config-root", str(config_root)],
-            capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True)
     except OSError as exc:
         return False, str(exc)
     if result.returncode != 0:

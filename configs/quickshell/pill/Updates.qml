@@ -28,12 +28,6 @@ SettingsSurface {
     implicitHeight: content.implicitHeight
     rows: []
 
-    readonly property string engine: {
-        var rel = Qt.resolvedUrl("../../../hypr/scripts/xiu-update.py").toString();
-        if (rel.indexOf("file://") === 0)
-            return rel.substring(7);
-        return Quickshell.env("HOME") + "/.config/hypr/scripts/xiu-update.py";
-    }
 
     property string status: ""
     property string version: ""
@@ -281,7 +275,7 @@ SettingsSurface {
 
     Process {
         id: checkProc
-        command: ["python3", root.engine, "check"]
+        command: ["xiu", "update", "check", "--json"]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.checking = false;
@@ -300,7 +294,7 @@ SettingsSurface {
         property string takeArg: ""
         property string installArg: ""
         command: {
-            var c = ["python3", root.engine, "apply"];
+            var c = ["xiu", "update", "apply", "--json"];
             if (takeArg.length > 0)
                 c = c.concat(["--take", takeArg]);
             if (installArg.length > 0)
