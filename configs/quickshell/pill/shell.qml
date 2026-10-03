@@ -181,6 +181,7 @@ ShellRoot {
         function recorder(mon: string): void { root.toggleSurface(mon, "recorder"); }
         function screenrec(mon: string): void { root.toggleSurface(mon, "recorder"); }
         function record(mon: string): void { root.toggleSurface(mon, "recorder"); }
+        function weather(mon: string): void { root.toggleSurface(mon, "weather"); }
 
         /**
          * Quick-record keybind (SUPER+D): one button cycles the whole flow with no
