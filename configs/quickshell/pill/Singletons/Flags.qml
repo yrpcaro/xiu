@@ -46,7 +46,6 @@ Singleton {
     property alias idleSuspendMin: adapter.idleSuspendMin
     property alias weatherCity: adapter.weatherCity
     property alias weatherBackend: adapter.weatherBackend
-    property alias weatherKey: adapter.weatherKey
     property alias musicViz: adapter.musicViz
     property alias gameMode: adapter.gameMode
     property alias gamePrevDnd: adapter.gamePrevDnd

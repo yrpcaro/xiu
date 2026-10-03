@@ -211,7 +211,6 @@ SettingsSurface {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 4 * root.s
-                    horizontalAlignment: Text.AlignRight
 
                     Rectangle {
                         anchors.right: parent.right
@@ -265,9 +264,9 @@ SettingsSurface {
                 Column {
                     anchors.centerIn: parent
                     spacing: 2 * root.s
-                    horizontalAlignment: Text.AlignHCenter
 
                     Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
                         text: "WIND"
                         color: Theme.faint
                         font.family: Theme.font
@@ -276,6 +275,7 @@ SettingsSurface {
                         font.letterSpacing: 0.8 * root.s
                     }
                     Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
                         text: (Weather.windNow > 0 ? Weather.windNow + " km/h " + root.dirFor(Weather.windDir) : "Calm")
                         color: Theme.cream
                         font.family: Theme.font
@@ -297,9 +297,9 @@ SettingsSurface {
                 Column {
                     anchors.centerIn: parent
                     spacing: 2 * root.s
-                    horizontalAlignment: Text.AlignHCenter
 
                     Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
                         text: "HUMIDITY"
                         color: Theme.faint
                         font.family: Theme.font
@@ -308,6 +308,7 @@ SettingsSurface {
                         font.letterSpacing: 0.8 * root.s
                     }
                     Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
                         text: Weather.humidity + "%"
                         color: Theme.cream
                         font.family: Theme.font
@@ -329,9 +330,9 @@ SettingsSurface {
                 Column {
                     anchors.centerIn: parent
                     spacing: 2 * root.s
-                    horizontalAlignment: Text.AlignHCenter
 
                     Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
                         text: Weather.uvNow > 0 ? "UV / PRESSURE" : "PRESSURE"
                         color: Theme.faint
                         font.family: Theme.font
@@ -340,6 +341,7 @@ SettingsSurface {
                         font.letterSpacing: 0.8 * root.s
                     }
                     Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
                         text: Weather.uvNow > 0
                               ? ("UV " + Weather.uvNow + " · " + Weather.pressureNow + "hPa")
                               : (Weather.pressureNow > 0 ? Weather.pressureNow + " hPa" : "Normal")
@@ -389,7 +391,6 @@ SettingsSurface {
                             readonly property var entry: Weather.hourly[Math.min(hourItem.index, Weather.hourly.length - 1)]
                             spacing: 4 * root.s
                             width: 34 * root.s
-                            horizontalAlignment: Text.AlignHCenter
 
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
