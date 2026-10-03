@@ -29,7 +29,7 @@ fn dispatch(cli: &cli::Cli) -> i32 {
     use cli::Commands;
     use commands::{
         app_install, check, clipboard, control, default_app, device, display, guard,
-        keybinds, layout, media, resizer, session, shell, theme, user, wallpaper, watchdog,
+        keybinds, layout, media, resizer, session, shell, theme, user, wallcolors, wallpaper, watchdog,
         window, yazi,
     };
     match &cli.command {
@@ -74,6 +74,7 @@ fn dispatch(cli: &cli::Cli) -> i32 {
             preset.as_deref(),
             variant.as_deref(),
         ),
+        Commands::Wallcolors { args } => wallcolors::wallcolors(args),
         Commands::Layout { action, target } => layout::layout(action, target.as_deref()),
         Commands::Keybinds { action, combo } => keybinds::keybinds(action, combo.as_deref()),
         Commands::Browser => shell::browser(),

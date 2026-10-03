@@ -93,7 +93,7 @@ pub enum Commands {
         /// Optional target (e.g. on/off for strip)
         target: Option<String>,
     },
-    /// list, get, set <preset|dynamic> [-v VARIANT], preview <wallpaper>, dark, light, toggle (engine: wallcolors.py)
+    /// list, get, set <preset|dynamic> [-v VARIANT], preview <wallpaper>, dark, light, toggle (engine: wallcolors)
     Scheme {
         /// The scheme action: list, get, set, preview, dark, light, toggle
         #[arg(default_value = "get")]
@@ -117,6 +117,12 @@ pub enum Commands {
         /// Matugen variant
         #[arg(short, long)]
         variant: Option<String>,
+    },
+    /// Wallcolors palette generation and fan-out engine
+    Wallcolors {
+        /// Arguments for wallcolors engine
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
     },
     /// Keyboard layout: switch, get, format
     Layout {

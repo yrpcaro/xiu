@@ -109,6 +109,62 @@ impl Json {
             }
         }
     }
+
+    pub fn to_json_pretty(&self, indent: usize) -> String {
+        self.to_json_pretty_level(0, indent)
+    }
+
+    fn to_json_pretty_level(&self, level: usize, indent: usize) -> String {
+        let pad = " ".repeat(level * indent);
+        let inner_pad = " ".repeat((level + 1) * indent);
+        match self {
+            Json::Null | Json::Bool(_) | Json::Num(_) | Json::Str(_) => self.to_json(),
+            Json::Arr(items) => {
+                if items.is_empty() {
+                    return "[]".to_string();
+                }
+                let mut out = String::from("[\n");
+                for (i, it) in items.iter().enumerate() {
+                    out.push_str(&inner_pad);
+                    out.push_str(&it.to_json_pretty_level(level + 1, indent));
+                    if i + 1 < items.len() {
+                        out.push(',');
+                    }
+                    out.push('\n');
+                }
+                out.push_str(&pad);
+                out.push(']');
+                out
+            }
+            Json::Obj(pairs) => {
+                if pairs.is_empty() {
+                    return "{}".to_string();
+                }
+                let mut out = String::from("{\n");
+                for (i, (k, v)) in pairs.iter().enumerate() {
+                    out.push_str(&inner_pad);
+                    out.push_str(&Json::Str(k.clone()).to_json());
+                    out.push_str(": ");
+                    out.push_str(&v.to_json_pretty_level(level + 1, indent));
+                    if i + 1 < pairs.len() {
+                        out.push(',');
+                    }
+                    out.push('\n');
+                }
+                out.push_str(&pad);
+                out.push('}');
+                out
+            }
+        }
+    }
+}
+
+pub fn stringify(val: &Json) -> String {
+    val.to_json()
+}
+
+pub fn stringify_pretty(val: &Json, indent: usize) -> String {
+    val.to_json_pretty(indent)
 }
 
 impl fmt::Display for Json {

@@ -323,12 +323,14 @@ pub fn gamemode_strip(mode: &str) -> i32 {
     }
 }
 
-/// The palette engine is wallcolors.py; the CLI is its front door. Scheme
+/// The palette engine is wallcolors; the CLI is its front door. Scheme
 /// state survives wallpaper changes in its own state file, and an explicit
 /// change flips the pill's paletteMode so the shell actually listens.
 pub fn scheme(action: &str, value: Option<&str>, variant: Option<&str>) -> i32 {
-    let script = crate::helpers::wallcolors_script();
-    let run = |flags: &[&str]| run_status(Command::new("python3").arg(&script).args(flags));
+    let run = |flags: &[&str]| {
+        let args: Vec<String> = flags.iter().map(|s| s.to_string()).collect();
+        crate::commands::wallcolors::wallcolors(&args)
+    };
 
     match action {
         "list" => run(&["--list-presets"]),

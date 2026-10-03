@@ -475,19 +475,12 @@ fn palette_update() {
         }
     }
 
-    let wallcolors = crate::helpers::wallcolors_script();
-    if wallcolors.is_file() {
-        if palette_mode == "manual" {
-            let _ = Command::new("python3")
-                .arg(&wallcolors)
-                .args(["--hue", &manual_hue, &manual_dark])
-                .status();
-        } else {
-            let _ = Command::new("python3")
-                .arg(&wallcolors)
-                .arg(&show)
-                .status();
-        }
+    if palette_mode == "manual" {
+        let args = vec!["--hue".to_string(), manual_hue, manual_dark];
+        let _ = crate::commands::wallcolors::wallcolors(&args);
+    } else {
+        let args = vec![show.clone()];
+        let _ = crate::commands::wallcolors::wallcolors(&args);
     }
 
     let _ = Command::new("hyprctl").arg("reload").status();

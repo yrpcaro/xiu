@@ -1,6 +1,6 @@
 //! Palette generation, 24-bit TrueColor token computation, template rendering, and live OSC broadcast.
 
-use crate::helpers::{cache_file, run_status, wallcolors_script};
+use crate::helpers::cache_file;
 use std::fs;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
@@ -29,14 +29,7 @@ pub fn theme(
 }
 
 fn set_mode(mode: &str) -> i32 {
-    let script = wallcolors_script();
-    if !script.is_file() {
-        eprintln!("xiu theme: wallcolors.py not found ({})", script.display());
-        return 1;
-    }
-    let mut cmd = Command::new("python3");
-    cmd.arg(&script).arg("--mode").arg(mode);
-    let status = run_status(&mut cmd);
+    let status = crate::commands::wallcolors::wallcolors(&["--mode".to_string(), mode.to_string()]);
     if status == 0 {
         let _ = live_reload();
         let _ = Command::new("hyprctl").arg("reload").status();
@@ -45,14 +38,7 @@ fn set_mode(mode: &str) -> i32 {
 }
 
 fn toggle_mode() -> i32 {
-    let script = wallcolors_script();
-    if !script.is_file() {
-        eprintln!("xiu theme: wallcolors.py not found ({})", script.display());
-        return 1;
-    }
-    let mut cmd = Command::new("python3");
-    cmd.arg(&script).arg("--toggle");
-    let status = run_status(&mut cmd);
+    let status = crate::commands::wallcolors::wallcolors(&["--toggle".to_string()]);
     if status == 0 {
         let _ = live_reload();
         let _ = Command::new("hyprctl").arg("reload").status();
@@ -108,65 +94,56 @@ pub fn live_reload() -> i32 {
 }
 
 fn generate(target: Option<&str>, preset: Option<&str>, variant: Option<&str>) -> i32 {
-    let script = wallcolors_script();
-    if !script.is_file() {
-        eprintln!("xiu theme generate: wallcolors.py not found ({})", script.display());
-        return 1;
-    }
-
-    let mut cmd = Command::new("python3");
-    cmd.arg(&script);
-
+    let mut args = Vec::new();
     if let Some(p) = preset {
-        cmd.arg("--preset").arg(p);
+        args.push("--preset".to_string());
+        args.push(p.to_string());
         if let Some(v) = variant {
-            cmd.arg("--variant").arg(v);
+            args.push("--variant".to_string());
+            args.push(v.to_string());
         }
     } else if let Some(t) = target {
         if Path::new(t).is_file() {
-            cmd.arg("--preview").arg(t);
+            args.push("--preview".to_string());
+            args.push(t.to_string());
         } else {
-            cmd.arg("--preset").arg(t);
+            args.push("--preset".to_string());
+            args.push(t.to_string());
             if let Some(v) = variant {
-                cmd.arg("--variant").arg(v);
+                args.push("--variant".to_string());
+                args.push(v.to_string());
             }
         }
     } else {
-        cmd.arg("--state");
+        args.push("--state".to_string());
     }
-
-    run_status(&mut cmd)
+    crate::commands::wallcolors::wallcolors(&args)
 }
 
 fn apply(target: Option<&str>, preset: Option<&str>, variant: Option<&str>) -> i32 {
-    let script = wallcolors_script();
-    if !script.is_file() {
-        eprintln!("xiu theme apply: wallcolors.py not found ({})", script.display());
-        return 1;
-    }
-
-    let mut cmd = Command::new("python3");
-    cmd.arg(&script);
-
+    let mut args = Vec::new();
     if let Some(p) = preset {
-        cmd.arg("--preset").arg(p);
+        args.push("--preset".to_string());
+        args.push(p.to_string());
         if let Some(v) = variant {
-            cmd.arg("--variant").arg(v);
+            args.push("--variant".to_string());
+            args.push(v.to_string());
         }
     } else if let Some(t) = target {
         if Path::new(t).is_file() {
-            cmd.arg(t);
+            args.push(t.to_string());
         } else {
-            cmd.arg("--preset").arg(t);
+            args.push("--preset".to_string());
+            args.push(t.to_string());
             if let Some(v) = variant {
-                cmd.arg("--variant").arg(v);
+                args.push("--variant".to_string());
+                args.push(v.to_string());
             }
         }
     } else {
-        cmd.arg("--apply");
+        args.push("--apply".to_string());
     }
-
-    let status = run_status(&mut cmd);
+    let status = crate::commands::wallcolors::wallcolors(&args);
     if status == 0 {
         let _ = live_reload();
         let _ = Command::new("hyprctl").arg("reload").status();

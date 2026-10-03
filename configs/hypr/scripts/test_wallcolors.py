@@ -9,8 +9,119 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import wallcolors as wc  # noqa: E402
+import json
+import os
+import shutil
+import subprocess
+
+XIU_BIN = os.environ.get("XIU_BIN") or shutil.which("xiu") or str(Path.home() / ".local" / "bin" / "xiu")
+
+
+class XiuWallcolors:
+    @staticmethod
+    def _run(*args):
+        cmd = [XIU_BIN, "wallcolors", "--test-eval"] + list(args)
+        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return res.stdout.strip()
+
+    @staticmethod
+    def hue_sat_of(hex_color):
+        out = XiuWallcolors._run("hue_sat_of", hex_color)
+        return json.loads(out)
+
+    @staticmethod
+    def contrast_ratio(hex_a, hex_b):
+        out = XiuWallcolors._run("contrast_ratio", hex_a, hex_b)
+        return float(out)
+
+    @staticmethod
+    def rel_luminance(hex_color):
+        out = XiuWallcolors._run("rel_luminance", hex_color)
+        return float(out)
+
+    @staticmethod
+    def signed_arc(a_deg, b_deg):
+        out = XiuWallcolors._run("signed_arc", str(a_deg), str(b_deg))
+        return float(out)
+
+    @staticmethod
+    def circ_clamp(h_deg, lo_deg, hi_deg):
+        out = XiuWallcolors._run("circ_clamp", str(h_deg), str(lo_deg), str(hi_deg))
+        return float(out)
+
+    @staticmethod
+    def snap_to_band(hex_color, band_tuple):
+        out = XiuWallcolors._run("snap_to_band", hex_color, str(band_tuple[0]), str(band_tuple[1]))
+        return out
+
+    @staticmethod
+    def clamp_light(hex_color, target, bg_hex):
+        out = XiuWallcolors._run("clamp_light", hex_color, str(target), bg_hex)
+        return out
+
+    @staticmethod
+    def semantic_terminal(pill, b, seed, share=None):
+        share_arg = [] if share is None else [str(share)]
+        out = XiuWallcolors._run("semantic_terminal", json.dumps(pill), json.dumps(b), seed, *share_arg)
+        data = json.loads(out)
+        b.clear()
+        b.update(data["b"])
+        return data["ansi"]
+
+    @staticmethod
+    def generate_manual(hue, mode, sat, variant):
+        out = XiuWallcolors._run("generate_manual", str(hue), mode, str(sat), variant)
+        return json.loads(out)
+
+    @staticmethod
+    def gnome_accent_color(hex_color):
+        return XiuWallcolors._run("gnome_accent_color", hex_color)
+
+    @staticmethod
+    def _update_gtk_settings(settings_file, theme_name, icon_theme, is_dark):
+        XiuWallcolors._run("update_gtk_settings", str(settings_file), theme_name, icon_theme, "true" if is_dark else "false")
+
+    @staticmethod
+    def _update_xsettingsd(conf_path, theme_name, icon_theme):
+        XiuWallcolors._run("update_xsettingsd", str(conf_path), theme_name, icon_theme)
+
+    @staticmethod
+    def _update_kdeglobals(kdeglobals, sections, icon_theme, primary_hex):
+        # Convert sections tuple list to JSON-serializable list
+        sec_json = []
+        for hdr, fields in sections:
+            sec_json.append([hdr, fields])
+        XiuWallcolors._run("update_kdeglobals", str(kdeglobals), json.dumps(sec_json), icon_theme, primary_hex)
+
+    @staticmethod
+    def get_active_icon_theme(is_dark=True):
+        return XiuWallcolors._run("get_active_icon_theme", "true" if is_dark else "false")
+
+    @staticmethod
+    def render_zed(sample_pill, b=None, target_dir=None):
+        b_str = json.dumps(b) if b is not None else "null"
+        d = str(target_dir or wc._tool_dir("zed"))
+        XiuWallcolors._run("render_zed", json.dumps(sample_pill), b_str, d)
+
+    @staticmethod
+    def render_helix(sample_pill, b=None, target_dir=None):
+        b_str = json.dumps(b) if b is not None else "{}"
+        d = str(target_dir or wc._tool_dir("helix"))
+        XiuWallcolors._run("render_helix", json.dumps(sample_pill), b_str, d)
+
+    @staticmethod
+    def render_micro(sample_pill, b=None, target_dir=None):
+        b_str = json.dumps(b) if b is not None else "{}"
+        d = str(target_dir or wc._tool_dir("micro"))
+        XiuWallcolors._run("render_micro", json.dumps(sample_pill), b_str, d)
+
+    @staticmethod
+    def _tool_dir(name):
+        path = Path.home() / ".config" / name
+        return path if path.is_dir() else None
+
+
+wc = XiuWallcolors
 
 
 def hex_hue(hex_color):

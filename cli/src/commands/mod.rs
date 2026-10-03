@@ -20,6 +20,7 @@ pub mod shell;
 pub mod theme;
 pub mod update;
 pub mod wallpaper;
+pub mod wallcolors;
 pub mod user;
 pub mod watchdog;
 pub mod window;
