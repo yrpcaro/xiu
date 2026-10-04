@@ -35,7 +35,7 @@ Row {
             }
 
             Behavior on height {
-                NumberAnimation { duration: Motion.fast; easing.type: Easing.OutQuad }
+                NumberAnimation { duration: 65; easing.type: Easing.OutQuad }
             }
         }
     }

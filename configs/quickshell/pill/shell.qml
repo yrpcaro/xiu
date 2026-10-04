@@ -573,7 +573,7 @@ ShellRoot {
                         width: slot.width
                         height: slot.height
                         visible: false
-                        layer.enabled: true
+                        layer.enabled: slot.swiping
 
                         Rectangle {
                             id: wallRect

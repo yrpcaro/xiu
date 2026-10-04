@@ -349,9 +349,9 @@ PillSurface {
 
             readonly property var entry: root.results[index]
             readonly property bool selected: index === root.selectedIndex
-            readonly property bool isCommand: entry && entry.isCommand
-            readonly property bool isAppImage: !isCommand && entry && entry.id
-                && (entry.id.indexOf("xiu-") === 0 || entry.id.indexOf("ricelin-") === 0)
+            readonly property bool isCommand: Boolean(entry && entry.isCommand)
+            readonly property bool isAppImage: !isCommand && Boolean(entry && entry.id
+                && (entry.id.indexOf("xiu-") === 0 || entry.id.indexOf("ricelin-") === 0))
             readonly property bool editing: root.editIndex === index && isAppImage
             property bool armed: false
             onEditingChanged: if (!editing) armed = false
