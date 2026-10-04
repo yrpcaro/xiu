@@ -82,6 +82,48 @@ pub fn load_scheme() -> (String, String, bool, String) {
     let mut smart = true;
     let mut mode = "dark".to_string();
 
+    let json_paths = [
+        cache_file("xiu/scheme.json"),
+        cache_file("ricelin/scheme.json"),
+        state_file("xiu/scheme.json"),
+        state_file("ricelin/scheme.json"),
+    ];
+
+    for p in json_paths {
+        if let Ok(content) = fs::read_to_string(&p) {
+            if let Ok(Json::Obj(entries)) = json::parse(&content) {
+                for (k, v) in entries {
+                    match k.as_str() {
+                        "preset" => {
+                            if let Json::Str(s) = v {
+                                if !s.is_empty() { preset = s; }
+                            }
+                        }
+                        "variant" => {
+                            if let Json::Str(s) = v {
+                                if !s.is_empty() { variant = s; }
+                            }
+                        }
+                        "smart" => {
+                            if let Json::Bool(b) = v {
+                                smart = b;
+                            } else if let Json::Str(s) = v {
+                                smart = s != "off";
+                            }
+                        }
+                        "mode" => {
+                            if let Json::Str(s) = v {
+                                if !s.is_empty() { mode = s; }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                return (preset, variant, smart, mode);
+            }
+        }
+    }
+
     let paths = [
         state_file("xiu/scheme"),
         state_file("ricelin/scheme"),
@@ -133,6 +175,25 @@ pub fn save_scheme(preset: &str, variant: &str, smart: bool, mode: &str) {
             let _ = fs::create_dir_all(parent);
         }
         let _ = fs::write(f, &content);
+    }
+
+    let scheme_json = json::stringify_pretty(
+        &Json::Obj(vec![
+            ("preset".to_string(), Json::Str(preset.to_string())),
+            ("variant".to_string(), Json::Str(variant.to_string())),
+            ("smart".to_string(), Json::Bool(smart)),
+            ("mode".to_string(), Json::Str(mode.to_string())),
+        ]),
+        2,
+    ) + "\n";
+    for sub in &["xiu", "ricelin"] {
+        let cd = cache_file(sub);
+        let _ = fs::create_dir_all(&cd);
+        let _ = fs::write(cd.join("scheme.json"), &scheme_json);
+
+        let sd = state_file(sub);
+        let _ = fs::create_dir_all(&sd);
+        let _ = fs::write(sd.join("scheme.json"), &scheme_json);
     }
 }
 

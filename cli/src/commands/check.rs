@@ -92,6 +92,22 @@ pub fn check() -> i32 {
         }
     }
 
+    println!("palette:");
+    let scheme_path = crate::helpers::cache_file("xiu/scheme.json");
+    if scheme_path.is_file() {
+        println!("  scheme.json  present");
+    } else {
+        let (preset, variant, smart, mode) = crate::commands::wallcolors::load_scheme();
+        crate::commands::wallcolors::save_scheme(&preset, &variant, smart, &mode);
+        println!("  scheme.json  generated");
+    }
+    let colors_path = crate::helpers::cache_file("xiu/colors.json");
+    if colors_path.is_file() {
+        println!("  colors.json  present");
+    } else {
+        println!("  colors.json  missing (run: xiu wallcolors --apply)");
+    }
+
     if configs_ok && missing.is_empty() {
         0
     } else {
