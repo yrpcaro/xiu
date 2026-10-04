@@ -26,17 +26,17 @@ Singleton {
 
     function _readColors() {
         try {
-            var t = colorFile.text();
-            if (t && t.length > 0) {
-                var o = JSON.parse(t);
-                if (o && o.primary) return o;
-            }
-        } catch (e) {}
-        try {
             var tx = colorFileXiu.text();
             if (tx && tx.length > 0) {
                 var ox = JSON.parse(tx);
                 if (ox && ox.primary) return ox;
+            }
+        } catch (e) {}
+        try {
+            var t = colorFile.text();
+            if (t && t.length > 0) {
+                var o = JSON.parse(t);
+                if (o && o.primary) return o;
             }
         } catch (e) {}
         return {};

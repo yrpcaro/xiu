@@ -47,7 +47,7 @@ Singleton {
 
     readonly property string home: Quickshell.env("HOME")
     readonly property string defaultDir: home + "/Videos/Screenrecording"
-    readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (home + "/.cache")) + "/ricelin/rec-thumbs/"
+    readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (home + "/.cache")) + "/xiu/rec-thumbs/"
     readonly property string outDir: {
         var d = Flags.recordDir;
         return d && d.length > 0 ? d : defaultDir;

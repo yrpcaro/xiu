@@ -35,9 +35,12 @@ Singleton {
     property string resolvedDir: ""
     readonly property string wpDir: Flags.wallpaperDir.length > 0 ? Flags.wallpaperDir
         : (resolvedDir.length > 0 ? resolvedDir : Quickshell.env("HOME") + "/Pictures/xiu/wallpapers")
-    readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/ricelin-wp-thumbs/"
-    readonly property string stateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin-wallpaper"
-    readonly property string dirStateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin-wallpaper-dir"
+    readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/xiu-wp-thumbs/"
+    readonly property string legacyThumbDir: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/ricelin-wp-thumbs/"
+    readonly property string stateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/xiu/wallpaper"
+    readonly property string legacyStateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin-wallpaper"
+    readonly property string dirStateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/xiu-wallpaper-dir"
+    readonly property string legacyDirStateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin-wallpaper-dir"
 
     onWpDirChanged: refresh()
 
@@ -47,7 +50,25 @@ Singleton {
         blockLoading: true
         watchChanges: true
         printErrors: false
-        onLoaded: root.resolvedDir = dirFile.text().trim()
+        onLoaded: {
+            var t = dirFile.text().trim();
+            if (t.length > 0) root.resolvedDir = t;
+            else dirLegacyFile.reload();
+        }
+        onFileChanged: reload()
+        onLoadFailed: dirLegacyFile.reload()
+    }
+
+    FileView {
+        id: dirLegacyFile
+        path: root.legacyDirStateFile
+        blockLoading: true
+        watchChanges: true
+        printErrors: false
+        onLoaded: {
+            var t = dirLegacyFile.text().trim();
+            if (t.length > 0) root.resolvedDir = t;
+        }
         onFileChanged: reload()
         onLoadFailed: root.resolvedDir = ""
     }
@@ -167,7 +188,7 @@ Singleton {
 
     Process {
         id: stateProc
-        command: ["sh", "-c", "cat \"$1\" 2>/dev/null || true", "_", root.stateFile]
+        command: ["sh", "-c", "cat \"$1\" 2>/dev/null || cat \"$2\" 2>/dev/null || true", "_", root.stateFile, root.legacyStateFile]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.current = this.text.trim();

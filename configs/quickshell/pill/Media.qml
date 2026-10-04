@@ -189,7 +189,7 @@ PillSurface {
             visible: root.active && bleedSrc.status === Image.Ready
             blurEnabled: true
             blur: 0.95
-            blurMax: 64
+            blurMax: 28
         }
 
         Rectangle {

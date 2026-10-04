@@ -60,6 +60,7 @@ Item {
     visible: opacity > 0.01
 
     Behavior on opacity {
-        NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard }
+        enabled: !surface.open || surface.settled
+        NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard }
     }
 }
