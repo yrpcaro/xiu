@@ -2,7 +2,7 @@
 name = "xiu"
 version = "0.1.0"
 edition = "2021"
-description = "xiu shell CLI: drive the pill, its scripts and the update flow from the terminal"
+description = "Pure Rust system engine for the xiu Wayland desktop environment"
 license = "MIT"
 
 [[bin]]
