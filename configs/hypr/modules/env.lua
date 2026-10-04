@@ -23,6 +23,8 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 
 hl.env("QT_QPA_PLATFORMTHEME", "qtengine")
 hl.env("QT_PLUGIN_PATH", "/usr/lib/qt6/plugins:/usr/lib/qt5/plugins:/usr/lib/qt/plugins")
+hl.env("QT_USE_PORTAL", "1")
+hl.env("GTK_USE_PORTAL", "1")
 
 -- rishot's auto-save folder and themed config dir.
 hl.env("RISHOT_SAVEDIR", os.getenv("HOME") .. "/Pictures/Screenshots")

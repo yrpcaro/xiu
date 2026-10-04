@@ -1,3 +1,4 @@
 [filechooser]
 cmd=xiu yazi-chooser
 default_dir=$HOME
+env=TERMCMD=foot

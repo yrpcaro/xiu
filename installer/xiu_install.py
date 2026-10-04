@@ -787,8 +787,10 @@ def wire_portal_chooser(dry):
     cfg_dir = home / ".config" / "xdg-desktop-portal-termfilechooser"
     cfg = cfg_dir / "config"
     cfg_toml = cfg_dir / "config.toml"
-    wrapper = home / ".config" / "hypr" / "scripts" / "yazi-chooser.sh"
-    portal_conf = home / ".config" / "xdg-desktop-portal" / "hyprland-portals.conf"
+    portal_confs = [
+        home / ".config" / "xdg-desktop-portal" / "hyprland-portals.conf",
+        home / ".config" / "xdg-desktop-portal" / "portals.conf",
+    ]
 
     backend_present = (
         Path("/usr/share/xdg-desktop-portal/portals/termfilechooser.portal").is_file()
@@ -798,47 +800,57 @@ def wire_portal_chooser(dry):
     )
 
     if not backend_present:
-        if portal_conf.is_file() and not dry:
-            try:
-                text = portal_conf.read_text()
-                lines = [l for l in text.splitlines(keepends=True)
-                         if not l.strip().startswith("org.freedesktop.impl.portal.FileChooser=termfilechooser")]
-                if len(lines) != len(text.splitlines(keepends=True)):
-                    portal_conf.write_text("".join(lines))
-            except OSError:
-                pass
+        if not dry:
+            for pconf in portal_confs:
+                if pconf.is_file():
+                    try:
+                        text = pconf.read_text()
+                        lines = [l for l in text.splitlines(keepends=True)
+                                 if not l.strip().startswith("org.freedesktop.impl.portal.FileChooser=termfilechooser")]
+                        if len(lines) != len(text.splitlines(keepends=True)):
+                            pconf.write_text("".join(lines))
+                    except OSError:
+                        pass
         print("  xdg-desktop-portal-termfilechooser not installed; file chooser remains GTK")
         return True, ""
 
     if dry:
-        print(f"  would wire the portal chooser -> {cfg} and route FileChooser in {portal_conf}")
+        print(f"  would wire the portal chooser -> {cfg} and route FileChooser in portals.conf")
         return True, ""
 
-    if not wrapper.is_file():
-        print("  yazi-chooser.sh not deployed yet; portal chooser waits for the next re-run")
+    xiu_bin = shutil.which("xiu") or (home / ".local" / "bin" / "xiu")
+    if isinstance(xiu_bin, Path) and not xiu_bin.is_file() and shutil.which("xiu") is None:
+        print("  xiu binary not installed yet; portal chooser waits for the next re-run")
         return True, ""
 
     try:
         cfg_dir.mkdir(parents=True, exist_ok=True)
         content = (
             "[filechooser]\n"
-            f"cmd={wrapper}\n"
+            "cmd=xiu yazi-chooser\n"
             f"default_dir={home}\n"
+            "env=TERMCMD=foot\n"
         )
         cfg.write_text(content)
         cfg_toml.write_text(content)
 
-        if portal_conf.is_file():
-            text = portal_conf.read_text()
-            if "org.freedesktop.impl.portal.FileChooser=termfilechooser" not in text:
-                if "[preferred]" in text:
-                    text = text.replace(
-                        "[preferred]",
-                        "[preferred]\norg.freedesktop.impl.portal.FileChooser=termfilechooser\n"
-                    )
-                else:
-                    text += "\n[preferred]\norg.freedesktop.impl.portal.FileChooser=termfilechooser\n"
-                portal_conf.write_text(text)
+        for pconf in portal_confs:
+            pconf.parent.mkdir(parents=True, exist_ok=True)
+            if pconf.is_file():
+                text = pconf.read_text()
+                if "org.freedesktop.impl.portal.FileChooser=termfilechooser" not in text:
+                    if "[preferred]" in text:
+                        text = text.replace(
+                            "[preferred]",
+                            "[preferred]\norg.freedesktop.impl.portal.FileChooser=termfilechooser;gtk\n"
+                        )
+                    else:
+                        text += "\n[preferred]\norg.freedesktop.impl.portal.FileChooser=termfilechooser;gtk\n"
+                    pconf.write_text(text)
+            else:
+                pconf.write_text(
+                    "[preferred]\ndefault=gtk\norg.freedesktop.impl.portal.FileChooser=termfilechooser;gtk\n"
+                )
 
         try:
             subprocess.run(["systemctl", "--user", "restart", "xdg-desktop-portal"],
@@ -935,11 +947,29 @@ def install_yazi_plugins(dry):
         # present, which is the success condition, not a failure.
         if "already exists" in out:
             print("  yazi plugins already installed")
+            _patch_yatline_deprecation()
             return True, ""
         tail = out.strip().splitlines()
         return False, "ya pkg add: " + (tail[-1] if tail else "failed")
+    _patch_yatline_deprecation()
     print("  yazi plugins installed (%d)" % len(YAZI_PLUGINS))
     return True, ""
+
+
+def _patch_yatline_deprecation():
+    yatline_main = Path.home() / ".config" / "yazi" / "plugins" / "yatline.yazi" / "main.lua"
+    if yatline_main.is_file():
+        try:
+            content = yatline_main.read_text(encoding="utf-8")
+            if "hovered:icon()" in content:
+                content = content.replace(
+                    "local icon = hovered:icon().text",
+                    "local icon = nil\n\t\t\tif th and th.icon then\n\t\t\t\tlocal ok, res = pcall(function() return th.icon:match(hovered) end)\n\t\t\t\tif ok and res then icon = res end\n\t\t\tend\n\t\t\tlocal icon_str = (icon and icon.text) or (cha.is_dir and \"\\uf115\" or \"\\uf15b\")\n\t\t\treturn icon_str .. \" \" .. name"
+                )
+                yatline_main.chmod(0o644)
+                yatline_main.write_text(content, encoding="utf-8")
+        except Exception:
+            pass
 
 
 def bridge_wallpaper_binary(dry):

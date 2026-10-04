@@ -23,34 +23,35 @@ end)
 
 -- 2. Modern statusline & deprecation guard (yatline)
 local ok_yatline, yatline = pcall(require, "yatline")
-if ok_yatline and yatline then
-    -- Guard: replace deprecated hovered:icon() with th.icon:match(file) / th.icon.match(file)
-    if yatline.string and yatline.string.get then
-        yatline.string.get.hovered_file_extension = function(self, show_icon)
-            local hovered = cx.active.current.hovered
-            if not hovered then
-                return ""
-            end
-            local name = hovered.cha.is_dir and "dir" or (hovered.url.name and hovered.url.name:match("%.([^%.]+)$") or "")
-            if show_icon then
-                local icon = nil
-                if th and th.icon then
-                    local ok, res = pcall(function() return th.icon:match(hovered) end)
-                    if ok and res then
-                        icon = res
-                    else
-                        local ok2, res2 = pcall(function() return th.icon.match(hovered) end)
-                        if ok2 and res2 then icon = res2 end
-                    end
+local yl = (type(_G.Yatline) == "table" and _G.Yatline) or (type(yatline) == "table" and yatline)
+if yl and yl.string and yl.string.get then
+    -- Guard: replace deprecated hovered:icon() with th.icon:match(file)
+    yl.string.get.hovered_file_extension = function(self, show_icon)
+        local hovered = cx and cx.active and cx.active.current and cx.active.current.hovered
+        if not hovered then
+            return ""
+        end
+        local name = hovered.cha.is_dir and "dir" or (hovered.url.name and hovered.url.name:match("%.([^%.]+)$") or "")
+        if show_icon then
+            local icon = nil
+            if th and th.icon then
+                local ok, res = pcall(function() return th.icon:match(hovered) end)
+                if ok and res then
+                    icon = res
+                else
+                    local ok2, res2 = pcall(function() return th.icon.match(hovered) end)
+                    if ok2 and res2 then icon = res2 end
                 end
-                local icon_str = (icon and icon.text) or (hovered.cha.is_dir and "" or "")
-                return icon_str .. " " .. name
-            else
-                return name
             end
+            local icon_str = (icon and icon.text) or (hovered.cha.is_dir and "" or "")
+            return icon_str .. " " .. name
+        else
+            return name
         end
     end
+end
 
+if ok_yatline and yatline and type(yatline.setup) == "function" then
     yatline:setup({
         section_separator = { open = "", close = "" },
         part_separator = { open = "", close = "" },
@@ -80,21 +81,6 @@ function Linemode:size_and_mtime()
     local size = self._file:size()
     return ui.Line(string.format("%s  %s", size and ya.readable_size(size) or "-", timestr))
 end
-
--- Global guard: intercept deprecated File:icon() across all plugins (e.g. root.yazi)
-pcall(function()
-    if type(File) == "table" then
-        File.icon = function(self, opts)
-            if th and th.icon then
-                local ok, icon = pcall(function() return th.icon:match(self, opts) end)
-                if ok and icon then return icon end
-                local ok2, icon2 = pcall(function() return th.icon.match(self, opts) end)
-                if ok2 and icon2 then return icon2 end
-            end
-            return nil
-        end
-    end
-end)
 
 -- 4. Modern Header with breadcrumb folder icon
 if type(Header) == "table" and Header.cwd then
