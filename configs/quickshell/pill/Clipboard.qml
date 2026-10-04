@@ -232,13 +232,26 @@ PillSurface {
                 width: 16 * root.s
                 height: 16 * root.s
 
-                readonly property color tone: sortArea.containsMouse ? Theme.cream : Theme.faint
+                readonly property bool activeSort: root.sortMode !== "recent"
+                readonly property color tone: activeSort ? Theme.vermLit : (sortArea.containsMouse ? Theme.cream : Theme.faint)
 
                 Tooltip {
                     s: root.s
                     placement: "below"
                     title: root.sortMode === "recent" ? "sort: recent" : (root.sortMode === "manual" ? "sort: manual" : (root.sortMode === "alpha" ? "sort: alphabetical" : "sort: oldest"))
                     show: sortArea.containsMouse
+                }
+
+                Rectangle {
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.topMargin: -1 * root.s
+                    anchors.rightMargin: -1 * root.s
+                    width: 4 * root.s
+                    height: 4 * root.s
+                    radius: width / 2
+                    color: Theme.vermLit
+                    visible: sortBtn.activeSort
                 }
 
                 Text {
@@ -468,8 +481,9 @@ PillSurface {
                     radius: 6 * root.s
                     color: Theme.tileBg
                     border.width: 1
-                    border.color: Theme.border
+                    border.color: row.selected ? Theme.vermLit : Theme.border
                     clip: true
+                    Behavior on border.color { ColorAnimation { duration: Motion.fast } }
 
                     Image {
                         anchors.fill: parent

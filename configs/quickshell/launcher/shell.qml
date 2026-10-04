@@ -31,14 +31,22 @@ ShellRoot {
 
     FileView {
         id: usageStore
-        path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin/launcher-usage.json"
+        path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/xiu/launcher-usage.json"
         blockLoading: true
         atomicWrites: true
         printErrors: false
     }
 
+    FileView {
+        id: usageStoreLegacy
+        path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin/launcher-usage.json"
+        blockLoading: true
+        printErrors: false
+    }
+
     Component.onCompleted: {
         var raw = usageStore.text();
+        if (!raw || !raw.length) raw = usageStoreLegacy.text();
         try {
             root.usage = raw && raw.length ? JSON.parse(raw) : ({});
         } catch (e) {

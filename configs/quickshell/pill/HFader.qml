@@ -68,7 +68,8 @@ Item {
             width: 2.5 * root.s
             height: 11 * root.s
             radius: 2 * root.s
-            color: Theme.tickRest
+            color: (root.focused || dragArea.containsMouse) ? Theme.vermLit : Theme.tickRest
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
             Behavior on x { enabled: root.animate && !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
         }
 
@@ -76,6 +77,7 @@ Item {
             id: dragArea
             anchors.fill: parent
             anchors.margins: -8 * root.s
+            hoverEnabled: true
             preventStealing: true
             enabled: root.on
             function setFromX(mx) {

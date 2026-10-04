@@ -98,7 +98,8 @@ PillSurface {
     ameForm: "caret"
     amePoint: Qt.point(caretX, caretY)
 
-    readonly property string usageFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin/launcher-usage.json"
+    readonly property string usageFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/xiu/launcher-usage.json"
+    readonly property string legacyUsageFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin/launcher-usage.json"
 
     readonly property var allEntries: {
         var src = DesktopEntries.applications.values;
@@ -216,8 +217,16 @@ PillSurface {
         printErrors: false
     }
 
+    FileView {
+        id: usageStoreLegacy
+        path: root.legacyUsageFile
+        blockLoading: true
+        printErrors: false
+    }
+
     Component.onCompleted: {
         var raw = usageStore.text();
+        if (!raw || !raw.length) raw = usageStoreLegacy.text();
         try {
             root.usage = raw && raw.length ? JSON.parse(raw) : ({});
         } catch (e) {
@@ -456,7 +465,7 @@ PillSurface {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
                     text: retMetrics.text
-                    color: Theme.accent
+                    color: Theme.vermLit
                     font.family: Theme.font
                     font.pixelSize: 12 * root.s
                     visible: appRow.selected && !appRow.editing
@@ -513,16 +522,67 @@ PillSurface {
                         width: parent.width
                         height: nameText.implicitHeight
 
-                        Text {
-                            id: nameText
+                        Row {
+                            id: nameRow
                             anchors.fill: parent
                             visible: !appRow.editing
-                            text: appRow.entry ? (appRow.isCommand ? (appRow.entry.name + " (" + appRow.entry.prefix + ")") : appRow.entry.name) : ""
-                            color: Theme.cream
-                            font.family: Theme.font
-                            font.pixelSize: 13 * root.s
-                            font.weight: appRow.selected ? Font.DemiBold : Font.Normal
-                            elide: Text.ElideRight
+                            spacing: 6 * root.s
+
+                            Text {
+                                id: nameText
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: appRow.entry ? appRow.entry.name : ""
+                                color: Theme.cream
+                                font.family: Theme.font
+                                font.pixelSize: 13 * root.s
+                                font.weight: appRow.selected ? Font.DemiBold : Font.Normal
+                                elide: Text.ElideRight
+                                width: Math.min(implicitWidth, parent.width - (cmdBadge.visible ? cmdBadge.width + parent.spacing : (appImageBadge.visible ? appImageBadge.width + parent.spacing : 0)))
+                            }
+
+                            Rectangle {
+                                id: cmdBadge
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: appRow.isCommand
+                                height: 16 * root.s
+                                width: cmdBadgeText.implicitWidth + 8 * root.s
+                                radius: 4 * root.s
+                                color: Qt.alpha(Theme.vermLit, 0.14)
+                                border.width: 1
+                                border.color: Qt.alpha(Theme.vermLit, 0.35)
+
+                                Text {
+                                    id: cmdBadgeText
+                                    anchors.centerIn: parent
+                                    text: (appRow.entry && appRow.entry.prefix) ? appRow.entry.prefix : ""
+                                    color: Theme.vermLit
+                                    font.family: Theme.font
+                                    font.pixelSize: 9.5 * root.s
+                                    font.weight: Font.DemiBold
+                                }
+                            }
+
+                            Rectangle {
+                                id: appImageBadge
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: appRow.isAppImage && !appRow.isCommand
+                                height: 16 * root.s
+                                width: appImageText.implicitWidth + 8 * root.s
+                                radius: 4 * root.s
+                                color: Qt.alpha(Theme.dim, 0.18)
+                                border.width: 1
+                                border.color: Qt.alpha(Theme.dim, 0.32)
+
+                                Text {
+                                    id: appImageText
+                                    anchors.centerIn: parent
+                                    text: "AppImage"
+                                    color: Theme.dim
+                                    font.family: Theme.font
+                                    font.pixelSize: 9 * root.s
+                                    font.weight: Font.Medium
+                                }
+                            }
                         }
                         TextInput {
                             id: nameEdit

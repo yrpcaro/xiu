@@ -37,7 +37,15 @@ Item {
         visible: row.selected
     }
 
+    Rectangle {
+        anchors.fill: parent
+        radius: 14
+        color: Qt.rgba(1, 1, 1, 0.035)
+        visible: !row.selected && rowArea.containsMouse
+    }
+
     MouseArea {
+        id: rowArea
         anchors.fill: parent
         hoverEnabled: true
         onEntered: row.entered()
@@ -80,17 +88,45 @@ Item {
             source: (row.entry && !row.entry.isCommand && row.entry.icon) ? Quickshell.iconPath(row.entry.icon, true) : ""
         }
 
-        Text {
+        Row {
+            id: labelRow
             anchors.verticalCenter: parent.verticalCenter
-            anchors.left: icon.right
+            anchors.left: iconBox.right
             anchors.leftMargin: 12
-            text: row.entry ? (row.entry.isCommand ? (row.entry.name + " (" + row.entry.prefix + ")") : row.entry.name) : ""
-            color: row.selected ? row.white : row.cream
-            font.family: "Inter"
-            font.pixelSize: 15
-            font.weight: row.selected ? Font.DemiBold : Font.Normal
-            elide: Text.ElideRight
-            width: Math.min(implicitWidth, parent.width - icon.width - 12 - secondary.width - enter.width - 18)
+            spacing: 6
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: row.entry ? row.entry.name : ""
+                color: row.selected ? row.white : row.cream
+                font.family: "Inter"
+                font.pixelSize: 15
+                font.weight: row.selected ? Font.DemiBold : Font.Normal
+                elide: Text.ElideRight
+                width: Math.min(implicitWidth, parent.parent.width - iconBox.width - 24 - (cmdBadge.visible ? cmdBadge.width + 6 : 0) - (secLabel.text.length > 0 ? secLabel.implicitWidth + 10 : 0) - (enter.visible ? enter.width + 10 : 0))
+            }
+
+            Rectangle {
+                id: cmdBadge
+                anchors.verticalCenter: parent.verticalCenter
+                visible: row.entry && row.entry.isCommand
+                height: 18
+                width: cmdBadgeText.implicitWidth + 8
+                radius: 4
+                color: row.selected ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(192 / 255, 68 / 255, 43 / 255, 0.22)
+                border.width: 1
+                border.color: row.selected ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(192 / 255, 68 / 255, 43 / 255, 0.45)
+
+                Text {
+                    id: cmdBadgeText
+                    anchors.centerIn: parent
+                    text: (row.entry && row.entry.prefix) ? row.entry.prefix : ""
+                    color: row.selected ? row.white : "#e0563b"
+                    font.family: "Inter"
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                }
+            }
         }
 
         Text {
@@ -107,7 +143,7 @@ Item {
         }
 
         Text {
-            id: secondary
+            id: secLabel
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: enter.left
             text: row.secondary

@@ -83,9 +83,14 @@ Item {
         anchors.top: field.bottom
         anchors.topMargin: 2 * root.s
         height: 1
-        color: Theme.faint
-        opacity: field.activeFocus ? 0.7 : 0
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
+            GradientStop { position: 0.5; color: Theme.vermLit }
+            GradientStop { position: 1.0; color: Qt.alpha(Theme.vermLit, 0.15) }
+        }
+        opacity: field.activeFocus ? 0.85 : 0
+        Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
     }
 
     Text {

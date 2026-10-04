@@ -90,9 +90,8 @@ Item {
             width: 11 * root.s
             height: 2.5 * root.s
             radius: 2 * root.s
-            color: Theme.tickRest
-            opacity: root.focused ? 0 : 1
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+            color: root.focused ? Theme.vermLit : Theme.tickRest
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
             Behavior on y { enabled: root.animate && !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
         }
 
