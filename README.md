@@ -2,293 +2,238 @@
 
 # xiu
 
-**A Hyprland rice with a pill for a shell — Ricelin's body, caelestia's depth, reworked by hand.**
+**An aesthetic, minimal, high-performance Wayland desktop environment.**
+*Built on Hyprland, driven by Quickshell, engineered with Rust.*
 
-![xiu desktop](assets/hero.png)
+---
 
 </div>
 
-xiu is my personal fork of [Ricelin](https://github.com/Gakuseei/Ricelin): the
-same hand-written Quickshell pill, rebuilt around the things I wanted from it —
-a deeper theming pipeline, caelestia-style keybinds that survive two keyboard
-layouts, a lock screen worth looking at, and an installer that asks instead of
-assuming. Everything below is what changed; the pill itself is still the star.
+## Overview
 
-## The shell
+**xiu** is a modern, unified Wayland desktop environment designed for fluidity, precision, and visual cohesion. Rather than a loose collection of disparate scripts and themes, xiu couples a modular Hyprland compositor configuration with an interactive Quickshell floating status pill and a dedicated, pure Rust system engine (`xiu`).
 
-Everything you see is hand-written Quickshell. One pill bar that morphs into
-whatever surface I need.
+Every component—from terminal emulators and file managers to application dialogs, system monitors, and web browsers—adapts seamlessly to your desktop wallpaper through an automated dynamic palette pipeline.
 
-![The pill surfaces](assets/shell.png)
+---
 
-The pill becomes media and now playing, a calendar, the wallpaper picker, the
-clipboard history (clipvault behind it), an audio and brightness mixer, network
-and bluetooth controls, a system monitor, a launcher, and the settings surface
-where keybinds, idle behavior and the palette mode live without touching a
-config file. There is also a lock screen and
-[rishot](https://github.com/Gakuseei/rishot), the screenshot and annotation
-tool, which lives in its own repo.
+## Screenshots
 
-Mere hovering never changes the pill: it opens on a click, a keybind or an
-event, never on a pointer crossing.
+> [!NOTE]
+> Screenshots are currently being refreshed to reflect the latest UI redesign and theming features. Please submit your latest desktop screenshots to showcase them here!
 
-## What's different from Ricelin
+---
 
-**Compositor & keybinds**
+## Key Features
 
-- The whole bind map rewritten in the caelestia arrangement but on raw keycodes
-  (`code:NNN`), so every bind hits the same physical key on both configured
-  layouts — `us` and `ir(winkeys)`, toggled with `Alt+Shift`.
-- Workspaces in groups of ten: digits pick the slot in the current group,
-  `Ctrl+Super` + digit picks the group. Special workspaces for the stash
-  (`Super+S`), the private space (`Super+Alt+P`) and the minimized set
-  (`Ctrl+Super+M`), plus category toggles (music, communication, todo, sysmon).
-- User overrides instead of edits: `xiu-vars.lua` and `xiu-user.lua` under
-  `~/.config/xiu/` are loaded last and seeded on first run, so my app choices
-  never overwrite yours on an update.
+### 1. The Morphing Pill Shell & Lock Screen
+Everything on the desktop interface is rendered natively in Quickshell:
+- **Interactive Morphing Pill**: A compact, floating pill bar anchored to the top of your screen that expands on demand into dedicated control surfaces:
+  - **App Launcher**: Subsequence and fuzzy matching across installed applications, with built-in commands (`>calc` expression solver, `>install` AppImage installer, `>wallpaper` switcher, and more).
+  - **Clipboard History**: Visual clipboard manager with per-item pinning, direct removal, manual item rearrangement, and automatic session-cleanup preserving pinned items.
+  - **Hardware Mixer & Quick Controls**: Volume, input devices, display brightness, Wi-Fi network selection, and Bluetooth peripherals.
+  - **Media & Spectrum Visualizer**: Media controls coupled with reactive, audio-synchronized Cava spectrum bars.
+  - **System Monitor & Settings**: In-shell configuration for idle timeouts, key chords, theme modes, and user profile management without manually editing configuration files.
+- **Frosted Lock Screen**: Centered clock, circular profile picture (AccountsService or `~/.face`), PAM authentication with password masking, keyboard layout indicator, and integrated media visualizer.
+- **Rishot Integration**: Integrated screenshot and annotation suite that matches your active desktop color theme.
 
-**The palette pipeline**
+### 2. Pure Rust Engine (`xiu-cli`)
+The heart of xiu is a unified, high-performance command-line engine written in pure Rust (`xiu`):
+- **Dynamic Theming**: Native Material You color extraction from wallpapers, rendering matching palettes for the shell, terminals, editors, and applications.
+- **Window Management & PiP**: Built-in PiP snapping daemon reading Hyprland socket events for floating video windows.
+- **File Chooser Bridge**: Integrated terminal file chooser wrapper (`xiu yazi-chooser`) connecting XDG desktop portals to Yazi.
+- **System Health Checks**: `xiu check` verifies palette health, package dependencies, and portal integrity.
+- **Shell Control & Updates**: `xiu shell`, `xiu status`, `xiu log`, and `xiu update` provide seamless lifecycle management.
 
-- matugen drives everything from the wallpaper: the pill, both terminals
-  (foot and the optional ghostty), fastfetch, window borders, btop, htop,
-  nvtop, cava, micro, helix, bottom, yazi, nvim (live — its colorscheme reads
-  the palette file), vesktop/vencord/equicord, Telegram (a
-  generated `.attheme`), VSCode/VSCodium, Zed, GTK (adw-gtk3), Qt
-  (qtengine + Darkly) and the window decorations.
-- A scheme engine on top: seven presets, matugen's scheme variants, and
-  smartScheme — a colourfulness heuristic that picks the variant per wallpaper.
-  `xiu scheme` drives it from the terminal, the Look surface from the pill.
-- Firefox and Zen get an original userChrome plus a live-theme WebExtension
-  fed by a native messaging host, so the browser follows the wallpaper in real
-  time; Brave/Chromium read their toolbar color from a managed policy
-  (`xiu browser`).
+### 3. Layout-Independent Raw Keybindings
+- Bindings are defined on physical evdev keycodes (`code:NNN`), ensuring identical physical keyboard positions across multiple layouts (such as `us` and `ir(winkeys)`).
+- Workspaces are grouped in sets of ten, featuring dedicated workspaces for stashed windows (`Super+S`), private workspaces (`Super+Alt+P`), and minimized application sets.
 
-**Tools**
+### 4. Cohesive Dynamic Theming Pipeline
+Whenever you change your wallpaper via the wallpaper surface or `xiu wallpaper`, the system extracts color harmonies and applies them in real time across:
+- **Terminals**: Foot and Ghostty
+- **File Managers**: Yazi with custom rounded styling and modern statusline
+- **Editors**: Neovim, Helix, Micro, and Zed (with Vesper-based dynamic palettes)
+- **Audio & Media**: Spicetify (custom `xiu` theme), Cava
+- **System Monitors**: btop, htop, nvtop, bottom
+- **Messaging & Communication**: Vesktop / Vencord / Equicord, Telegram Desktop
+- **Web Browsers**: Firefox and Zen (via native messaging extension and userChrome), Chromium/Brave policies
+- **Desktop Toolkits**: GTK (via adw-gtk3) and Qt (via qtengine)
 
-- Terminal: **foot** (ghostty stays available as the optional fallback).
-- Clipboard: **clipvault** behind the pill surface (cliphist as the fallback).
-- The Rust set: eza, bat, fd, ripgrep, dust, zoxide (owning `cd` itself,
-  the caelestia way), gitui, starship, direnv, bottom, yazi — with the fish
-  aliases to match (`y` even closes into the directory you were in), plus a
-  `~/.config/xiu/user-config.fish` hook for your own bits.
-- Touchpad gestures, caelestia-style: three fingers swipe between
-  workspaces, four fingers pull up the stash — finger counts configurable
-  through `xiu-vars.lua`.
-- **xiu**, the shell's own Rust CLI: `xiu shell/open/wallpaper/scheme/
-  screenshot/record/clipboard/emoji/gamemode/browser` plus the control verbs
-  (`xiu restart/start/stop/log/status/update/uninstall`) and `xiu check`, a
-  drift and health
-  report for the install.
+---
 
-**The lock screen**
+## Desktop Stack
 
-Rearranged macOS-style over the original motion system: clock and date centered
-in the upper third, a circular avatar (your `.face` or AccountsService icon,
-with a glyph fallback) with the username beneath, and the password capsule
-hanging under it — real frosted glass (a crop of the blurred desktop, blurred
-once more), a border that tints on focus, ember-bead masking with a reveal eye,
-and the failure shake intact. A status corner shows the keyboard layout,
-battery, network and hold-to-confirm power actions.
+| Component | Technology | Description |
+|---|---|---|
+| **Compositor** | Hyprland | Dynamic tiling Wayland compositor configured in modular Lua |
+| **Shell & UI** | Quickshell (Qt 6 / QML) | Custom floating morphing pill, surfaces, and lock screen |
+| **System CLI** | Rust (`xiu`) | Unified daemon, theming engine, and control utility |
+| **Primary Terminal** | Foot | Ultra-fast, lightweight Wayland-native terminal emulator |
+| **Shell Environment** | Fish | Interactive shell with custom prompt and automated aliases |
+| **File Manager** | Yazi | Terminal file manager integrated into XDG portal dialogs |
+| **Theming** | Matugen / Rust Engine | Dynamic Material You palette generation |
+| **Screenshots** | Rishot | Wayland screenshot tool with interactive annotations |
 
-**Elsewhere**
+---
 
-- Per-service IPC targets on the shell singletons (`qs -c pill ipc call …`).
-- A window resizer / PiP daemon, ported from caelestia-cli as a standalone
-  **GPL-3.0** script (see Credits).
-- XDG portal tuning, uwsm-staged session env, optional trash-cli cleanup.
-- An installer with a selftest and a real dry run, and a NixOS home-manager
-  module (below).
+## Keybindings Reference
 
-## Stack
+All key combinations utilize raw keycodes, preserving identical physical layout regardless of active keyboard language. `Super` corresponds to the Windows/Command key.
 
-- WM: Hyprland, configured in Lua
-- Shell UI: custom Quickshell
-- Terminal: foot
-- Shell: fish
-- Font: JetBrains Mono Nerd
-- Colors: matugen, palette pulled from the wallpaper
+### System & Session
+| Key Chord | Action |
+|---|---|
+| `Super` + `Space` | Toggle application launcher |
+| `Alt` + `Shift` | Switch keyboard layout (`us` ⇄ `ir`) |
+| `Super` + `L` | Lock screen |
+| `Super` + `Shift` + `L` | Suspend / sleep system |
+| `Super` + `K` | Peek status pill |
+| `Super` + `N` | Notification center |
+| `Ctrl` + `Alt` + `C` | Clear all notifications |
+| `Ctrl` + `Alt` + `Del` | Power / session menu |
+| `Ctrl` + `Super` + `Alt` + `R` | Restart Quickshell instances |
 
-## Install
+### Window Management
+| Key Chord | Action |
+|---|---|
+| `Super` + `Q` | Close active window |
+| `Super` + `F` | Toggle fullscreen |
+| `Super` + `Alt` + `F` | Toggle maximize |
+| `Super` + `Alt` + `Space` | Toggle floating mode |
+| `Super` + `P` | Pin floating window across workspaces |
+| `Super` + `Alt` + `\` | Toggle Picture-in-Picture mode |
+| `Ctrl` + `Super` + `\` | Center active floating window |
+| `Super` + Arrow Keys | Change focus in direction |
+| `Super` + `Shift` + Arrow Keys | Move active window in direction |
+| `Super` + `-` / `Super` + `=` | Decrease / increase window width |
+| `Super` + `Shift` + `-` / `=` | Decrease / increase window height |
+| `Super` + `,` | Group windows into tabbed container |
+| `Super` + `U` | Ungroup / extract window from container |
+| `Alt` + `Tab` / `Shift` + `Alt` + `Tab` | Cycle next / previous window |
 
-> [!WARNING]
-> The installer is young. It hasn't had a clean-machine run beyond mine yet, so
-> expect rough edges. Read `install.sh` first and keep backups. If something
-> breaks, file a bug and say it's the installer.
+### Workspaces
+| Key Chord | Action |
+|---|---|
+| `Super` + `1` – `0` | Switch to workspace 1–10 (current group) |
+| `Super` + `Alt` + `1` – `0` | Move active window to workspace 1–10 |
+| `Ctrl` + `Super` + `1` – `0` | Switch workspace group 1–10 |
+| `Super` + Mouse Wheel | Navigate workspaces |
+| `Super` + `S` | Toggle scratchpad / stash workspace |
+| `Super` + `Shift` + `S` | Move active window to scratchpad |
+| `Super` + `Alt` + `P` | Toggle private workspace |
+| `Ctrl` + `Super` + `M` | Open minimized window tray |
+| `Ctrl` + `Shift` + `Esc` | Jump to system monitor workspace |
+| `Super` + `M` | Jump to or toggle Music workspace (Spotify) |
+| `Super` + `A` | Jump to or toggle Communication workspace |
+| `Super` + `J` | Jump to or toggle Telegram workspace |
 
-One line, straight through the pipe:
+### Applications & Tools
+| Key Chord | Action |
+|---|---|
+| `Super` + `Return` | Launch Foot terminal |
+| `Super` + `E` | Open file manager (Yazi) |
+| `Super` + `W` | Open primary web browser |
+| `Super` + `C` | Open code editor |
+| `Super` + `V` | Open clipboard history surface |
+| `Super` + `.` | Open emoji selector surface |
+| `Super` + `B` | Shuffle wallpaper and regenerate theme |
+| `Super` + `Shift` + `B` | Open interactive wallpaper selector surface |
+| `Super` + `G` | Toggle Game Mode (disables animations and effects) |
+| `Ctrl` + `Alt` + `V` | Open audio/brightness mixer surface |
+| `Print` / `Shift` + `Print` | Interactive screenshot / region selection (Rishot) |
+
+---
+
+## Installation
+
+### Automatic Installer
+Clone and run the interactive installer on any supported Linux distribution (Arch Linux, Fedora, Debian, openSUSE, Gentoo):
+
+```sh
+git clone https://github.com/yrpcaro/xiu.git
+cd xiu
+python3 installer/xiu_install.py
+```
+
+Or install via one-line bootstrap:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/yrpcaro/xiu/main/install.sh | bash
 ```
 
-`install.sh` is a thin bootstrap: it detects your distro (Arch, Debian, Fedora,
-openSUSE or Gentoo), makes sure git and python3 are there, clones the rice, then hands
-off to the guided Python installer. The wizard asks the questions that shape
-the install:
-
-- **profile** — Quick (core), Full (plus the daily apps) or Custom
-- **file manager** — dolphin, yazi, thunar, or keep yours
-- **login screen** — TTY (default), the torii SDDM theme, or greetd + tuigreet
-- **browser live theme** — register the native host and drop the userChrome
-  into your Firefox/Zen profiles
-- **legacy tools** — keep ghostty + cliphist as fallbacks, or remove them once
-  foot + clipvault are in
-- **your configs** — carry them across (Settings, keybinds, fish; three-way
-  merged on updates) or start from the repo defaults
-
-Skip the wizard with flags, passed straight through the pipe:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/yrpcaro/xiu/main/install.sh | bash -s -- --quickstart
+### Installation Flags
+```
+--quickstart    Install core components with defaults without interactive prompts
+--full          Install full suite including optional applications
+--sddm          Deploy the Torii SDDM login theme
+--no-deps       Skip distro package installation, only deploy configurations
+--dry-run       Simulate installation steps without writing changes
+--uninstall     Cleanly remove deployed configurations and binaries
 ```
 
-```
---quickstart  core defaults, no questions
---full        also install the daily apps
---sddm        also install the torii SDDM login theme
---no-deps     skip the package step, just deploy the configs
---dry-run     walk the whole flow and change nothing
---uninstall   remove the deployed configs and restore the backups
-```
-
-### NixOS
-
-For home-manager, no build step — links instead of copies:
+### NixOS (Home-Manager)
+For NixOS users managing their configuration with `home-manager`:
 
 ```nix
 imports = [ /path/to/xiu/nix/home-manager.nix ];
+
 programs.xiu = {
   enable = true;
   repo = /path/to/xiu;
 };
 ```
 
-The module links every deploy-set file into `~/.config` except the ones the
-rice treats as user-owned (the Settings-written hypr modules, hypridle, fish),
-so activation never fights the shell's own Settings surface; `exclude` covers
-anything else you want to own in place. `nix/test.nix` is a store-free harness
-for the mapping: `nix --store dummy:// eval --impure --file nix/test.nix`.
+---
 
-xiu is a Hyprland shell. On Niri, Sway or anything else only rishot (the
-screenshot tool) makes sense; grab it from
-[rishot](https://github.com/Gakuseei/rishot)'s own installer.
+## Architecture & Repository Layout
 
-## Keybinds
-
-Every bind is on a raw keycode, so the table is layout-proof — the key is named
-for the `us` layout and lands on the same physical key in `ir(winkeys)`.
-`Super` is the Windows key.
-
-| Key | Action |
-|---|---|
-| `Super` + `Space` | app launcher |
-| `Alt` + `Shift` | switch keyboard layout (us ⇄ ir) |
-| **Session** | |
-| `Ctrl` + `Alt` + `Del` | session menu (power) |
-| `Super` + `N` | notifications |
-| `Ctrl` + `Alt` + `C` | clear notifications |
-| `Super` + `K` | peek the pill |
-| `Super` + `L` | lock |
-| `Super` + `Alt` + `L` | restart the shell and lock |
-| `Super` + `Shift` + `L` | sleep |
-| `Ctrl` + `Super` + `Shift` + `R` | stop the shells (no auto-restart) |
-| `Ctrl` + `Super` + `Alt` + `R` | restart the shells |
-| **Windows** | |
-| `Super` + `Q` | close window |
-| `Super` + `F` | fullscreen |
-| `Super` + `Alt` + `F` | maximize |
-| `Super` + `Alt` + `Space` | toggle floating |
-| `Super` + `Z` / `Super` + `X` | move / resize window by keyboard |
-| `Super` + drag | drag window |
-| `Super` + right-drag | resize window |
-| `Super` + `P` | pin window |
-| `Ctrl` + `Super` + `\` | center window |
-| `Ctrl` + `Super` + `Alt` + `\` | normalize window (55% × 70%, centered) |
-| `Super` + `Alt` + `\` | picture-in-picture |
-| `Super` + arrows | focus by direction |
-| `Super` + `Shift` + arrows | move window by direction |
-| `Super` + `-` / `Super` + `=` | narrower / wider (repeats) |
-| `Super` + `Shift` + `-` / `=` | shorter / taller (repeats) |
-| `Alt` + `Tab` / `Shift` + `Alt` + `Tab` | cycle windows |
-| `Ctrl` + `Alt` + `Tab` | cycle window group |
-| `Super` + `,` | toggle window group |
-| `Super` + `Shift` + `,` | lock into window group |
-| `Super` + `U` | ungroup window |
-| **Workspaces** | |
-| `Super` + `1`–`0` | workspace 1–10 (slot in the current group) |
-| `Super` + `Alt` + `1`–`0` | move window to slot |
-| `Ctrl` + `Super` + `1`–`0` | workspace group 1–10 (keeps the slot) |
-| `Ctrl` + `Super` + `Alt` + `1`–`0` | move window to group |
-| `Super` + wheel / `PgUp` / `PgDn` | previous / next workspace |
-| `Ctrl` + `Super` + wheel | previous / next workspace group |
-| `Super` + `Alt` + wheel / `PgUp` / `PgDn` | move window across workspaces |
-| `Super` + `S` | stash workspace |
-| `Super` + `Shift` + `S` | send window to the stash |
-| `Ctrl` + `Super` + `Shift` + `Up` / `Down` | send window to the stash / take it back |
-| `Super` + `Alt` + `P` | private workspace |
-| `Super` + `Shift` + `P` | send window to the private space |
-| `Super` + `Alt` + `M` | minimize toggle |
-| `Ctrl` + `Super` + `M` | minimized stash |
-| `Ctrl` + `Shift` + `Esc` | system monitor workspace |
-| `Super` + `M` / `D` / `R` | music / communication / todo workspace |
-| **Apps & tools** | |
-| `Super` + `Return` | terminal (foot) |
-| `Super` + `W` | browser |
-| `Super` + `A` | Telegram |
-| `Super` + `O` | Spotify |
-| `Super` + `C` | editor |
-| `Super` + `E` | file manager |
-| `Ctrl` + `Alt` + `V` | mixer |
-| `Super` + `V` | clipboard history |
-| `Ctrl` + `Shift` + `Alt` + `V` | paste latest clipboard (works while locked) |
-| `Super` + `.` | emoji picker |
-| `Super` + `B` | shuffle wallpaper and retheme |
-| `Super` + `Shift` + `B` | wallpaper picker |
-| `Super` + `Shift` + `C` | color picker |
-| `Super` + `G` | game mode |
-| `Ctrl` + `Alt` + `R` | screen record |
-| `Print` / `Shift` + `Print` | rishot (see its repo) |
-| **Media (work while locked)** | |
-| `Ctrl` + `Super` + `Space` | play / pause |
-| `Ctrl` + `Super` + `=` / `-` | next / previous track |
-| `Super` + `Shift` + `M` | mute audio |
-| hardware keys | volume, brightness, media |
-
-## Syncing with upstream
-
-xiu tracks [Gakuseei/Ricelin](https://github.com/Gakuseei/Ricelin) through the
-`upstream` remote. After upstream moves:
-
-```sh
-git checkout xiu
-git fetch upstream
-git merge upstream/main
-# resolve whatever conflicts come up — most of the pill's QML is untouched
-# upstream, so the usual conflict points are the installer and the scripts
-git push origin xiu
-git checkout main
-git merge xiu --no-edit
-git push origin main
+```
+xiu/
+├── cli/                        # Native pure Rust system engine (xiu binary)
+│   ├── src/commands/           # Resizer daemon, wallcolors, yazi-chooser, shell IPC
+│   └── tests/                  # Integration test suite
+├── configs/
+│   ├── hypr/                   # Hyprland modular Lua configurations & window rules
+│   ├── quickshell/             # Quickshell pill, surfaces, launcher, and lock screen
+│   │   ├── pill/               # Morphing pill, widgets, and IPC handlers
+│   │   ├── lock/               # Lock screen surface and shaders
+│   │   └── rishot/             # Screenshot and annotation UI
+│   ├── yazi/                   # Yazi file manager configurations and plugins
+│   ├── foot/                   # Foot terminal configuration
+│   ├── spicetify/              # Spotify xiu theme templates
+│   ├── portals/                # XDG desktop portal configurations
+│   └── xdg-desktop-portal-termfilechooser/ # Terminal file picker configuration
+├── installer/                  # Python installer, distro abstraction, and deployer
+└── tests/                      # Multi-suite automated test harnesses
 ```
 
-`xiu check` (the CLI's drift command) reports how far your checkout is from
-both remotes, and the pill's own Settings > Updates surface does the same
-in-app.
+---
 
-## Credits
+## Testing & Quality Assurance
 
-- [Ricelin](https://github.com/Gakuseei/Ricelin) by
-  [Gakuseei](https://github.com/Gakuseei) — the base this fork grew from:
-  the pill, the surfaces, the Lua hypr setup and the installer skeleton.
-  MIT licensed.
-- [caelestia-dots](https://github.com/caelestia-dots) — the inspiration tree:
-  the keybind arrangement is re-expressed from its (unlicensed) dots repo as
-  functional data in original Lua; the window resizer / PiP daemon is ported
-  from its GPL-3.0 CLI and ships as the standalone GPL-3.0
-  `configs/hypr/scripts/xiu-resizer`; theme template *formats* (config
-  syntaxes) were referenced while every generator in `wallcolors.py` is
-  original code.
-- [rishot](https://github.com/Gakuseei/rishot) — the screenshot tool, its own
-  project.
-- The lock screen, the SDDM background and the wallpapers are not mine. See
-  [CREDITS](configs/sddm/themes/torii/CREDITS.md).
+xiu includes a comprehensive test suite across the Rust CLI, Python deployment scripts, and JavaScript/QML modules:
+
+```sh
+# Run full 14-suite verification
+(cd cli && cargo test --quiet) && \
+python3 configs/hypr/scripts/test_default_apps.py && \
+python3 configs/hypr/scripts/test_wallcolors.py && \
+python3 configs/hypr/scripts/test_xiu_update.py && \
+python3 configs/hypr/scripts/test_resizer.py && \
+bash configs/hypr/scripts/test_launch_guard.sh && \
+python3 installer/fallbacks.py && \
+python3 installer/deploy.py && \
+python3 installer/distro.py && \
+node configs/quickshell/launcher/lib/fuzzy.test.mjs && \
+node configs/quickshell/pill/lib/keychord.test.mjs && \
+node configs/quickshell/pill/lib/monitors.test.mjs && \
+node configs/quickshell/pill/lib/commands.test.mjs && \
+(cd configs/quickshell/rishot/lib && ./run-tests.sh)
+```
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
