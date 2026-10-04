@@ -1675,9 +1675,13 @@ def run(args):
                     "spicetify", "config",
                     "spotify_path", str(spotify_dir),
                     "prefs_path", str(Path.home() / ".config" / "spotify" / "prefs"),
+                    "current_theme", "xiu",
+                    "color_scheme", "xiu",
+                    "inject_css", "1",
+                    "replace_colors", "1",
                 ], False)
                 record(ok, detail, "Configure spicetify",
-                       "Run: spicetify config spotify_path '%s' prefs_path '%s'"
+                       "Run: spicetify config spotify_path '%s' prefs_path '%s' current_theme xiu color_scheme xiu"
                        % (spotify_dir, Path.home() / ".config" / "spotify" / "prefs"))
                 market_cmd = "curl -fsSL https://raw.githubusercontent.com/spicetify/spicetify-marketplace/main/resources/install.sh | sh"
                 ok, detail = _shell(market_cmd, False)

@@ -622,6 +622,7 @@ pub fn fan_out(
     render::render_helix(pill, &b, None);
     render::render_bottom(pill, &b);
     render::render_yazi(pill, &b);
+    render::render_spicetify(pill, &b);
     render::render_discord(pill);
     render::render_userchrome(pill);
     render::render_vscode(pill);

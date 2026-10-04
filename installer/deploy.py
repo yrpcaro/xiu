@@ -52,6 +52,7 @@ DEPLOY_SET = [
     ("helix",      "helix",                                 "helix"),
     ("bottom",     "bottom",                                "bottom"),
     ("yazi",       "yazi",                                  "yazi"),
+    ("spicetify",  "spicetify",                             "spicetify"),
     ("portals",    "portals",                               "xdg-desktop-portal"),
     ("termfilechooser", "xdg-desktop-portal-termfilechooser", "xdg-desktop-portal-termfilechooser"),
     ("uwsm",       "uwsm",                                  "uwsm"),

@@ -798,6 +798,66 @@ pub fn render_yazi(pill: &HashMap<String, String>, b: &HashMap<String, String>) 
     let _ = fs::write(d.join("theme.toml"), lines.join("\n") + "\n");
 }
 
+pub fn render_spicetify(pill: &HashMap<String, String>, b: &HashMap<String, String>) {
+    let d = config_file(&["spicetify"]);
+    let theme_dir = d.join("Themes").join("xiu");
+    if !theme_dir.is_dir() {
+        return;
+    }
+
+    let h = |k: &str| -> String {
+        pill.get(k)
+            .map(|s| s.trim_start_matches('#').to_uppercase())
+            .unwrap_or_else(|| "FFFFFF".to_string())
+    };
+    let hb = |k: &str| -> String {
+        b.get(k)
+            .map(|s| s.trim_start_matches('#').to_uppercase())
+            .unwrap_or_else(|| "FFFFFF".to_string())
+    };
+
+    let lines = vec![
+        "; Xiu Spotify theme — colors kept fresh by xiu wallcolors on every".to_string(),
+        "; palette change. Selected with: spicetify config current_theme xiu color_scheme xiu".to_string(),
+        "[xiu]".to_string(),
+        format!("text               = {}", h("bright")),
+        format!("subtext            = {}", h("subtle")),
+        format!("main               = {}", h("surface")),
+        format!("main-elevated      = {}", h("surface_container_high")),
+        format!("highlight          = {}", h("surface_container")),
+        format!("highlight-elevated = {}", h("surface_container_highest")),
+        format!("sidebar            = {}", h("surface_container")),
+        format!("player             = {}", h("surface_container")),
+        format!("card               = {}", h("primary_container")),
+        format!("shadow             = {}", h("surface_container")),
+        format!("selected-row       = {}", h("bright")),
+        format!("button             = {}", h("primary")),
+        format!("button-active      = {}", h("primary_container")),
+        format!("button-disabled    = {}", h("outline_variant")),
+        format!("tab-active         = {}", h("surface_container_high")),
+        format!("notification       = {}", h("primary")),
+        format!("notification-error = {}", hb("base08")),
+        format!("misc               = {}", h("subtle")),
+    ];
+
+    let _ = fs::write(theme_dir.join("color.ini"), lines.join("\n") + "\n");
+
+    let prefs = d.join("config-xpui.ini");
+    if prefs.is_file() {
+        if let Ok(content) = fs::read_to_string(&prefs) {
+            if content.contains("current_theme = xiu")
+                || content.contains("current_theme                 = xiu")
+            {
+                let _ = Command::new("spicetify")
+                    .arg("refresh")
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status();
+            }
+        }
+    }
+}
+
 pub fn render_userchrome(pill: &HashMap<String, String>) {
     let g = |k: &str| pill.get(k).cloned().unwrap_or_default();
     let subs = vec![
