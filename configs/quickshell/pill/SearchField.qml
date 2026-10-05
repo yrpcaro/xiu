@@ -83,13 +83,8 @@ Item {
         anchors.top: field.bottom
         anchors.topMargin: 2 * root.s
         height: 1
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
-            GradientStop { position: 0.5; color: Theme.vermLit }
-            GradientStop { position: 1.0; color: Qt.alpha(Theme.vermLit, 0.15) }
-        }
-        opacity: field.activeFocus ? 0.85 : 0
+        color: Theme.verm
+        opacity: field.activeFocus ? 0.75 : 0
         Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
     }
 
