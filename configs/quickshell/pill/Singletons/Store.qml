@@ -458,16 +458,17 @@ Singleton {
      */
     function _applyCursor(theme, size) {
         root._sync("autostart");
-        setcursorProc.command = ["hyprctl", "setcursor", theme, String(size)];
+        setcursorProc.command = ["xiu", "cursor", theme, String(size)];
         setcursorProc.running = true;
 
         var env = root._envText;
         var e1 = SetInput.setEnv(env, "XCURSOR_THEME", theme);
         var e2 = SetInput.setEnv(e1.ok ? e1.text : env, "XCURSOR_SIZE", String(size));
-        var e3 = SetInput.setEnv(e2.ok ? e2.text : (e1.ok ? e1.text : env), "HYPRCURSOR_SIZE", String(size));
-        var any = e1.ok || e2.ok || e3.ok;
+        var e3 = SetInput.setEnv(e2.ok ? e2.text : (e1.ok ? e1.text : env), "HYPRCURSOR_THEME", theme);
+        var e4 = SetInput.setEnv(e3.ok ? e3.text : (e2.ok ? e2.text : (e1.ok ? e1.text : env)), "HYPRCURSOR_SIZE", String(size));
+        var any = e1.ok || e2.ok || e3.ok || e4.ok;
         if (any) {
-            root._envText = e3.ok ? e3.text : (e2.ok ? e2.text : e1.text);
+            root._envText = e4.ok ? e4.text : (e3.ok ? e3.text : (e2.ok ? e2.text : e1.text));
             root._envPending += 1;
             envWriter.setText(root._envText);
         }

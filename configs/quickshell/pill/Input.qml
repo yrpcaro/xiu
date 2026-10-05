@@ -225,9 +225,10 @@ SettingsSurface {
         var env = root.envText;
         var e1 = SetInput.setEnv(env, "XCURSOR_THEME", theme);
         var e2 = SetInput.setEnv(e1.ok ? e1.text : env, "XCURSOR_SIZE", String(size));
-        var e3 = SetInput.setEnv(e2.ok ? e2.text : (e1.ok ? e1.text : env), "HYPRCURSOR_SIZE", String(size));
-        if (e3.ok || e2.ok || e1.ok) {
-            root.envText = e3.ok ? e3.text : (e2.ok ? e2.text : e1.text);
+        var e3 = SetInput.setEnv(e2.ok ? e2.text : (e1.ok ? e1.text : env), "HYPRCURSOR_THEME", theme);
+        var e4 = SetInput.setEnv(e3.ok ? e3.text : (e2.ok ? e2.text : (e1.ok ? e1.text : env)), "HYPRCURSOR_SIZE", String(size));
+        if (e4.ok || e3.ok || e2.ok || e1.ok) {
+            root.envText = e4.ok ? e4.text : (e3.ok ? e3.text : (e2.ok ? e2.text : e1.text));
             envWriter.setText(root.envText);
         }
 
@@ -320,7 +321,7 @@ SettingsSurface {
         id: setcursorProc
         property string theme: ""
         property int size: 24
-        command: ["hyprctl", "setcursor", theme, String(size)]
+        command: ["xiu", "cursor", theme, String(size)]
     }
 
     Process {

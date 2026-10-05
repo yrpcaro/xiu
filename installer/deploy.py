@@ -100,9 +100,10 @@ MON_AUTO = """hl.monitor({
 """
 
 # The portable env, written fresh so a stale nvidia block never rides along.
-ENV_BASE = """hl.env("XCURSOR_THEME",   "Bibata-Modern-Ice")
-hl.env("XCURSOR_SIZE",    "24")
-hl.env("HYPRCURSOR_SIZE", "24")
+ENV_BASE = """hl.env("XCURSOR_THEME",    "Bibata-Modern-Ice")
+hl.env("XCURSOR_SIZE",     "24")
+hl.env("HYPRCURSOR_THEME", "Bibata-Modern-Ice")
+hl.env("HYPRCURSOR_SIZE",  "24")
 
 hl.env("PATH", os.getenv("HOME") .. "/.local/bin:" .. (os.getenv("PATH") or ""))
 hl.env("XDG_DATA_DIRS", os.getenv("HOME") .. "/.local/share:" .. (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"))

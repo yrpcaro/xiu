@@ -1,6 +1,7 @@
-hl.env("XCURSOR_THEME",   "Bibata-Modern-Ice")
-hl.env("XCURSOR_SIZE",    "24")
-hl.env("HYPRCURSOR_SIZE", "24")
+hl.env("XCURSOR_THEME",    "Bibata-Modern-Ice")
+hl.env("XCURSOR_SIZE",     "24")
+hl.env("HYPRCURSOR_THEME", "Bibata-Modern-Ice")
+hl.env("HYPRCURSOR_SIZE",  "24")
 
 -- The xiu CLI and the fallback tools install into ~/.local/bin, which login
 -- managers never put on the session PATH — so keybinds calling `xiu` died on

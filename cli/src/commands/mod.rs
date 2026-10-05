@@ -7,6 +7,7 @@ pub mod app_install;
 pub mod check;
 pub mod clipboard;
 pub mod control;
+pub mod cursor;
 pub mod default_app;
 pub mod device;
 pub mod display;

@@ -28,7 +28,7 @@ fn main() {
 fn dispatch(cli: &cli::Cli) -> i32 {
     use cli::Commands;
     use commands::{
-        app_install, check, clipboard, control, default_app, device, display, guard,
+        app_install, check, clipboard, control, cursor, default_app, device, display, guard,
         keybinds, layout, media, resizer, session, shell, theme, user, wallcolors, wallpaper, watchdog,
         window, yazi,
     };
@@ -74,6 +74,9 @@ fn dispatch(cli: &cli::Cli) -> i32 {
             preset.as_deref(),
             variant.as_deref(),
         ),
+        Commands::Cursor { theme, size } => {
+            cursor::cursor(theme.as_deref(), *size)
+        }
         Commands::Wallcolors { args } => wallcolors::wallcolors(args),
         Commands::Layout { action, target } => layout::layout(action, target.as_deref()),
         Commands::Keybinds { action, combo } => keybinds::keybinds(action, combo.as_deref()),

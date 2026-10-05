@@ -1579,6 +1579,11 @@ pub fn update_gtk_settings(
                 has_dark = true;
                 continue;
             }
+            if trimmed.starts_with("gtk-cursor-theme-name=breeze_cursors") {
+                let cur = crate::commands::cursor::read_cursor_theme().unwrap_or_else(|| "Bibata-Modern-Ice".to_string());
+                new_lines.push(format!("gtk-cursor-theme-name={cur}"));
+                continue;
+            }
             if trimmed.starts_with("gtk-modules=") {
                 let val = trimmed.strip_prefix("gtk-modules=").unwrap_or("");
                 let mods: Vec<&str> = val
@@ -1641,6 +1646,9 @@ pub fn update_xsettingsd(conf_path: &Path, theme_name: &str, icon_theme: &str) {
         } else if stripped.starts_with("Net/IconThemeName") {
             new_lines.push(format!("Net/IconThemeName \"{icon_theme}\""));
             has_icon = true;
+        } else if stripped.starts_with("Gtk/CursorThemeName") && stripped.contains("breeze_cursors") {
+            let cur = crate::commands::cursor::read_cursor_theme().unwrap_or_else(|| "Bibata-Modern-Ice".to_string());
+            new_lines.push(format!("Gtk/CursorThemeName \"{cur}\""));
         } else {
             new_lines.push(line);
         }
@@ -1877,6 +1885,9 @@ selection, *:selected {{
                 .status();
         }
     }
+
+    let (c_theme, c_size) = crate::commands::cursor::resolve_cursor(None, None);
+    let _ = crate::commands::cursor::sync_all(&c_theme, c_size);
 }
 
 pub fn render_qt(pill: &HashMap<String, String>) {

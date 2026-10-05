@@ -118,6 +118,13 @@ pub enum Commands {
         #[arg(short, long)]
         variant: Option<String>,
     },
+    /// Cursor theme and size management and system-wide synchronization (XWayland, GTK, Qt, CEF)
+    Cursor {
+        /// Cursor theme name (e.g. Bibata-Modern-Ice) or "sync"
+        theme: Option<String>,
+        /// Cursor size in px (e.g. 24)
+        size: Option<u32>,
+    },
     /// Wallcolors palette generation and fan-out engine
     Wallcolors {
         /// Arguments for wallcolors engine
