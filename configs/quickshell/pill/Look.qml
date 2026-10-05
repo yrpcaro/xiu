@@ -90,7 +90,7 @@ SettingsSurface {
     ]
 
     readonly property string decoPath: Quickshell.env("HOME") + "/.config/hypr/modules/decoration.lua"
-    readonly property string pillBlurRule: 'hl.layer_rule({ name = "pill-blur", match = { namespace = "pill" }, blur = true, ignore_alpha = 0.5 })\n'
+    readonly property string pillBlurRule: 'hl.layer_rule({ name = "pill-blur", match = { namespace = "pill.*" }, blur = true, ignore_alpha = 0.2 })\n'
 
     property int gapsIn: 6
     property int gapsOut: 12

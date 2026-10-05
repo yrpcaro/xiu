@@ -38,8 +38,9 @@ Item {
             return;
         card.expandedIdx = -1;
         opener.menu = item.menu;
-        var p = anchorItem.mapToItem(null, anchorItem.width / 2, 0);
+        var p = anchorItem.mapToItem(null, anchorItem.width / 2, anchorItem.height);
         menu.anchorX = p.x;
+        menu.anchorY = p.y + 4 * tray.s;
         menu.open = true;
     }
 
@@ -131,7 +132,7 @@ Item {
         property bool expanded: false
         signal activated()
 
-        height: entryData.isSeparator ? 9 * tray.s : 32 * tray.s
+        height: entryData.isSeparator ? 6 * tray.s : 26 * tray.s
 
         Rectangle {
             visible: mrow.entryData.isSeparator
@@ -148,16 +149,16 @@ Item {
             visible: !mrow.entryData.isSeparator
             anchors.fill: parent
             anchors.leftMargin: mrow.indent
-            radius: 8 * tray.s
+            radius: 6 * tray.s
             color: mrowArea.containsMouse && mrow.entryData.enabled
                 ? Theme.frameBg : "transparent"
 
             Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: 6 * tray.s
+                anchors.leftMargin: 3 * tray.s
                 width: 2 * tray.s
-                height: parent.height * 0.46
+                height: 12 * tray.s
                 radius: width / 2
                 color: Theme.vermLit
                 opacity: mrowArea.containsMouse && mrow.entryData.enabled ? 1 : 0
@@ -168,15 +169,15 @@ Item {
                 id: stateBox
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: 16 * tray.s
+                anchors.leftMargin: 8 * tray.s
                 readonly property bool isCheck: mrow.entryData.buttonType === QsMenuButtonType.CheckBox
                 readonly property bool isRadio: mrow.entryData.buttonType === QsMenuButtonType.RadioButton
                 readonly property bool present: isCheck || isRadio
                 readonly property bool checked: mrow.entryData.checkState === Qt.Checked
                 visible: present
-                width: present ? 11 * tray.s : 0
-                height: 11 * tray.s
-                radius: isRadio ? width / 2 : 3 * tray.s
+                width: present ? 10 * tray.s : 0
+                height: 10 * tray.s
+                radius: isRadio ? width / 2 : 2.5 * tray.s
                 color: "transparent"
                 border.width: 1
                 border.color: checked ? Theme.vermLit : Theme.border
@@ -184,9 +185,9 @@ Item {
                 Rectangle {
                     anchors.centerIn: parent
                     visible: stateBox.checked
-                    width: 5 * tray.s
-                    height: 5 * tray.s
-                    radius: stateBox.isRadio ? width / 2 : 1.5 * tray.s
+                    width: 4 * tray.s
+                    height: 4 * tray.s
+                    radius: stateBox.isRadio ? width / 2 : 1 * tray.s
                     color: Theme.vermLit
                 }
             }
@@ -195,12 +196,12 @@ Item {
                 id: entryIcon
                 anchors.left: stateBox.right
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: stateBox.present ? 8 * tray.s : 0
-                width: mrow.entryData.icon ? 15 * tray.s : 0
-                height: 15 * tray.s
+                anchors.leftMargin: (stateBox.present && mrow.entryData.icon) ? 6 * tray.s : 0
+                width: mrow.entryData.icon ? 13 * tray.s : 0
+                height: 13 * tray.s
                 source: mrow.entryData.icon
-                sourceSize.width: 30
-                sourceSize.height: 30
+                sourceSize.width: 26
+                sourceSize.height: 26
                 fillMode: Image.PreserveAspectFit
                 smooth: true
                 cache: true
@@ -209,15 +210,15 @@ Item {
 
             Text {
                 anchors.left: entryIcon.right
-                anchors.leftMargin: mrow.entryData.icon ? 9 * tray.s : 0
+                anchors.leftMargin: mrow.entryData.icon ? 6 * tray.s : (stateBox.present ? 6 * tray.s : 0)
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: chevron.visible ? chevron.left : parent.right
-                anchors.rightMargin: 14 * tray.s
+                anchors.rightMargin: 8 * tray.s
                 text: mrow.entryData.text
                 color: !mrow.entryData.enabled ? Theme.dim
                     : (mrowArea.containsMouse ? Theme.cream : Theme.creamMenu)
                 font.family: Theme.font
-                font.pixelSize: 13 * tray.s
+                font.pixelSize: 11 * tray.s
                 font.weight: mrowArea.containsMouse ? Font.DemiBold : Font.Normal
                 elide: Text.ElideRight
             }
@@ -225,14 +226,14 @@ Item {
             GlyphIcon {
                 id: chevron
                 anchors.right: parent.right
-                anchors.rightMargin: 10 * tray.s
+                anchors.rightMargin: 8 * tray.s
                 anchors.verticalCenter: parent.verticalCenter
                 visible: mrow.entryData.hasChildren === true
-                width: 10 * tray.s
-                height: 10 * tray.s
+                width: 9 * tray.s
+                height: 9 * tray.s
                 name: "chevron-right"
                 color: mrow.expanded ? Theme.vermLit : Theme.iconDim
-                stroke: 2
+                stroke: 1.8
                 rotation: mrow.expanded ? 90 : 0
                 Behavior on rotation { NumberAnimation { duration: Motion.fast } }
             }
@@ -253,6 +254,7 @@ Item {
 
         property bool open: false
         property real anchorX: 0
+        property real anchorY: 44 * tray.s
 
         onOpenChanged: {
             if (!open) {
@@ -268,7 +270,7 @@ Item {
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-        WlrLayershell.namespace: "pill-tray"
+        WlrLayershell.namespace: "pill"
 
         anchors { top: true; left: true; right: true; bottom: true }
 
@@ -287,21 +289,27 @@ Item {
                 id: card
 
                 x: Math.max(8 * tray.s, Math.min(menu.anchorX - width / 2, menu.width - width - 8 * tray.s))
-                y: 50 * tray.s
-                width: 220 * tray.s
-                radius: 12 * tray.s
+                y: Math.max(38 * tray.s, Math.min(menu.anchorY > 0 ? menu.anchorY : 44 * tray.s, menu.height - height - 8 * tray.s))
+                width: 180 * tray.s
+                radius: 10 * tray.s
                 clip: true
 
+                transformOrigin: Item.Top
+                scale: menu.open ? 1.0 : 0.96
+                opacity: menu.open ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
+                Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
+
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: Theme.cardTop }
-                    GradientStop { position: 1.0; color: Theme.cardBot }
+                    GradientStop { position: 0.0; color: Qt.alpha(Theme.cardTop, Flags.pillOpacity) }
+                    GradientStop { position: 1.0; color: Qt.alpha(Theme.cardBot, Flags.pillOpacity) }
                 }
                 border.width: 1
                 border.color: Theme.border
 
                 property int expandedIdx: -1
 
-                implicitHeight: col.implicitHeight + 12 * tray.s
+                implicitHeight: col.implicitHeight + 8 * tray.s
                 height: implicitHeight
 
                 Rectangle {
@@ -309,8 +317,8 @@ Item {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.topMargin: 1
-                    anchors.leftMargin: 10 * tray.s
-                    anchors.rightMargin: 10 * tray.s
+                    anchors.leftMargin: 8 * tray.s
+                    anchors.rightMargin: 8 * tray.s
                     height: 1
                     color: Theme.sheen
                 }
@@ -330,7 +338,7 @@ Item {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    anchors.margins: 6 * tray.s
+                    anchors.margins: 4 * tray.s
                     spacing: 0
 
                     Repeater {
@@ -370,7 +378,7 @@ Item {
                                 delegate: MenuRow {
                                     required property var modelData
                                     width: entry.width
-                                    indent: 14 * tray.s
+                                    indent: 12 * tray.s
                                     entryData: modelData
                                     onActivated: {
                                         if (!modelData.hasChildren) {
