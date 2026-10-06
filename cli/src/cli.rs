@@ -248,7 +248,17 @@ pub enum Commands {
     Minimize,
     /// Lock the session (grabs monitors and wakes lock surface)
     #[command(alias = "idle")]
-    Lock,
+    Lock {
+        /// Only lock if idle (no video player inhibiting idle)
+        #[arg(long)]
+        idle: bool,
+    },
+    /// Suspend the system if safe (guard against active tasks/progress and video playback)
+    Suspend {
+        /// Guard against active tasks/progress and video playback
+        #[arg(long)]
+        idle: bool,
+    },
     /// Paste and type latest clipboard entry into active window
     #[command(alias = "paste")]
     PasteLatest,

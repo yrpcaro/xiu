@@ -6,7 +6,7 @@ general {
 
 listener {
     timeout = 300
-    on-timeout = xiu lock
+    on-timeout = xiu lock --idle
 }
 
 listener {

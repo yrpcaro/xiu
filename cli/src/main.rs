@@ -131,7 +131,8 @@ fn dispatch(cli: &cli::Cli) -> i32 {
         ),
         Commands::Special { name } => window::special(name.as_deref()),
         Commands::Minimize => window::minimize(),
-        Commands::Lock => session::lock(),
+        Commands::Lock { idle } => session::lock_cmd(*idle),
+        Commands::Suspend { idle } => session::suspend_cmd(*idle),
         Commands::PasteLatest => clipboard::paste_latest(),
         Commands::MountPhone { action } => device::mount_phone(action),
         Commands::Display {

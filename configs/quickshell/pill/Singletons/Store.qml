@@ -341,7 +341,7 @@ Singleton {
         if (Flags.idleLockMin > 0)
             out += "\nlistener {\n"
                 + "    timeout = " + (Flags.idleLockMin * 60) + "\n"
-                + "    on-timeout = " + root.lockScript + "\n"
+                + "    on-timeout = " + root.lockScript + " --idle\n"
                 + "}\n";
 
         if (Flags.idleScreenOffMin > 0)
@@ -354,7 +354,7 @@ Singleton {
         if (Flags.idleSuspendMin > 0)
             out += "\nlistener {\n"
                 + "    timeout = " + (Flags.idleSuspendMin * 60) + "\n"
-                + "    on-timeout = systemctl suspend\n"
+                + "    on-timeout = xiu suspend --idle\n"
                 + "}\n";
 
         return out;
