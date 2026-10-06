@@ -29,6 +29,7 @@ let
     { name = "helix"; src = "helix"; dest = "helix"; }
     { name = "bottom"; src = "bottom"; dest = "bottom"; }
     { name = "yazi"; src = "yazi"; dest = "yazi"; }
+    { name = "mpv"; src = "mpv"; dest = "mpv"; }
     { name = "portals"; src = "portals"; dest = "xdg-desktop-portal"; }
     { name = "uwsm"; src = "uwsm"; dest = "uwsm"; }
     { name = "browser"; src = "browser-integration"; dest = "xiu/browser-integration"; }
