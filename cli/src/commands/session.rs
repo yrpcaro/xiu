@@ -122,6 +122,14 @@ pub fn is_video_playing() -> bool {
 
     // 2. Check playerctl for video players playing
     if let Ok(out) = Command::new("playerctl")
+        .args(["-a", "status", "-f", "{{playerName}}:{{status}}"])
+        .output()
+    {
+        let text = String::from_utf8_lossy(&out.stdout);
+        if is_video_player_active_in_output(&text) {
+            return true;
+        }
+    } else if let Ok(out) = Command::new("playerctl")
         .args(["-a", "metadata", "--format", "{{playerName}}:{{status}}"])
         .output()
     {
