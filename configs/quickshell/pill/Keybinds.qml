@@ -34,7 +34,7 @@ PillSurface {
     mRight: 19
     mBottom: 14
 
-    implicitHeight: content.implicitHeight
+    implicitHeight: 420 * root.s
 
     signal requestSurface(string name)
 
@@ -270,18 +270,16 @@ PillSurface {
 
     onFormOpenChanged: if (formOpen) Qt.callLater(nameField.forceActiveFocus)
 
-    readonly property Item focusRowItem: list.focusRowItem
-
-    readonly property bool rowFocused: focusRowItem !== null && active && !formOpen
+    readonly property bool rowFocused: active && !formOpen && root.filtered.length > 0 && root.focusIndex >= 0 && root.focusIndex < root.filtered.length
 
     readonly property point rowPoint: {
         void root.width;
         void root.height;
         void root.focusIndex;
         void list.contentY;
-        if (!focusRowItem)
+        if (!rowFocused)
             return Qt.point(4 * root.s, root.height / 2);
-        return focusRowItem.mapToItem(root, 4 * root.s, focusRowItem.height / 2);
+        return Qt.point(4 * root.s, list.y + root.focusIndex * 38 * root.s - list.contentY + 19 * root.s);
     }
 
     ameForm: rowFocused ? "rowseam" : "off"
@@ -453,13 +451,11 @@ PillSurface {
         ListView {
             id: list
             width: parent.width
-            height: visible ? Math.min(contentHeight, 250 * root.s) : 0
+            height: visible ? (root.formOpen ? 0 : 250 * root.s) : 0
             visible: !root.formOpen
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: root.filtered
-
-            property Item focusRowItem: null
 
             delegate: Item {
                 id: brow
@@ -470,8 +466,6 @@ PillSurface {
 
                 width: ListView.view.width
                 height: 38 * root.s
-
-                onFocusedChanged: if (focused) list.focusRowItem = brow
 
                 HoverHandler {
                     id: rowHover
