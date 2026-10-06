@@ -86,6 +86,7 @@ SettingsSurface {
         { item: secRow, kind: "toggle", get: function () { return Flags.clockSeconds; }, set: function (v) { Flags.clockSeconds = v; } },
         { item: glyphRow, kind: "toggle", get: function () { return Flags.showGlyphs; }, set: function (v) { Flags.showGlyphs = v; } },
         { item: vizRow, kind: "toggle", get: function () { return Flags.musicViz; }, set: function (v) { Flags.musicViz = v; } },
+        { item: weatherRow, kind: "toggle", get: function () { return Flags.weatherEnabled; }, set: function (v) { Flags.weatherEnabled = v; } },
         { item: paletteRow, kind: "seg", vals: ["static", "dynamic", "manual"], get: function () { return Flags.paletteMode; }, set: function (v) { root.applyMode(v); } },
         { item: randomRow, kind: "seg", vals: ["all", "cursor"], get: function () { return Flags.randomScope; }, set: function (v) { Flags.randomScope = v; } },
         { item: scaleRow, kind: "seg", vals: [0.9, 1.0, 1.1, 1.25], get: function () { return Flags.uiScale; }, set: function (v) { Flags.uiScale = v; } },
@@ -159,6 +160,19 @@ SettingsSurface {
                 s: root.s
                 on: Flags.musicViz
                 onToggled: Flags.musicViz = !Flags.musicViz
+            }
+        }
+
+        SettingsRow {
+            id: weatherRow
+            surface: root
+            name: "Weather"
+            icon: "cloud"
+
+            LinkToggle {
+                s: root.s
+                on: Flags.weatherEnabled
+                onToggled: Flags.weatherEnabled = !Flags.weatherEnabled
             }
         }
 

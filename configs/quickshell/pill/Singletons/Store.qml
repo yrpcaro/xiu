@@ -73,6 +73,7 @@ Singleton {
     readonly property string decoText: root._decoText
     readonly property string inputText: root._inputText
     readonly property string animText: root._animText
+    readonly property bool weatherEnabled: Flags.weatherEnabled
 
     /**
      * Writes of ours still landing, per file. A `setText` is asynchronous, so

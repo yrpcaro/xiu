@@ -97,8 +97,13 @@ Singleton {
             label: "Music visualizer", caption: "The media strip's cover art and thread",
             control: "toggle", type: "bool", backend: "flags", key: "musicViz", def: true
         },
-        weatherCity: {
+        weatherEnabled: {
             page: "appearance", group: "clock", order: 4,
+            label: "Weather", caption: "Show weather in pill and calendar",
+            control: "toggle", type: "bool", backend: "flags", key: "weatherEnabled", def: true
+        },
+        weatherCity: {
+            page: "appearance", group: "clock", order: 5,
             label: "Weather town", caption: "The calendar's weather, by city name",
             control: "text", type: "string", backend: "flags", key: "weatherCity", def: ""
         },

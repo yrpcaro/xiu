@@ -1658,7 +1658,7 @@ Item {
                 Row {
                     id: weatherGlance
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: Weather.ready
+                    visible: Flags.weatherEnabled && Weather.ready
                     spacing: 5 * pill.s
 
                     HoverHandler {

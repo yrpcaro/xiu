@@ -49,7 +49,7 @@ PillSurface {
     readonly property real editorW: 196 * s
     readonly property real gutter: 16 * s
 
-    readonly property bool weatherShown: Weather.ready
+    readonly property bool weatherShown: Flags.weatherEnabled && Weather.ready
     readonly property bool editorShown: selectedDate.length > 0
 
     /**

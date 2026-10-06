@@ -44,6 +44,7 @@ Singleton {
     property alias idleLockMin: adapter.idleLockMin
     property alias idleScreenOffMin: adapter.idleScreenOffMin
     property alias idleSuspendMin: adapter.idleSuspendMin
+    property alias weatherEnabled: adapter.weatherEnabled
     property alias weatherCity: adapter.weatherCity
     property alias weatherBackend: adapter.weatherBackend
     property alias musicViz: adapter.musicViz
@@ -131,6 +132,7 @@ Singleton {
             property int idleLockMin: 5
             property int idleScreenOffMin: 6
             property int idleSuspendMin: 0
+            property bool weatherEnabled: true
             property string weatherCity: ""
             /** Weather source: "open-meteo" (keyless default). */
             property string weatherBackend: "open-meteo"
