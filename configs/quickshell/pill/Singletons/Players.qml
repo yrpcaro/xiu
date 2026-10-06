@@ -38,10 +38,16 @@ Singleton {
         var status = p.playbackStatus !== undefined ? p.playbackStatus : "";
         if (status === "Stopped" || status === 2 || (typeof MprisPlaybackStatus !== "undefined" && status === MprisPlaybackStatus.Stopped))
             return true;
-        if (!p.isPlaying && (!p.trackTitle || p.trackTitle.length === 0))
-            return true;
-        if (isTransient(p) && !p.isPlaying)
-            return true;
+        var title = (p.trackTitle ? p.trackTitle.trim() : "");
+        if (!p.isPlaying) {
+            if (title.length === 0)
+                return true;
+            var low = title.toLowerCase();
+            if (isTransient(p) && (low === "telegram" || low === "brave" || low === "chromium" || low === "chrome" || low === "firefox" || low === "discord" || low === "vesktop" || low === "edge"))
+                return true;
+            if (p.canControl === false && p.canPlay === false && p.canTogglePlaying === false)
+                return true;
+        }
         return false;
     }
 
@@ -103,10 +109,10 @@ Singleton {
         for (var i = 0; i < l.length; i++)
             if (l[i].isPlaying && !isIdle(l[i]))
                 return l[i];
-        if (preferred && l.indexOf(preferred) >= 0 && !isIdle(preferred) && (!isTransient(preferred) || preferred.isPlaying))
+        if (preferred && l.indexOf(preferred) >= 0 && !isIdle(preferred))
             return preferred;
         for (var j = 0; j < l.length; j++)
-            if (!isIdle(l[j]) && l[j].trackTitle && l[j].trackTitle.length > 0)
+            if (!isIdle(l[j]) && l[j].trackTitle && l[j].trackTitle.trim().length > 0)
                 return l[j];
         return null;
     }
@@ -151,7 +157,7 @@ Singleton {
     readonly property bool has: active !== null
     readonly property bool playing: has && active.isPlaying
     /** Falls back to the service label so a titleless DRM stream still reads as its site. */
-    readonly property string title: has ? refineTitle(active, active.trackTitle || labelOf(active)) : ""
+    readonly property string title: has ? refineTitle(active, (active.trackTitle && active.trackTitle.trim().length > 0) ? active.trackTitle : (active.isPlaying ? labelOf(active) : "")) : ""
     readonly property string artist: has ? Theme.joinArtists(active.trackArtists, active.trackArtist) : ""
     readonly property string trackUrl: urlOf(active)
     readonly property string artUrl: artUrlFor(active)

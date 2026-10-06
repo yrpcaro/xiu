@@ -144,12 +144,18 @@ Item {
         }
         for (var j = 0; j < list.length; j++) {
             var cand = list[j];
-            if (!cand || isProxyPlayer(cand) || isTransientPlayer(cand))
+            if (!cand || isProxyPlayer(cand))
                 continue;
             var status = cand.playbackStatus !== undefined ? cand.playbackStatus : "";
             if (status === "Stopped" || status === 2)
                 continue;
-            if (cand.trackTitle && cand.trackTitle.length > 0 && cand.canControl)
+            var title = (cand.trackTitle ? cand.trackTitle.trim() : "");
+            if (title.length === 0)
+                continue;
+            var low = title.toLowerCase();
+            if (isTransientPlayer(cand) && (low === "telegram" || low === "brave" || low === "chromium" || low === "chrome" || low === "firefox" || low === "discord" || low === "vesktop" || low === "edge"))
+                continue;
+            if (cand.canControl)
                 return cand;
         }
         return null;
