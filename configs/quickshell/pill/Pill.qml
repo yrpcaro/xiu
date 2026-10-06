@@ -652,12 +652,14 @@ Item {
             hoverSoulGate = false;
             soulTarget = "";
             soulWsIndex = -1;
+            soulTraySlot = null;
         }
     }
     onHoverSoulGateChanged: if (hoverSoulGate) kanjiFlashAnim.restart()
 
     property string soulTarget: ""
     property int soulWsIndex: -1
+    property var soulTraySlot: null
 
     property real kanjiFlash: 0
 
@@ -801,6 +803,10 @@ Item {
         void pill.width;
         void pill.height;
         const drop = 12 * pill.s;
+        if (soulTarget === "weather")
+            return weatherGlance.mapToItem(pill, weatherGlance.width / 2, weatherGlance.height + drop * 0.55);
+        if (soulTarget === "tray" && soulTraySlot)
+            return soulTraySlot.mapToItem(pill, soulTraySlot.width / 2, soulTraySlot.height + drop * 0.55);
         if (soulTarget === "layout")
             return layoutChip.mapToItem(pill, layoutChip.width / 2, layoutChip.height + drop * 0.55);
         if (soulTarget === "wifi")
@@ -1592,6 +1598,7 @@ Item {
                     id: minimized
                     anchors.verticalCenter: parent.verticalCenter
                     s: pill.s
+                    pill: pill
                     screenName: pill.screenName
                     enabled: hover.live
                     visible: count > 0
@@ -1609,6 +1616,7 @@ Item {
                 Tray {
                     anchors.verticalCenter: parent.verticalCenter
                     s: pill.s
+                    pill: pill
                     barWindow: pill.barWindow
                     enabled: hover.live
                     onMenuOpenChanged: pill.menuPinned = menuOpen
@@ -1636,6 +1644,7 @@ Item {
                         id: layoutArea
                         anchors.fill: parent
                         anchors.margins: -6 * pill.s
+                        hoverEnabled: true
                         enabled: hover.live
                         cursorShape: Qt.PointingHandCursor
                         onClicked: pill.toggleLayout()
@@ -1649,13 +1658,14 @@ Item {
                     visible: Weather.ready
                     spacing: 5 * pill.s
 
-                    HoverHandler {
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4 * pill.s
+                        hoverEnabled: true
+                        enabled: hover.live
                         cursorShape: Qt.PointingHandCursor
-                        enabled: hover.live
-                    }
-                    TapHandler {
-                        enabled: hover.live
-                        onTapped: pill.requestSurface("weather")
+                        onClicked: pill.requestSurface("weather")
+                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "weather"
                     }
 
                     GlyphIcon {

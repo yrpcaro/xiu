@@ -33,4 +33,9 @@ Singleton {
     readonly property color iconDim: dyn ? Qt.alpha(cream, 0.78) : "#cdbfb4"
     readonly property color subtle: dyn ? Qt.alpha(cream, 0.62) : "#b9a99e"
     readonly property color flameCore: dyn ? Qt.lighter(Dyn.primary, 1.6) : "#ffd9c2"
+    readonly property color flameGlow: dyn ? Dyn.primary : "#ff9a64"
+    readonly property string flameInk:   dyn ? Dyn.primary : "#f0795a"
+    readonly property string flameBurn:  dyn ? Dyn.primary : "#d4583b"
+    readonly property string flameTip:   dyn ? Dyn.primary : "#f59a80"
+    readonly property string flameEmber: dyn ? Dyn.primary : "#b83d22"
 }

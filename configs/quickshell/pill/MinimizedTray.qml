@@ -13,6 +13,7 @@ Row {
     id: root
 
     property real s: 1
+    property var pill: null
     property string screenName: ""
     spacing: 8 * s
 
@@ -89,6 +90,12 @@ Row {
                 anchors.margins: -3 * root.s
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
+                onContainsMouseChanged: {
+                    if (containsMouse && root.pill) {
+                        root.pill.soulTraySlot = chip;
+                        root.pill.soulTarget = "tray";
+                    }
+                }
                 onClicked: {
                     var addr = chip.modelData.address;
                     if (addr.indexOf("0x") !== 0)

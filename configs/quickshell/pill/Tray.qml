@@ -20,6 +20,7 @@ Item {
 
     property real s: 1
     property var barWindow
+    property var pill: null
 
     /**
      * True while the floating tray menu is up. The menu is a full-screen
@@ -93,6 +94,12 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                    onContainsMouseChanged: {
+                        if (containsMouse && tray.pill) {
+                            tray.pill.soulTraySlot = slot;
+                            tray.pill.soulTarget = "tray";
+                        }
+                    }
                     onClicked: (mouse) => {
                         if (mouse.button === Qt.MiddleButton) {
                             slot.modelData.secondaryActivate();
