@@ -86,30 +86,7 @@ Item {
             powerLabel = "";
     }
 
-    // The breathing molten dot / Ame indicator consistent with the pill/shell
-    property string soulTarget: ""
 
-    readonly property point homeDotPoint: Qt.point(
-        content.width / 2,
-        dateLabel.y + dateLabel.height + (identity.y - (dateLabel.y + dateLabel.height)) * 0.5
-    )
-
-    readonly property point soulPoint: {
-        void content.width;
-        void content.height;
-        const drop = 14 * content.s;
-        if (soulTarget === "layout" && layoutChip.visible)
-            return layoutChip.mapToItem(content, layoutChip.width / 2, layoutChip.height + drop * 0.55);
-        if (soulTarget === "sleep" && sleepTile.visible)
-            return sleepTile.mapToItem(content, sleepTile.width / 2, sleepTile.height + drop * 0.55);
-        if (soulTarget === "reboot" && rebootTile.visible)
-            return rebootTile.mapToItem(content, rebootTile.width / 2, rebootTile.height + drop * 0.55);
-        if (soulTarget === "poweroff" && poweroffTile.visible)
-            return poweroffTile.mapToItem(content, poweroffTile.width / 2, poweroffTile.height + drop * 0.55);
-        if (soulTarget === "capsule" && capsule.visible)
-            return capsule.mapToItem(content, capsule.width / 2, capsule.height + drop * 0.55);
-        return homeDotPoint;
-    }
 
     /** The lock chip's layout switch, the same command the locked binds fire. */
     Process {
@@ -580,17 +557,6 @@ Item {
 
         transform: Translate { id: capsuleShift }
 
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
-            onContainsMouseChanged: {
-                if (containsMouse)
-                    content.soulTarget = "capsule";
-                else if (content.soulTarget === "capsule")
-                    content.soulTarget = "";
-            }
-        }
 
         SequentialAnimation {
             id: shake
@@ -834,12 +800,6 @@ Item {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: layoutProc.running = true
-                onContainsMouseChanged: {
-                    if (containsMouse)
-                        content.soulTarget = "layout";
-                    else if (content.soulTarget === "layout")
-                        content.soulTarget = "";
-                }
             }
         }
 
@@ -931,8 +891,8 @@ Item {
                 label: "Sleep"
                 holdMs: 0
                 argv: ["systemctl", "suspend"]
-                onHoverEnter: { content.namePower(label, false); content.soulTarget = "sleep"; }
-                onHoverExit: { content.clearPower(label); if (content.soulTarget === "sleep") content.soulTarget = ""; }
+                onHoverEnter: content.namePower(label, false)
+                onHoverExit: content.clearPower(label)
             }
 
             // The hairline between the safe group and the destructive pair.
@@ -951,8 +911,8 @@ Item {
                 label: "Restart — hold"
                 confirm: true
                 argv: ["systemctl", "reboot"]
-                onHoverEnter: { content.namePower(label, true); content.soulTarget = "reboot"; }
-                onHoverExit: { content.clearPower(label); if (content.soulTarget === "reboot") content.soulTarget = ""; }
+                onHoverEnter: content.namePower(label, true)
+                onHoverExit: content.clearPower(label)
             }
 
             HoldGlyph {
@@ -963,8 +923,8 @@ Item {
                 label: "Shutdown — hold"
                 confirm: true
                 argv: ["systemctl", "poweroff"]
-                onHoverEnter: { content.namePower(label, true); content.soulTarget = "poweroff"; }
-                onHoverExit: { content.clearPower(label); if (content.soulTarget === "poweroff") content.soulTarget = ""; }
+                onHoverEnter: content.namePower(label, true)
+                onHoverExit: content.clearPower(label)
             }
         }
     }
@@ -988,13 +948,5 @@ Item {
         font.letterSpacing: 0.4 * content.s
         opacity: text.length > 0 ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 200 } }
-    }
-
-    Ame {
-        id: ame
-        visible: content.isMain
-        anchors.fill: parent
-        s: content.s
-        point: content.soulPoint
     }
 }
