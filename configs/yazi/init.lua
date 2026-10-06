@@ -53,9 +53,9 @@ end
 
 if ok_yatline and yatline and type(yatline.setup) == "function" then
     yatline:setup({
-        section_separator = { open = "", close = "" },
-        part_separator = { open = "", close = "" },
-        inverse_separator = { open = "", close = "" },
+        section_separator = { open = "", close = "" },
+        part_separator = { open = " │ ", close = " │ " },
+        inverse_separator = { open = "", close = "" },
         style_a = {
             fg = "black",
             bg_mode = {

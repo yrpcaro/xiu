@@ -1,4 +1,69 @@
-# Xiu yazi theme. This whole file is written by wallcolors.py on every palette
-# change (mgr, tabs, mode, filetype); yazi.toml next to it — keys, openers —
-# is yours and never touched. Until the first wallpaper change yazi runs its
-# defaults.
+# Xiu yazi theme: clean, modern, and minimal aesthetic matching Xiu system tokens.
+# Default values applied before/between wallpaper theme generations.
+
+[manager]
+cwd = { fg = "#e6d6cb", bold = true }
+hovered = { fg = "#fff6f0", bg = "#2e231b", bold = true }
+preview_hovered = { underline = true }
+border_style = { fg = "#3a2a22" }
+find_keyword = { fg = "#e0563b", bold = true }
+find_position = { fg = "#fff6f0", bg = "#2e231b" }
+marker_selected = { fg = "#e0563b", bold = true }
+marker_copied = { fg = "#a3be8c" }
+marker_cut = { fg = "#bf616a" }
+marker_marked = { fg = "#b48ead" }
+tab_active = { fg = "#fff6f0", bg = "#2e231b", bold = true }
+tab_inactive = { fg = "#8a7d74" }
+count_copied = { fg = "#fff6f0", bg = "#a3be8c" }
+count_cut = { fg = "#fff6f0", bg = "#bf616a" }
+count_selected = { fg = "#fff6f0", bg = "#e0563b" }
+border_symbol = "│"
+syntect_theme = ""
+
+[tabs]
+active = { fg = "#fff6f0", bg = "#2e231b", bold = true }
+inactive = { fg = "#8a7d74" }
+sep = { fg = "#3a2a22" }
+
+[mode]
+normal_main = { fg = "#160f0a", bg = "#e0563b", bold = true }
+normal_alt = { fg = "#e6d6cb", bg = "#221813" }
+select_main = { fg = "#fff6f0", bg = "#81a1c1", bold = true }
+select_alt = { fg = "#e6d6cb", bg = "#2e231b" }
+unset_main = { fg = "#e6d6cb", bg = "#bf616a", bold = true }
+unset_alt = { fg = "#e6d6cb", bg = "#2e231b" }
+
+[status]
+separator_open = ""
+separator_close = ""
+separator_style = { fg = "#3a2a22" }
+
+[select]
+border = { fg = "#e0563b" }
+active = { fg = "#fff6f0", bg = "#2e231b" }
+inactive = { fg = "#e6d6cb" }
+
+[input]
+border = { fg = "#e0563b" }
+title = { fg = "#e6d6cb", bold = true }
+value = { fg = "#fff6f0" }
+selected = { bg = "#2e231b" }
+
+[which]
+mask = { bg = "#221813" }
+cand = { fg = "#88c0d0" }
+rest = { fg = "#b9a99e" }
+desc = { fg = "#e6d6cb" }
+separator = "  "
+separator_style = { fg = "#3a2a22" }
+
+[filetype]
+rules = [
+  { mime = "image/*", fg = "#ebcb8b" },
+  { mime = "{audio,video}/*", fg = "#81a1c1" },
+  { mime = "application/{zip,rar,7z*,tar*,gzip,xz}", fg = "#b48ead" },
+  { mime = "application/{pdf,doc*,epub*}", fg = "#a3be8c" },
+  { mime = "inode/empty", fg = "#8a7d74" },
+  { url = "*/", fg = "#81a1c1", bold = true },
+  { url = "*", fg = "#e6d6cb" },
+]
