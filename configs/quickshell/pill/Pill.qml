@@ -1661,14 +1661,15 @@ Item {
                     visible: Weather.ready
                     spacing: 5 * pill.s
 
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -4 * pill.s
-                        hoverEnabled: true
-                        enabled: hover.live
+                    HoverHandler {
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: pill.requestSurface("weather")
-                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "weather"
+                        enabled: hover.live
+                        onHoveredChanged: if (hovered) pill.soulTarget = "weather"
+                    }
+
+                    TapHandler {
+                        enabled: hover.live
+                        onTapped: pill.requestSurface("weather")
                     }
 
                     GlyphIcon {
