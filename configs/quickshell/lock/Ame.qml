@@ -18,16 +18,33 @@ Item {
     property real heat: 0
 
     readonly property real restR: 5.5 * s
-    property real bx: point.x
-    property real by: point.y
+    property bool initialized: false
+    property real bx: 0
+    property real by: 0
     property real swirl: 0
 
-    Behavior on bx { NumberAnimation { duration: 340; easing.type: Easing.OutCubic } }
-    Behavior on by { NumberAnimation { duration: 340; easing.type: Easing.OutCubic } }
+    Behavior on bx {
+        enabled: root.initialized
+        NumberAnimation { duration: 340; easing.type: Easing.OutCubic }
+    }
+    Behavior on by {
+        enabled: root.initialized
+        NumberAnimation { duration: 340; easing.type: Easing.OutCubic }
+    }
+
+    onBxChanged: canvas.requestPaint()
+    onByChanged: canvas.requestPaint()
 
     onPointChanged: {
-        bx = point.x;
-        by = point.y;
+        if (!initialized && point.x > 0 && point.y > 0) {
+            bx = point.x;
+            by = point.y;
+            initialized = true;
+            canvas.requestPaint();
+        } else if (initialized) {
+            bx = point.x;
+            by = point.y;
+        }
     }
 
     Timer {

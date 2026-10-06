@@ -805,8 +805,11 @@ Item {
         const drop = 12 * pill.s;
         if (soulTarget === "weather")
             return weatherGlance.mapToItem(pill, weatherGlance.width / 2, weatherGlance.height + drop * 0.55);
-        if (soulTarget === "tray" && soulTraySlot)
-            return soulTraySlot.mapToItem(pill, soulTraySlot.width / 2, soulTraySlot.height + drop * 0.55);
+        if (soulTarget === "tray" && soulTraySlot && typeof soulTraySlot.mapToItem === "function") {
+            try {
+                return soulTraySlot.mapToItem(pill, soulTraySlot.width / 2, soulTraySlot.height + drop * 0.55);
+            } catch (e) {}
+        }
         if (soulTarget === "layout")
             return layoutChip.mapToItem(pill, layoutChip.width / 2, layoutChip.height + drop * 0.55);
         if (soulTarget === "wifi")
