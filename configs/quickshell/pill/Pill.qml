@@ -86,7 +86,7 @@ Item {
     readonly property bool settingsLike: settingsOpen || appearanceOpen || updatesOpen
         || lookOpen || inputOpen || displayOpen || animationOpen || idlelockOpen
         || defaultappsOpen || userOpen || weatherOpen || emojiOpen || fontpickerOpen
-    readonly property bool hasMedia: Players.list.length > 0
+    readonly property bool hasMedia: Players.has && (Players.playing || (Players.title.length > 0 && !Players.isIdle(Players.active)))
 
     readonly property var netDevices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
     readonly property var wifiDev: netDevices.find(function(d) { return d && d.type === DeviceType.Wifi }) || null

@@ -20,10 +20,26 @@ Singleton {
         return (p && p.dbusName ? p.dbusName : "").toLowerCase().indexOf("playerctld") >= 0;
     }
 
+    function isTransient(p) {
+        var name = (p && p.dbusName ? p.dbusName : "").toLowerCase();
+        return name.indexOf("telegram") >= 0
+            || name.indexOf("brave") >= 0
+            || name.indexOf("chromium") >= 0
+            || name.indexOf("chrome") >= 0
+            || name.indexOf("firefox") >= 0;
+    }
+
     function isIdle(p) {
         if (!p || isProxy(p))
             return true;
-        return !p.isPlaying && (!p.trackTitle || p.trackTitle.length === 0);
+        var status = p.playbackStatus !== undefined ? p.playbackStatus : "";
+        if (status === "Stopped" || status === 2 || (typeof MprisPlaybackStatus !== "undefined" && status === MprisPlaybackStatus.Stopped))
+            return true;
+        if (!p.isPlaying && (!p.trackTitle || p.trackTitle.length === 0))
+            return true;
+        if (isTransient(p) && !p.isPlaying && (!p.trackTitle || p.trackTitle.length === 0 || status === "Stopped"))
+            return true;
+        return false;
     }
 
     function otherPlaying(self) {
@@ -84,12 +100,12 @@ Singleton {
         for (var i = 0; i < l.length; i++)
             if (l[i].isPlaying && !isIdle(l[i]))
                 return l[i];
-        if (preferred && l.indexOf(preferred) >= 0 && !isIdle(preferred))
+        if (preferred && l.indexOf(preferred) >= 0 && !isIdle(preferred) && (!isTransient(preferred) || preferred.isPlaying))
             return preferred;
         for (var j = 0; j < l.length; j++)
-            if (!isIdle(l[j]) && l[j].trackTitle)
+            if (!isIdle(l[j]) && l[j].trackTitle && l[j].trackTitle.length > 0)
                 return l[j];
-        return l[0];
+        return null;
     }
 
     readonly property var active: (manualActive && list.indexOf(manualActive) >= 0 && !isIdle(manualActive)) ? manualActive : autoPick
