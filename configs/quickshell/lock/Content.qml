@@ -140,24 +140,45 @@ Item {
         return weekdays[d.getDay()] + " · " + months[d.getMonth()] + " " + d.getDate();
     }
 
+    function isProxyPlayer(p) {
+        return (p && p.dbusName ? p.dbusName : "").toLowerCase().indexOf("playerctld") >= 0;
+    }
+
+    function isTransientPlayer(p) {
+        var name = (p && p.dbusName ? p.dbusName : "").toLowerCase();
+        return name.indexOf("telegram") >= 0
+            || name.indexOf("brave") >= 0
+            || name.indexOf("chromium") >= 0
+            || name.indexOf("chrome") >= 0
+            || name.indexOf("firefox") >= 0
+            || name.indexOf("discord") >= 0
+            || name.indexOf("vesktop") >= 0
+            || name.indexOf("edge") >= 0;
+    }
+
     readonly property var player: {
         var list = Mpris.players.values;
         if (!list || list.length === 0)
             return null;
-        var controllable = null;
         for (var i = 0; i < list.length; i++) {
             var p = list[i];
-            if (!p)
-                continue;
-            if (p.isPlaying)
+            if (p && !isProxyPlayer(p) && p.isPlaying)
                 return p;
-            if (!controllable && p.canControl)
-                controllable = p;
         }
-        return controllable ? controllable : list[0];
+        for (var j = 0; j < list.length; j++) {
+            var cand = list[j];
+            if (!cand || isProxyPlayer(cand) || isTransientPlayer(cand))
+                continue;
+            var status = cand.playbackStatus !== undefined ? cand.playbackStatus : "";
+            if (status === "Stopped" || status === 2)
+                continue;
+            if (cand.trackTitle && cand.trackTitle.length > 0 && cand.canControl)
+                return cand;
+        }
+        return null;
     }
 
-    readonly property bool hasPlayer: player !== null
+    readonly property bool hasPlayer: player !== null && (player.isPlaying || (trackTitle.length > 0))
     readonly property bool playing: hasPlayer && player.isPlaying
 
     readonly property string trackTitle: {

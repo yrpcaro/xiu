@@ -26,7 +26,10 @@ Singleton {
             || name.indexOf("brave") >= 0
             || name.indexOf("chromium") >= 0
             || name.indexOf("chrome") >= 0
-            || name.indexOf("firefox") >= 0;
+            || name.indexOf("firefox") >= 0
+            || name.indexOf("discord") >= 0
+            || name.indexOf("vesktop") >= 0
+            || name.indexOf("edge") >= 0;
     }
 
     function isIdle(p) {
@@ -37,7 +40,7 @@ Singleton {
             return true;
         if (!p.isPlaying && (!p.trackTitle || p.trackTitle.length === 0))
             return true;
-        if (isTransient(p) && !p.isPlaying && (!p.trackTitle || p.trackTitle.length === 0 || status === "Stopped"))
+        if (isTransient(p) && !p.isPlaying)
             return true;
         return false;
     }
