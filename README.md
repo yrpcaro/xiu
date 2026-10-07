@@ -5,6 +5,12 @@
 **An aesthetic, minimal, high-performance Wayland desktop environment.**
 *Built on Hyprland, driven by Quickshell, engineered with Rust.*
 
+<br />
+
+<img src="assets/hero.png" alt="xiu Desktop Preview" width="100%" />
+
+<br />
+
 ---
 
 </div>
@@ -19,8 +25,9 @@ Every component—from terminal emulators and file managers to application dialo
 
 ## Screenshots
 
-> [!NOTE]
-> Screenshots are currently being refreshed to reflect the latest UI redesign and theming features. Please submit your latest desktop screenshots to showcase them here!
+<div align="center">
+  <img src="assets/hero.png" alt="xiu Desktop Preview" width="100%" />
+</div>
 
 ---
 
