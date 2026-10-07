@@ -13,12 +13,17 @@ hl.env("PATH", os.getenv("HOME") .. "/.local/bin:" .. (os.getenv("PATH") or ""))
 -- apps always resolve user-installed icon themes, fonts, and desktop entries.
 hl.env("XDG_DATA_DIRS", os.getenv("HOME") .. "/.local/share:" .. (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"))
 
-hl.env("LIBVA_DRIVER_NAME",         "nvidia")
-hl.env("NVD_BACKEND",               "direct")
-hl.env("MOZ_DISABLE_RDD_SANDBOX",   "1")
-hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
-hl.env("__GL_GSYNC_ALLOWED",        "0")
-hl.env("__GL_VRR_ALLOWED",          "0")
+-- Hardware video acceleration and graphics environment.
+-- Only apply Nvidia-specific variables when the proprietary nvidia driver is loaded.
+local has_nvidia = (os.execute("test -c /dev/nvidia0") == 0) or (os.execute("test -d /proc/driver/nvidia") == 0)
+if has_nvidia then
+    hl.env("LIBVA_DRIVER_NAME",         "nvidia")
+    hl.env("NVD_BACKEND",               "direct")
+    hl.env("MOZ_DISABLE_RDD_SANDBOX",   "1")
+    hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
+    hl.env("__GL_GSYNC_ALLOWED",        "0")
+    hl.env("__GL_VRR_ALLOWED",          "0")
+end
 
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 

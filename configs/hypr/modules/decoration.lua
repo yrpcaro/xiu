@@ -72,6 +72,7 @@ hl.config({
         rounding_power   = 4,
         active_opacity   = 1.00,
         inactive_opacity = 1.00,
+        dim_special      = 0.12,
         shadow = {
             enabled      = true,
             range        = 10,
@@ -85,6 +86,7 @@ hl.config({
             vibrancy          = 0.17,
             noise             = 0.01,
             new_optimizations = true,
+            special           = false,
         },
     },
 })

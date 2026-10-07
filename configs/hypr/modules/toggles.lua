@@ -144,13 +144,16 @@ local function toggle(category)
     return function()
         local active = hl.get_active_special_workspace()
         local open = active and active.name == "special:" .. category
-        if not open then
-            hl.dispatch(hl.dsp.focus({ workspace = "special:" .. category }))
-        end
-        local apps = rules()[category]
-        if apps then place(apps, category) end
         if open then
             hl.dispatch(hl.dsp.workspace.toggle_special(category))
+        else
+            if active and active.name and active.name ~= "" then
+                local cur = active.name:gsub("^special:", "")
+                hl.dispatch(hl.dsp.workspace.toggle_special(cur))
+            end
+            hl.dispatch(hl.dsp.workspace.toggle_special(category))
+            local apps = rules()[category]
+            if apps then place(apps, category) end
         end
     end
 end
