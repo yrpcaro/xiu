@@ -643,9 +643,10 @@ PillSurface {
              * static thumb, which also stays underneath as the loading frame.
              */
             readonly property bool isGif: /\.gif(\?|$)/i.test(remote ? (modelData.image || "") : modelData.path)
+            readonly property bool isVideo: !remote && /\.(mp4|webm|mkv|mov)$/i.test(modelData.path || "")
             readonly property string videoSource: remote
                 ? (focused && root.previewFile !== "" ? "file://" + root.previewFile : "")
-                : (/\.(mp4|webm|mkv|mov)$/i.test(modelData.path) ? "file://" + modelData.path : "")
+                : (isVideo ? "file://" + modelData.path : "")
             readonly property bool showPreview: focused && root.previewArmed && ao < 0.5
             readonly property string resLabel: remote
                 ? (modelData.w > 0 ? modelData.w + "x" + modelData.h : "")
@@ -710,6 +711,14 @@ PillSurface {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     smooth: true
+
+                    onStatusChanged: {
+                        if (status === Image.Error && !tile.remote && !tile.isVideo && tile.modelData && tile.modelData.path) {
+                            var fb = "file://" + tile.modelData.path;
+                            if (source !== fb)
+                                source = fb;
+                        }
+                    }
                 }
 
                 Rectangle {

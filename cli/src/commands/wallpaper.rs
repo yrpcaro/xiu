@@ -749,11 +749,18 @@ pub fn resolve() -> i32 {
 
 pub fn thumbs() -> i32 {
     let wpdir = resolve_wallpaper_dir();
-    let cache = std::env::var("XDG_CACHE_HOME")
+    let cache_base = std::env::var("XDG_CACHE_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| home_path(&[".cache"]))
-        .join("ricelin-wp-thumbs");
+        .unwrap_or_else(|_| home_path(&[".cache"]));
+    let cache = cache_base.join("xiu-wp-thumbs");
+    let legacy_cache = cache_base.join("ricelin-wp-thumbs");
     let _ = fs::create_dir_all(&cache);
+    #[cfg(unix)]
+    {
+        if !legacy_cache.exists() {
+            let _ = std::os::unix::fs::symlink(&cache, &legacy_cache);
+        }
+    }
 
     // 1. Prune stale thumbnails
     if wpdir.is_dir() {
