@@ -23,14 +23,6 @@ Every component—from terminal emulators and file managers to application dialo
 
 ---
 
-## Screenshots
-
-<div align="center">
-  <img src="assets/hero.png" alt="xiu Desktop Preview" width="100%" />
-</div>
-
----
-
 ## Key Features
 
 ### 1. The Morphing Pill Shell & Lock Screen
