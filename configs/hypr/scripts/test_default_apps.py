@@ -50,4 +50,15 @@ with tempfile.TemporaryDirectory() as td:
     assert 'browser = "brave"' in content, f"brave missing after terminal addition: {content}"
     assert 'terminal = "ghostty"' in content, f"ghostty missing from vars.lua: {content}"
 
+    # Add editor key
+    res4 = subprocess.run(
+        ["xiu", "default-app", "text/plain", "dev.zed.Zed.desktop"],
+        capture_output=True, text=True, env=env
+    )
+    assert res4.returncode == 0, f"setting editor failed: {res4.stderr}"
+    content = vars_file.read_text()
+    assert 'browser = "brave"' in content, f"brave missing after editor addition: {content}"
+    assert 'terminal = "ghostty"' in content, f"ghostty missing after editor addition: {content}"
+    assert 'editor = "zeditor"' in content, f"editor missing from vars.lua: {content}"
+
 print("test_default_apps: all tests passed")

@@ -12,6 +12,7 @@ use std::process::Command;
 pub const VAR_MAP: &[(&str, &str)] = &[
     ("x-scheme-handler/http", "browser"),
     ("x-scheme-handler/terminal", "terminal"),
+    ("text/plain", "editor"),
     ("inode/directory", "fileManager"),
     ("audio/mpeg", "musicPlayer"),
     ("video/mp4", "videoPlayer"),
@@ -34,6 +35,18 @@ pub const WELL_KNOWN: &[(&str, &str)] = &[
     ("Alacritty.desktop", "alacritty"),
     ("wezterm.desktop", "wezterm"),
     ("org.wezfurlong.wezterm.desktop", "wezterm"),
+    ("code.desktop", "code"),
+    ("visual-studio-code.desktop", "code"),
+    ("code-oss.desktop", "code-oss"),
+    ("dev.zed.Zed.desktop", "zeditor"),
+    ("zed.desktop", "zeditor"),
+    ("helix.desktop", "helix"),
+    ("nvim.desktop", "nvim"),
+    ("neovim.desktop", "nvim"),
+    ("micro.desktop", "micro"),
+    ("org.gnome.TextEditor.desktop", "gnome-text-editor"),
+    ("gedit.desktop", "gedit"),
+    ("kate.desktop", "kate"),
     ("brave-browser.desktop", "brave"),
     ("firefox.desktop", "firefox"),
     ("chromium.desktop", "chromium"),
@@ -284,6 +297,10 @@ mod tests {
         assert_eq!(resolve_cmd("spotify-launcher.desktop"), "spotify-launcher");
         assert_eq!(resolve_cmd("imv.desktop"), "imv");
         assert_eq!(resolve_cmd("mpv.desktop"), "mpv");
+        assert_eq!(resolve_cmd("dev.zed.Zed.desktop"), "zeditor");
+        assert_eq!(resolve_cmd("code.desktop"), "code");
+        assert_eq!(resolve_cmd("helix.desktop"), "helix");
+        assert_eq!(resolve_cmd("nvim.desktop"), "nvim");
     }
 
     #[test]
@@ -307,6 +324,11 @@ mod tests {
         let content = fs::read_to_string(&p).unwrap();
         assert!(content.contains("browser = \"brave\""), "content: {content}");
         assert!(content.contains("terminal = \"ghostty\""), "content: {content}");
+
+        // 4. Add editor key
+        update_vars_file("editor", "zeditor", Some(&p)).unwrap();
+        let content = fs::read_to_string(&p).unwrap();
+        assert!(content.contains("editor = \"zeditor\""), "content: {content}");
 
         let _ = fs::remove_dir_all(&tmp_dir);
     }
