@@ -1674,6 +1674,21 @@ def run(args):
         record(ok, detail, "Seed wallpapers",
                "Copy any image into ~/Pictures/xiu/wallpapers yourself.")
 
+        # Apply wallpaper theme so yazi and terminals follow theme immediately
+        xiu_bin = Path.home() / ".local" / "bin" / "xiu"
+        if not dry:
+            cmd = [str(xiu_bin), "wallcolors", "--apply"] if xiu_bin.is_file() else ["xiu", "wallcolors", "--apply"] if shutil.which("xiu") else None
+            if cmd:
+                ok_wc, detail_wc = _run(cmd, dry=False)
+                record(ok_wc, detail_wc, "Apply initial wallpaper theme",
+                       "Run: xiu wallcolors --apply yourself.")
+            else:
+                yz = deploy.CONFIG_ROOT / "yazi"
+                if yz.is_dir():
+                    pill, b_pal, _ = deploy._yazi_palette()
+                    deploy._render_yazi(yz, pill, b_pal, apply=True)
+        else:
+            print("  would run: xiu wallcolors --apply")
 
         # m. login screen.
         if choices["greeter"] == "sddm":

@@ -139,6 +139,27 @@ WARM_DEFAULT = {
     "subtle": "#b89a86",
     "outline": "#594636",
     "bright": "#fff6f0",
+    "cream": "#abb4bc",
+    "outline_variant": "#5e666e",
+}
+
+WARM_BASE16 = {
+    "base00": "#141a20",
+    "base01": "#20262d",
+    "base02": "#2c333b",
+    "base03": "#454c54",
+    "base04": "#5e666e",
+    "base05": "#778088",
+    "base06": "#919aa2",
+    "base07": "#abb4bc",
+    "base08": "#ff6f4a",
+    "base09": "#dc865f",
+    "base0a": "#d08e45",
+    "base0b": "#a79f00",
+    "base0c": "#8ea554",
+    "base0d": "#e18700",
+    "base0e": "#83a900",
+    "base0f": "#6f767e",
 }
 
 
@@ -409,6 +430,123 @@ def _render_fastfetch(ff_dir, palette, apply):
     return str(ff_dir / "config.jsonc")
 
 
+def _yazi_palette():
+    """
+    Pick the palette for yazi/theme.toml: live wallpaper colours and base16 if
+    cached, else warm fallback defaults matching cli/src/commands/wallcolors/render.rs.
+    """
+    pill = dict(WARM_DEFAULT)
+    b_pal = dict(WARM_BASE16)
+    source = "default"
+    for sub in ("xiu", "ricelin"):
+        cache_c = Path.home() / ".cache" / sub / "colors.json"
+        if cache_c.is_file():
+            try:
+                data = json.loads(cache_c.read_text())
+                if isinstance(data, dict):
+                    pill.update(data)
+                    source = "cache"
+                    break
+            except (OSError, ValueError, TypeError):
+                pass
+
+    for sub in ("xiu", "ricelin"):
+        cache_b = Path.home() / ".cache" / sub / "base16.json"
+        if cache_b.is_file():
+            try:
+                data = json.loads(cache_b.read_text())
+                if isinstance(data, dict):
+                    b_pal.update(data)
+                    break
+            except (OSError, ValueError, TypeError):
+                pass
+
+    return pill, b_pal, source
+
+
+def _render_yazi(yazi_dir, pill, b, apply):
+    """
+    Render yazi/theme.toml matching cli/src/commands/wallcolors/render.rs.
+    """
+    g_pill = lambda k: pill.get(k, WARM_DEFAULT.get(k, ""))
+    g_b = lambda k: b.get(k, WARM_BASE16.get(k, ""))
+
+    lines = [
+        "# Written by wallcolors.py on every palette change.",
+        "[manager]",
+        f'cwd = {{ fg = "{g_pill("cream")}", bold = true }}',
+        f'hovered = {{ fg = "{g_pill("bright")}", bg = "{g_pill("surface_container_high")}", bold = true }}',
+        'preview_hovered = { underline = true }',
+        f'border_style = {{ fg = "{g_pill("outline_variant")}" }}',
+        f'find_keyword = {{ fg = "{g_pill("primary")}", bold = true }}',
+        f'find_position = {{ fg = "{g_pill("bright")}", bg = "{g_pill("surface_container_high")}" }}',
+        f'marker_selected = {{ fg = "{g_pill("primary")}", bold = true }}',
+        f'marker_copied = {{ fg = "{g_b("base0b")}" }}',
+        f'marker_cut = {{ fg = "{g_b("base08")}" }}',
+        f'marker_marked = {{ fg = "{g_b("base0e")}" }}',
+        f'tab_active = {{ fg = "{g_pill("bright")}", bg = "{g_pill("surface_container_high")}", bold = true }}',
+        f'tab_inactive = {{ fg = "{g_pill("dim")}" }}',
+        f'count_copied = {{ fg = "{g_pill("bright")}", bg = "{g_b("base0b")}" }}',
+        f'count_cut = {{ fg = "{g_pill("bright")}", bg = "{g_b("base08")}" }}',
+        f'count_selected = {{ fg = "{g_pill("bright")}", bg = "{g_pill("primary")}" }}',
+        'border_symbol = "│"',
+        'syntect_theme = ""',
+        "",
+        "[tabs]",
+        f'active = {{ fg = "{g_pill("bright")}", bg = "{g_pill("surface_container_high")}", bold = true }}',
+        f'inactive = {{ fg = "{g_pill("dim")}" }}',
+        f'sep = {{ fg = "{g_pill("outline_variant")}" }}',
+        "",
+        "[mode]",
+        f'normal_main = {{ fg = "{g_pill("on_primary_container")}", bg = "{g_pill("primary")}", bold = true }}',
+        f'normal_alt = {{ fg = "{g_pill("cream")}", bg = "{g_pill("surface_container")}" }}',
+        f'select_main = {{ fg = "{g_pill("bright")}", bg = "{g_b("base0d")}", bold = true }}',
+        f'select_alt = {{ fg = "{g_pill("cream")}", bg = "{g_pill("surface_container_high")}" }}',
+        f'unset_main = {{ fg = "{g_pill("cream")}", bg = "{g_b("base08")}", bold = true }}',
+        f'unset_alt = {{ fg = "{g_pill("cream")}", bg = "{g_pill("surface_container_high")}" }}',
+        "",
+        "[status]",
+        'separator_open = ""',
+        'separator_close = ""',
+        f'separator_style = {{ fg = "{g_pill("outline_variant")}" }}',
+        "",
+        "[select]",
+        f'border = {{ fg = "{g_pill("primary")}" }}',
+        f'active = {{ fg = "{g_pill("bright")}", bg = "{g_pill("surface_container_high")}" }}',
+        f'inactive = {{ fg = "{g_pill("cream")}" }}',
+        "",
+        "[input]",
+        f'border = {{ fg = "{g_pill("primary")}" }}',
+        f'title = {{ fg = "{g_pill("cream")}", bold = true }}',
+        f'value = {{ fg = "{g_pill("bright")}" }}',
+        f'selected = {{ bg = "{g_pill("surface_container_high")}" }}',
+        "",
+        "[which]",
+        f'mask = {{ bg = "{g_pill("surface_container")}" }}',
+        f'cand = {{ fg = "{g_b("base0c")}" }}',
+        f'rest = {{ fg = "{g_pill("subtle")}" }}',
+        f'desc = {{ fg = "{g_pill("cream")}" }}',
+        'separator = "  "',
+        f'separator_style = {{ fg = "{g_pill("outline_variant")}" }}',
+        "",
+        "[filetype]",
+        "rules = [",
+        f'  {{ mime = "image/*", fg = "{g_b("base0a")}" }},',
+        f'  {{ mime = "{{audio,video}}/*", fg = "{g_b("base0d")}" }},',
+        f'  {{ mime = "application/{{zip,rar,7z*,tar*,gzip,xz}}", fg = "{g_b("base0e")}" }},',
+        f'  {{ mime = "application/{{pdf,doc*,epub*}}", fg = "{g_b("base0b")}" }},',
+        f'  {{ mime = "inode/empty", fg = "{g_pill("dim")}" }},',
+        f'  {{ url = "*/", fg = "{g_b("base0d")}", bold = true }},',
+        f'  {{ url = "*", fg = "{g_pill("cream")}" }},',
+        "]",
+    ]
+    theme_file = yazi_dir / "theme.toml"
+    if apply:
+        yazi_dir.mkdir(parents=True, exist_ok=True)
+        theme_file.write_text("\n".join(lines) + "\n")
+    return str(theme_file)
+
+
 def _pristine(rel, config_root, src):
     """
     True when the live file is still the byte-exact repo copy, i.e. deploy just
@@ -520,6 +658,12 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
         actions.append({"step": "fastfetch", "path": str(ff / "config.jsonc"),
                         "palette": source, "rendered": out is not None})
 
+    yz = config_root / "yazi"
+    if yz.is_dir() or (Path(src) / "yazi").is_dir():
+        pill, b_pal, source = _yazi_palette()
+        out = _render_yazi(yz, pill, b_pal, apply)
+        actions.append({"step": "yazi-theme", "path": str(yz / "theme.toml"),
+                        "palette": source, "rendered": out is not None})
 
     icon_theme = "yet-another-monochrome-icon-set"
     kde = config_root / "kdeglobals"
