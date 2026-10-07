@@ -26,6 +26,7 @@
     an N-finger swipe is whatever hl.gesture registered for N fingers.
 ]]
 local vars = require("modules.vars")
+local toggles = require("modules.toggles")
 
 hl.config({
     gestures = {
@@ -50,14 +51,12 @@ end
 
 local function swipe_horizontal(target)
     return function()
-        if dismiss_special() then
-            return
-        end
+        dismiss_special()
         hl.dispatch(hl.dsp.focus({ workspace = target }))
     end
 end
 
--- 3 fingers horizontal: swipe between workspaces, or dismiss active special workspace.
+-- 3 fingers horizontal: swipe between workspaces, dismissing active special workspace if open.
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
     direction = "left",
@@ -71,19 +70,17 @@ hl.gesture({
 })
 
 -- 3 fingers vertical: swipe up toggles the spotify special workspace,
--- and swipe down toggles the telegram special workspace.
+-- and swipe down toggles the telegram special workspace (launching if not running).
 hl.gesture({
-    fingers        = vars.gestureWorkspaceFingers,
-    direction      = "up",
-    action         = "special",
-    workspace_name = "spotify",
+    fingers   = vars.gestureWorkspaceFingers,
+    direction = "up",
+    action    = toggles.toggle("spotify"),
 })
 
 hl.gesture({
-    fingers        = vars.gestureWorkspaceFingers,
-    direction      = "down",
-    action         = "special",
-    workspace_name = "telegram",
+    fingers   = vars.gestureWorkspaceFingers,
+    direction = "down",
+    action    = toggles.toggle("telegram"),
 })
 
 -- 4 fingers horizontal: carry the focused window to the neighbouring
