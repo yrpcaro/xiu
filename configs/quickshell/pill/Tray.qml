@@ -65,16 +65,6 @@ Item {
                 Layout.preferredWidth: 24 * tray.s
                 Layout.preferredHeight: 24 * tray.s
 
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 6 * tray.s
-                    color: Theme.frameBg
-                    border.width: 1
-                    border.color: Theme.frameBorder
-                    opacity: area.containsMouse ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                }
-
                 Image {
                     anchors.centerIn: parent
                     source: slot.modelData.icon
@@ -86,6 +76,8 @@ Item {
                     smooth: true
                     cache: true
                     asynchronous: true
+                    opacity: area.containsMouse ? 1.0 : 0.78
+                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
                 }
 
                 MouseArea {
