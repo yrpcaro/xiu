@@ -11,7 +11,8 @@
 
       3 fingers horizontal  workspaces (dismisses active special workspace
                             if present, else switches workspace)
-      3 fingers up / down    the stash special workspace (native)
+      3 fingers up / down    toggle spotify (up) and telegram (down)
+                            special workspaces
       4 fingers horizontal   move the focused window to the previous/next
                             workspace (dispatcher gesture — native dispatch
                             per completed swipe)
@@ -69,20 +70,20 @@ hl.gesture({
     action    = swipe_horizontal("r-1"),
 })
 
--- 3 fingers vertical: the stash special workspace, up to open and down to
--- dismiss, the same pair caelestia uses for its scratchpad.
+-- 3 fingers vertical: swipe up toggles the spotify special workspace,
+-- and swipe down toggles the telegram special workspace.
 hl.gesture({
     fingers        = vars.gestureWorkspaceFingers,
     direction      = "up",
     action         = "special",
-    workspace_name = "stash",
+    workspace_name = "spotify",
 })
 
 hl.gesture({
     fingers        = vars.gestureWorkspaceFingers,
     direction      = "down",
     action         = "special",
-    workspace_name = "stash",
+    workspace_name = "telegram",
 })
 
 -- 4 fingers horizontal: carry the focused window to the neighbouring

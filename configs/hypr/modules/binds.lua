@@ -238,7 +238,7 @@ hl.bind("CTRL + SUPER + code:58", hl.dsp.workspace.toggle_special("minimized")) 
 
 -- App-category workspaces (see modules/toggles.lua)
 hl.bind("CTRL + SHIFT + code:9", toggles.toggle("sysmon")) -- system monitor workspace
-hl.bind(mod .. " + code:58", toggles.toggle("music")) -- music workspace [M]
+hl.bind(mod .. " + code:58", toggles.toggle("spotify")) -- spotify workspace [M]
 hl.bind(mod .. " + code:38", toggles.toggle("communication")) -- communication workspace [A]
 hl.bind(mod .. " + SHIFT + code:38", hl.dsp.exec_cmd("xiu special communication")) -- send window to communication [A]
 hl.bind(mod .. " + code:27", toggles.toggle("todo")) -- todo workspace [R]

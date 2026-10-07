@@ -36,6 +36,9 @@ local defaults = {
     music = {
         spotify = { match = { { class = "[Ss]potify" } }, command = { "spotify-launcher" } },
     },
+    spotify = {
+        spotify = { match = { { class = "[Ss]potify" } }, command = { "spotify-launcher" } },
+    },
     communication = {},
     telegram = {
         telegram = {
