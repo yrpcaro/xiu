@@ -182,6 +182,92 @@ pub fn render_foot(pill: &HashMap<String, String>, b: &HashMap<String, String>, 
     let _ = fs::write(cache_xiu.join("foot-colors.ini"), &body);
 }
 
+pub fn render_alacritty(
+    pill: &HashMap<String, String>,
+    b: &HashMap<String, String>,
+    ansi: &[String],
+) {
+    let clean = |hex: &str| -> String {
+        let h = hex.trim().trim_start_matches('#');
+        format!("#{h}")
+    };
+    let base00 = clean(b.get("base00").map(String::as_str).unwrap_or("141a20"));
+    let base07 = clean(b.get("base07").map(String::as_str).unwrap_or("abb4bc"));
+    let base02 = clean(b.get("base02").map(String::as_str).unwrap_or("2c333b"));
+    let primary = clean(pill.get("primary").map(String::as_str).unwrap_or("e0563b"));
+    let bright_sel = clean(pill.get("bright").map(String::as_str).unwrap_or("fff6f0"));
+
+    let ansi_col = |idx: usize, def: &str| -> String {
+        clean(ansi.get(idx).map(String::as_str).unwrap_or(def))
+    };
+
+    let body = format!(
+        r#"# Written by wallcolors on every palette change.
+
+[colors.primary]
+background = "{base00}"
+foreground = "{base07}"
+
+[colors.cursor]
+cursor = "{primary}"
+text = "{base00}"
+
+[colors.selection]
+background = "{base02}"
+text = "{bright_sel}"
+
+[colors.normal]
+black = "{c0}"
+red = "{c1}"
+green = "{c2}"
+yellow = "{c3}"
+blue = "{c4}"
+magenta = "{c5}"
+cyan = "{c6}"
+white = "{c7}"
+
+[colors.bright]
+black = "{c8}"
+red = "{c9}"
+green = "{c10}"
+yellow = "{c11}"
+blue = "{c12}"
+magenta = "{c13}"
+cyan = "{c14}"
+white = "{c15}"
+"#,
+        c0 = ansi_col(0, "2e231b"),
+        c1 = ansi_col(1, "c0442b"),
+        c2 = ansi_col(2, "8a9a5b"),
+        c3 = ansi_col(3, "d89a5b"),
+        c4 = ansi_col(4, "6f8da0"),
+        c5 = ansi_col(5, "b06a78"),
+        c6 = ansi_col(6, "7fa89a"),
+        c7 = ansi_col(7, "e6d6cb"),
+        c8 = ansi_col(8, "594636"),
+        c9 = ansi_col(9, "e0563b"),
+        c10 = ansi_col(10, "a8b56e"),
+        c11 = ansi_col(11, "f0b85e"),
+        c12 = ansi_col(12, "8fa9bb"),
+        c13 = ansi_col(13, "d08a96"),
+        c14 = ansi_col(14, "9fc3b4"),
+        c15 = ansi_col(15, "fff6f0"),
+    );
+
+    let alacritty = tool_dir("alacritty").unwrap_or_else(|| {
+        let p = home_path(&[".config", "alacritty"]);
+        let _ = fs::create_dir_all(&p);
+        p
+    });
+    let _ = fs::write(alacritty.join("colors.toml"), &body);
+
+    for sub in &["ricelin", "xiu"] {
+        let d = cache_file(sub);
+        let _ = fs::create_dir_all(&d);
+        let _ = fs::write(d.join("alacritty-colors.toml"), &body);
+    }
+}
+
 pub fn render_btop(pill: &HashMap<String, String>, b: &HashMap<String, String>) {
     let d = match tool_dir("btop") {
         Some(dir) => dir,
@@ -2099,6 +2185,32 @@ pub fn render_user_templates(pill: &HashMap<String, String>, b: &HashMap<String,
                     }
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_render_alacritty_generates_valid_config() {
+        let mut pill = HashMap::new();
+        pill.insert("primary".into(), "#e0563b".into());
+        pill.insert("bright".into(), "#fff6f0".into());
+        let mut b = HashMap::new();
+        b.insert("base00".into(), "#141a20".into());
+        b.insert("base07".into(), "#abb4bc".into());
+        b.insert("base02".into(), "#2c333b".into());
+        let ansi: Vec<String> = (0..16).map(|i| format!("#{:02x}{:02x}{:02x}", i, i, i)).collect();
+        render_alacritty(&pill, &b, &ansi);
+
+        let colors_toml = home_path(&[".config", "alacritty", "colors.toml"]);
+        if colors_toml.is_file() {
+            let content = fs::read_to_string(colors_toml).unwrap();
+            assert!(content.contains("[colors.primary]"));
+            assert!(content.contains("background = \"#141a20\""));
+            assert!(content.contains("cursor = \"#e0563b\""));
         }
     }
 }

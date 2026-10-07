@@ -1,0 +1,31 @@
+# Xiu Alacritty terminal configuration.
+# Colors are managed dynamically by xiu wallcolors.
+
+[general]
+import = ["~/.config/alacritty/colors.toml"]
+
+[font]
+size = 12.0
+
+[font.normal]
+family = "JetBrainsMono Nerd Font"
+
+[window]
+opacity = 0.85
+decorations = "None"
+
+[window.padding]
+x = 14
+y = 12
+
+[cursor]
+style = { shape = "Block", blinking = "On" }
+blink_interval = 500
+
+[mouse]
+hide_when_typing = true
+
+[keyboard]
+bindings = [
+  { key = "V", mods = "Control", action = "Paste" }
+]

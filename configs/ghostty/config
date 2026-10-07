@@ -10,7 +10,7 @@ window-decoration = none
 background-opacity = 0.85
 
 cursor-style = block
-cursor-style-blink = false
+cursor-style-blink = true
 mouse-hide-while-typing = true
 
 copy-on-select = clipboard

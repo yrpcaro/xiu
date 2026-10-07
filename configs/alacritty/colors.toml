@@ -1,0 +1,33 @@
+# Written by wallcolors on every palette change.
+
+[colors.primary]
+background = "#141a20"
+foreground = "#abb4bc"
+
+[colors.cursor]
+cursor = "#e0563b"
+text = "#141a20"
+
+[colors.selection]
+background = "#2c333b"
+text = "#fff6f0"
+
+[colors.normal]
+black = "#2e231b"
+red = "#c0442b"
+green = "#8a9a5b"
+yellow = "#d89a5b"
+blue = "#6f8da0"
+magenta = "#b06a78"
+cyan = "#7fa89a"
+white = "#e6d6cb"
+
+[colors.bright]
+black = "#594636"
+red = "#e0563b"
+green = "#a8b56e"
+yellow = "#f0b85e"
+blue = "#8fa9bb"
+magenta = "#d08a96"
+cyan = "#9fc3b4"
+white = "#fff6f0"

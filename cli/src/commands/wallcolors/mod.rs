@@ -614,6 +614,7 @@ pub fn fan_out(
     }
 
     render::render_foot(pill, &b, &ansi);
+    render::render_alacritty(pill, &b, &ansi);
     render::render_btop(pill, &b);
     render::render_htop(pill, &b);
     render::render_nvtop(pill, &b);

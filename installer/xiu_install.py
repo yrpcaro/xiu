@@ -140,6 +140,8 @@ def _default_choices(args, info, manifest):
     profile = "full" if args.full else "quick"
     return {
         "profile": profile,
+        "terminal": "foot",
+        "extra_terminals": [],
         "aur_choice": info["aur_helper"] or "yay",
         "optional_ids": set(full_ids) if profile == "full" else set(),
         "file_manager": "dolphin",
@@ -179,6 +181,18 @@ def _wizard(args, info, manifest):
             ("None", "Skip the AUR, use fallbacks instead", False),
         ], default=0)
         aur_choice = ("yay", "paru", "none")[aidx]
+
+    tidx = tui.select_one("Default terminal", [
+        ("foot", "Fast, lightweight Wayland terminal (Recommended)", True),
+        ("ghostty", "Modern GPU-accelerated terminal with native styling", False),
+        ("alacritty", "Fast GPU-accelerated terminal with smooth cursor", False),
+    ], default=0)
+    terminal = ("foot", "ghostty", "alacritty")[tidx]
+
+    other_terms = [t for t in ("foot", "ghostty", "alacritty") if t != terminal]
+    term_opts = [(t, f"Install {t} as an alternative terminal", False) for t in other_terms]
+    chosen_terms = tui.select_many("Additional terminals", term_opts, preselect=())
+    extra_terminals = [other_terms[i] for i in chosen_terms]
 
     fidx = tui.select_one("File manager", [
         ("dolphin", "KDE file manager, native dialogs for the rice", True),
@@ -269,6 +283,7 @@ def _wizard(args, info, manifest):
 
     return {
         "profile": profile, "aur_choice": aur_choice, "optional_ids": optional_ids,
+        "terminal": terminal, "extra_terminals": extra_terminals,
         "file_manager": file_manager, "greeter": greeter,
         "sddm_theme": sddm_theme,
         "browser_theme": browser_theme, "fresh_configs": fresh_configs,
@@ -281,6 +296,11 @@ def _choice_ids(choices):
     """The full-group package ids an explicit wizard/quickstart choice pulls in,
     so a Quick install still gets the chosen file manager or greeter."""
     ids = set()
+    term = choices.get("terminal", "foot")
+    if term in ("ghostty", "alacritty"):
+        ids.add(term)
+    for extra in choices.get("extra_terminals", []):
+        ids.add(extra)
     fm = choices.get("file_manager")
     if fm and fm != "none":
         ids.add(fm)
@@ -315,7 +335,10 @@ def _build_plan(manifest, info, choices, cli_local):
     # deps in with it). The removal pass stays for boxes that already had
     # them installed.
     if choices.get("legacy_swap") == "clean":
-        rows = [r for r in rows if r["id"] not in ("ghostty", "cliphist")]
+        keep_ids = set()
+        if choices.get("terminal") == "ghostty" or "ghostty" in choices.get("extra_terminals", []):
+            keep_ids.add("ghostty")
+        rows = [r for r in rows if r["id"] not in ({"ghostty", "cliphist"} - keep_ids)]
 
     repos, native, aur, fb, skipped, manual = [], [], [], [], [], []
     optional_native = set()
@@ -712,27 +735,30 @@ def set_xdg_defaults(choices, dry):
 
 def seed_vars(choices, dry):
     """
-    Land the wizard's file-manager choice where Super+E reads it:
+    Land the wizard's terminal and file-manager choice where Hyprland reads it:
     ~/.config/xiu/vars.lua, the override file vars.lua loads on every start.
     Written only when the file doesn't exist — a box that already
-    personalized it keeps every line as-is. yazi is a TUI, so it rides in a
-    foot window the way the editor default does. Fail-soft like every step.
+    personalized it keeps every line as-is. Fail-soft like every step.
     """
     dest = deploy.CONFIG_ROOT / "xiu" / "vars.lua"
+    terminal = choices.get("terminal", "foot")
+    fm = choices.get("file_manager", "dolphin")
     if dry:
-        print("  would seed vars.lua (file manager: %s)" % choices["file_manager"])
+        print("  would seed vars.lua (terminal: %s, file manager: %s)" % (terminal, fm))
         return True, ""
     try:
         if dest.is_file():
             print(f"  vars.lua already present -> {dest} (left untouched)")
             return True, ""
-        fm = choices["file_manager"]
-        body = {
+        term_cmd = f"{terminal} -e yazi" if terminal != "foot" else "foot -e yazi"
+        body_fm = {
             "dolphin": '    fileManager = "dolphin",  -- chosen in the installer',
             "thunar": '    fileManager = "thunar",  -- chosen in the installer',
-            "yazi": '    fileManager = "foot -e yazi",  -- chosen in the installer; a TUI needs the terminal',
+            "yazi": f'    fileManager = "{term_cmd}",  -- chosen in the installer; a TUI needs the terminal',
             "none": '    -- fileManager = "dolphin",  -- uncomment to set yours',
         }.get(fm, '    -- fileManager = "dolphin",')
+        term_line = f'    terminal = "{terminal}",  -- chosen in the installer'
+        body = f"{term_line}\n{body_fm}"
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(VARS_TEMPLATE % {"body": body})
         print(f"  seeded vars.lua -> {dest}")
@@ -1648,6 +1674,7 @@ def run(args):
         record(ok, detail, "Seed wallpapers",
                "Copy any image into ~/Pictures/xiu/wallpapers yourself.")
 
+
         # m. login screen.
         if choices["greeter"] == "sddm":
             theme = choices.get("sddm_theme", "torii")
@@ -1743,7 +1770,9 @@ def run(args):
                 "fedora": ["dnf", "remove", "-y"],
                 "suse": ["zypper", "rm", "-y"],
             }.get(fam)
-            for old_id, new_id in (("ghostty", "foot"), ("cliphist", "clipvault")):
+            keep_ghostty = choices.get("terminal") == "ghostty" or "ghostty" in choices.get("extra_terminals", [])
+            swap_pairs = [("cliphist", "clipvault")] if keep_ghostty else [("ghostty", "foot"), ("cliphist", "clipvault")]
+            for old_id, new_id in swap_pairs:
                 if remove_argv is None:
                     break
                 old_pkg = next((p for p in manifest["packages"] if p["id"] == old_id), None)

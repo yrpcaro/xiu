@@ -41,6 +41,7 @@ DEPLOY_SET = [
     ("quickshell", "quickshell",                            "quickshell"),
     ("ghostty",    "ghostty",                               "ghostty"),
     ("foot",       "foot",                                  "foot"),
+    ("alacritty",  "alacritty",                             "alacritty"),
     ("fish",       "fish",                                  "fish"),
     ("fastfetch",  "fastfetch",                             "fastfetch"),
     ("btop",       "btop",                                  "btop"),
@@ -518,6 +519,7 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
         out = _render_fastfetch(ff, palette, apply)
         actions.append({"step": "fastfetch", "path": str(ff / "config.jsonc"),
                         "palette": source, "rendered": out is not None})
+
 
     icon_theme = "yet-another-monochrome-icon-set"
     kde = config_root / "kdeglobals"

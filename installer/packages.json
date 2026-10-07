@@ -81,6 +81,10 @@
       "names": { "arch": "ghostty", "debian": null, "fedora": null, "suse": "ghostty", "gentoo": "x11-terms/ghostty" },
       "fallback": "ghostty" },
 
+    { "id": "alacritty", "group": "full", "required": false, "desc": "Alternative terminal emulator (GPU-accelerated)", "aur": false,
+      "names": { "arch": "alacritty", "debian": "alacritty", "fedora": "alacritty", "suse": "alacritty", "gentoo": "x11-terms/alacritty" },
+      "fallback": "cargo" },
+
     { "id": "fish", "group": "core", "required": true, "desc": "The shell", "aur": false,
       "names": { "arch": "fish", "debian": "fish", "fedora": "fish", "suse": "fish", "gentoo": "app-shells/fish" }, "fallback": null },
 
