@@ -385,7 +385,8 @@ def main():
             assert 'set recolor-keephue "true"' in z_text, "zathura recolor keephue enabled"
             assert 'set default-bg "rgba(' in z_text, "zathura default-bg has rgba transparency"
             assert 'set recolor-lightcolor "rgba(' in z_text, "zathura recolor-lightcolor has rgba transparency"
-            assert ('set recolor-darkcolor "%s"' % sample_pill["cream"]) in z_text, "zathura recolor-darkcolor follows cream"
+            assert ('set recolor-darkcolor "%s"' % WARM["base07"]) in z_text, "zathura recolor-darkcolor follows terminal foreground"
+            assert 'set statusbar-bg "rgba(' in z_text, "zathura statusbar-bg has rgba transparency"
             assert (zathura_dir / "zathurarc").is_file(), "zathurarc was created"
             assert "include theme" in (zathura_dir / "zathurarc").read_text(), "zathurarc includes theme"
         finally:

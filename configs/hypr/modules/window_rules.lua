@@ -74,7 +74,7 @@ hl.window_rule({
 hl.window_rule({
     name    = "zathura-translucent",
     match   = { class = "(zathura|org\\.pwmt\\.zathura)" },
-    opacity = "0.90 0.85",
+    opacity = "0.85 0.85",
 })
 
 hl.window_rule({

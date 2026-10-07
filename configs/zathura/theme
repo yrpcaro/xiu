@@ -4,49 +4,49 @@ set recolor "true"
 set recolor-keephue "true"
 set recolor-reverse-video "false"
 
-# Page background and text recolor (transparent & matches system palette)
-set recolor-lightcolor "rgba(20,17,15,0.85)"
-set recolor-darkcolor "#e6e6e6"
+# Page background and text recolor (matches terminal background, transparency & blur)
+set recolor-lightcolor "rgba(20,26,32,0.85)"
+set recolor-darkcolor "#abb4bc"
 
 # Window background and foreground
-set default-bg "rgba(20,17,15,0.85)"
-set default-fg "#e6e6e6"
+set default-bg "rgba(20,26,32,0.85)"
+set default-fg "#abb4bc"
 
 # Statusbar
-set statusbar-bg "rgba(20,17,15,0.90)"
-set statusbar-fg "#e6e6e6"
+set statusbar-bg "rgba(20,26,32,0.85)"
+set statusbar-fg "#abb4bc"
 
 # Inputbar
-set inputbar-bg "rgba(20,17,15,0.90)"
-set inputbar-fg "#e6e6e6"
+set inputbar-bg "rgba(20,26,32,0.85)"
+set inputbar-fg "#abb4bc"
 
 # Notifications
-set notification-bg "rgba(20,17,15,0.90)"
-set notification-fg "#e6e6e6"
+set notification-bg "rgba(20,26,32,0.85)"
+set notification-fg "#abb4bc"
 set notification-error-bg "#c0442b"
-set notification-error-fg "#f7f7f7"
+set notification-error-fg "#ffffff"
 set notification-warning-bg "#d89a5b"
-set notification-warning-fg "#f7f7f7"
+set notification-warning-fg "#ffffff"
 
 # Highlight & Selection
-set highlight-color "rgba(179,179,179,0.35)"
-set highlight-active-color "rgba(179,179,179,0.65)"
+set highlight-color "rgba(224,86,59,0.35)"
+set highlight-active-color "rgba(224,86,59,0.65)"
 
 # Completion
-set completion-bg "rgba(20,17,15,0.90)"
-set completion-fg "#e6e6e6"
-set completion-highlight-bg "#b3b3b3"
-set completion-highlight-fg "#14110f"
-set completion-group-bg "rgba(20,17,15,0.90)"
-set completion-group-fg "#bababa"
+set completion-bg "rgba(20,26,32,0.85)"
+set completion-fg "#abb4bc"
+set completion-highlight-bg "#e0563b"
+set completion-highlight-fg "#141a20"
+set completion-group-bg "rgba(20,26,32,0.85)"
+set completion-group-fg "#5e666e"
 
 # Index mode (table of contents)
-set index-bg "rgba(20,17,15,0.90)"
-set index-fg "#e6e6e6"
-set index-active-bg "#b3b3b3"
-set index-active-fg "#14110f"
+set index-bg "rgba(20,26,32,0.85)"
+set index-fg "#abb4bc"
+set index-active-bg "#e0563b"
+set index-active-fg "#141a20"
 
 # Render loading
 set render-loading "true"
-set render-loading-bg "rgba(20,17,15,0.85)"
-set render-loading-fg "#bababa"
+set render-loading-bg "rgba(20,26,32,0.85)"
+set render-loading-fg "#5e666e"

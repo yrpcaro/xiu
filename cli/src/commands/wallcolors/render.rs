@@ -902,18 +902,17 @@ pub fn render_zathura(
     };
 
     let g = |m: &HashMap<String, String>, k: &str| m.get(k).cloned().unwrap_or_default();
-    let surface = g(pill, "surface");
-    let bg_hex = if !surface.is_empty() {
-        surface
-    } else {
-        g(b, "base00")
-    };
-    let cream = g(pill, "cream");
+    let clean = |hex: &str| hex.trim().trim_start_matches('#').to_string();
+    let base00 = clean(b.get("base00").map(String::as_str).unwrap_or("141a20"));
+    let base07 = clean(b.get("base07").map(String::as_str).unwrap_or("abb4bc"));
     let primary = g(pill, "primary");
     let subtle = g(pill, "subtle");
     let bright = g(pill, "bright");
     let error = g(b, "base08");
     let warning = g(b, "base0a");
+
+    let bg_hex = format!("#{base00}");
+    let fg_hex = format!("#{base07}");
 
     let hex_to_rgba = |hex: &str, alpha: f32| -> String {
         let s = hex.trim().trim_start_matches('#');
@@ -928,7 +927,6 @@ pub fn render_zathura(
     };
 
     let bg_rgba = hex_to_rgba(&bg_hex, 0.85);
-    let surface_rgba = hex_to_rgba(&bg_hex, 0.90);
     let highlight_rgba = hex_to_rgba(&primary, 0.35);
     let highlight_active_rgba = hex_to_rgba(&primary, 0.65);
 
@@ -942,25 +940,25 @@ set recolor "true"
 set recolor-keephue "true"
 set recolor-reverse-video "false"
 
-# Page background and text recolor (transparent & matches system palette)
+# Page background and text recolor (matches terminal background, transparency & blur)
 set recolor-lightcolor "{bg_rgba}"
-set recolor-darkcolor "{cream}"
+set recolor-darkcolor "{fg_hex}"
 
 # Window background and foreground
 set default-bg "{bg_rgba}"
-set default-fg "{cream}"
+set default-fg "{fg_hex}"
 
 # Statusbar
-set statusbar-bg "{surface_rgba}"
-set statusbar-fg "{cream}"
+set statusbar-bg "{bg_rgba}"
+set statusbar-fg "{fg_hex}"
 
 # Inputbar
-set inputbar-bg "{surface_rgba}"
-set inputbar-fg "{cream}"
+set inputbar-bg "{bg_rgba}"
+set inputbar-fg "{fg_hex}"
 
 # Notifications
-set notification-bg "{surface_rgba}"
-set notification-fg "{cream}"
+set notification-bg "{bg_rgba}"
+set notification-fg "{fg_hex}"
 set notification-error-bg "{err_col}"
 set notification-error-fg "{bright}"
 set notification-warning-bg "{warn_col}"
@@ -971,16 +969,16 @@ set highlight-color "{highlight_rgba}"
 set highlight-active-color "{highlight_active_rgba}"
 
 # Completion
-set completion-bg "{surface_rgba}"
-set completion-fg "{cream}"
+set completion-bg "{bg_rgba}"
+set completion-fg "{fg_hex}"
 set completion-highlight-bg "{primary}"
 set completion-highlight-fg "{bg_hex}"
-set completion-group-bg "{surface_rgba}"
+set completion-group-bg "{bg_rgba}"
 set completion-group-fg "{subtle}"
 
 # Index mode (table of contents)
-set index-bg "{surface_rgba}"
-set index-fg "{cream}"
+set index-bg "{bg_rgba}"
+set index-fg "{fg_hex}"
 set index-active-bg "{primary}"
 set index-active-fg "{bg_hex}"
 
