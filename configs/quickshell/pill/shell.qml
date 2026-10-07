@@ -135,6 +135,20 @@ ShellRoot {
     Connections {
         target: Hyprland
         function onRawEvent(event) {
+            if (event.name === "workspace" || event.name === "workspacev2") {
+                var mons = Hyprland.monitors.values;
+                for (var i = 0; i < mons.length; i++) {
+                    var m = mons[i];
+                    var sw = (m.specialWorkspace && m.specialWorkspace.name && m.specialWorkspace.name.length > 0)
+                        ? m.specialWorkspace.name
+                        : ((m.lastIpcObject && m.lastIpcObject.specialWorkspace && m.lastIpcObject.specialWorkspace.name && m.lastIpcObject.specialWorkspace.name.length > 0)
+                            ? m.lastIpcObject.specialWorkspace.name : "");
+                    if (sw && sw.length > 0) {
+                        var cleanName = sw.indexOf("special:") === 0 ? sw.slice(8) : sw;
+                        Hyprland.dispatch("togglespecialworkspace " + cleanName);
+                    }
+                }
+            }
             if (root.refreshEvents[event.name])
                 root.refresh();
         }

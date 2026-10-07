@@ -19,11 +19,20 @@ local release = { release = true }
 local repeating = { repeating = true }
 local locked_repeating = { locked = true, repeating = true }
 
+local function dismiss_special()
+    local sp = hl.get_active_special_workspace()
+    if sp and sp.name and sp.name ~= "" then
+        local name = sp.name:gsub("^special:", "")
+        hl.dispatch(hl.dsp.workspace.toggle_special(name))
+    end
+end
+
 -- Digits pick the slot inside the current group of ten workspaces;
 -- CTRL+SUPER plus a digit picks the group, keeping the current slot
 -- (group 1 is workspaces 1-10, group 2 is 11-20, and so on).
 local function goto_slot(i)
     return function()
+        dismiss_special()
         local active = hl.get_active_workspace()
         local base = active and (math.floor((active.id - 1) / 10) * 10) or 0
         hl.dispatch(hl.dsp.focus({ workspace = base + i }))
@@ -40,6 +49,7 @@ end
 
 local function goto_group(i)
     return function()
+        dismiss_special()
         local active = hl.get_active_workspace()
         local slot = active and (((active.id - 1) % 10) + 1) or i
         hl.dispatch(hl.dsp.focus({ workspace = (i - 1) * 10 + slot }))
@@ -193,15 +203,22 @@ hl.bind("CTRL + SUPER + ALT + code:17", move_group(8)) -- move window to group 8
 hl.bind("CTRL + SUPER + ALT + code:18", move_group(9)) -- move window to group 9 [9]
 hl.bind("CTRL + SUPER + ALT + code:19", move_group(10)) -- move window to group 10 [0]
 
+local function focus_relative(target)
+    return function()
+        dismiss_special()
+        hl.dispatch(hl.dsp.focus({ workspace = target }))
+    end
+end
+
 -- Relative workspace movement
-hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "r+1" })) -- next workspace
-hl.bind(mod .. " + mouse_up", hl.dsp.focus({ workspace = "r-1" })) -- previous workspace
-hl.bind(mod .. " + code:117", hl.dsp.focus({ workspace = "r+1" }), repeating) -- next workspace
-hl.bind(mod .. " + code:112", hl.dsp.focus({ workspace = "r-1" }), repeating) -- previous workspace
-hl.bind("CTRL + SUPER + code:114", hl.dsp.focus({ workspace = "r+1" }), repeating) -- next workspace
-hl.bind("CTRL + SUPER + code:113", hl.dsp.focus({ workspace = "r-1" }), repeating) -- previous workspace
-hl.bind("CTRL + SUPER + mouse_down", hl.dsp.focus({ workspace = "r+10" })) -- next workspace group
-hl.bind("CTRL + SUPER + mouse_up", hl.dsp.focus({ workspace = "r-10" })) -- previous workspace group
+hl.bind(mod .. " + mouse_down", focus_relative("r+1")) -- next workspace
+hl.bind(mod .. " + mouse_up", focus_relative("r-1")) -- previous workspace
+hl.bind(mod .. " + code:117", focus_relative("r+1"), repeating) -- next workspace
+hl.bind(mod .. " + code:112", focus_relative("r-1"), repeating) -- previous workspace
+hl.bind("CTRL + SUPER + code:114", focus_relative("r+1"), repeating) -- next workspace
+hl.bind("CTRL + SUPER + code:113", focus_relative("r-1"), repeating) -- previous workspace
+hl.bind("CTRL + SUPER + mouse_down", focus_relative("r+10")) -- next workspace group
+hl.bind("CTRL + SUPER + mouse_up", focus_relative("r-10")) -- previous workspace group
 hl.bind("SUPER + ALT + mouse_down", hl.dsp.window.move({ workspace = "r+1" })) -- move window to next workspace
 hl.bind("SUPER + ALT + mouse_up", hl.dsp.window.move({ workspace = "r-1" })) -- move window to previous workspace
 hl.bind("SUPER + ALT + code:117", hl.dsp.window.move({ workspace = "r+1" }), repeating) -- move window to next workspace
