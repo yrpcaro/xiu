@@ -6,6 +6,7 @@ use std::fs;
 use std::path::Path;
 
 const US_KEYS: &[(u32, &str)] = &[
+    (9, "Esc"),
     (10, "1"), (11, "2"), (12, "3"), (13, "4"), (14, "5"),
     (15, "6"), (16, "7"), (17, "8"), (18, "9"), (19, "0"),
     (20, "-"), (21, "="), (22, "Backspace"), (23, "Tab"),
@@ -264,6 +265,7 @@ mod tests {
 
     #[test]
     fn format_resolves_clean_us_labels() {
+        assert_eq!(format_combo("mod .. \" + code:9\""), "SUPER + Esc");
         assert_eq!(format_combo("mod .. \" + code:24\""), "SUPER + Q");
         assert_eq!(format_combo("mod .. \" + code:28\""), "SUPER + T");
         assert_eq!(format_combo("mod .. \" + code:60\""), "SUPER + .");
