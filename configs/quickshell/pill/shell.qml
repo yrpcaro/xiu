@@ -145,7 +145,7 @@ ShellRoot {
                             ? m.lastIpcObject.specialWorkspace.name : "");
                     if (sw && sw.length > 0) {
                         var cleanName = sw.indexOf("special:") === 0 ? sw.slice(8) : sw;
-                        Hyprland.dispatch("togglespecialworkspace " + cleanName);
+                        Hyprland.dispatch('hl.dsp.workspace.toggle_special("' + cleanName + '")');
                     }
                 }
             }

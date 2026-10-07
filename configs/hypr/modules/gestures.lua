@@ -9,9 +9,8 @@
     move, special, close, float, fullscreen, cursor_zoom, scroll_move, or
     a Lua start/update/end callback receiving { delta = {x, y} }):
 
-      3 fingers horizontal  workspaces (native CUnifiedWorkspaceSwipe —
-                            the smoothest path; the tuning knobs above are
-                            its knobs)
+      3 fingers horizontal  workspaces (dismisses active special workspace
+                            if present, else switches workspace)
       3 fingers up / down    the stash special workspace (native)
       4 fingers horizontal   move the focused window to the previous/next
                             workspace (dispatcher gesture — native dispatch
@@ -38,11 +37,36 @@ hl.config({
     },
 })
 
--- 3 fingers horizontal: swipe between workspaces.
+local function dismiss_special()
+    local sp = hl.get_active_special_workspace()
+    if sp and sp.name and sp.name ~= "" then
+        local name = sp.name:gsub("^special:", "")
+        hl.dispatch(hl.dsp.workspace.toggle_special(name))
+        return true
+    end
+    return false
+end
+
+local function swipe_horizontal(target)
+    return function()
+        if dismiss_special() then
+            return
+        end
+        hl.dispatch(hl.dsp.focus({ workspace = target }))
+    end
+end
+
+-- 3 fingers horizontal: swipe between workspaces, or dismiss active special workspace.
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
-    direction = "horizontal",
-    action    = "workspace",
+    direction = "left",
+    action    = swipe_horizontal("r+1"),
+})
+
+hl.gesture({
+    fingers   = vars.gestureWorkspaceFingers,
+    direction = "right",
+    action    = swipe_horizontal("r-1"),
 })
 
 -- 3 fingers vertical: the stash special workspace, up to open and down to
