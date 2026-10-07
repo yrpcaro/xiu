@@ -884,6 +884,128 @@ pub fn render_yazi(pill: &HashMap<String, String>, b: &HashMap<String, String>) 
     let _ = fs::write(d.join("theme.toml"), lines.join("\n") + "\n");
 }
 
+pub fn render_zathura(
+    pill: &HashMap<String, String>,
+    b: &HashMap<String, String>,
+    override_dir: Option<&Path>,
+) {
+    let dir = match override_dir {
+        Some(d) => d.to_path_buf(),
+        None => match tool_dir("zathura") {
+            Some(d) => d,
+            None => {
+                let p = home_path(&[".config", "zathura"]);
+                let _ = fs::create_dir_all(&p);
+                p
+            }
+        },
+    };
+
+    let g = |m: &HashMap<String, String>, k: &str| m.get(k).cloned().unwrap_or_default();
+    let surface = g(pill, "surface");
+    let bg_hex = if !surface.is_empty() {
+        surface
+    } else {
+        g(b, "base00")
+    };
+    let cream = g(pill, "cream");
+    let primary = g(pill, "primary");
+    let subtle = g(pill, "subtle");
+    let bright = g(pill, "bright");
+    let error = g(b, "base08");
+    let warning = g(b, "base0a");
+
+    let hex_to_rgba = |hex: &str, alpha: f32| -> String {
+        let s = hex.trim().trim_start_matches('#');
+        if s.len() >= 6 {
+            let r = u8::from_str_radix(&s[0..2], 16).unwrap_or(0);
+            let g = u8::from_str_radix(&s[2..4], 16).unwrap_or(0);
+            let b = u8::from_str_radix(&s[4..6], 16).unwrap_or(0);
+            format!("rgba({r},{g},{b},{alpha:.2})")
+        } else {
+            format!("rgba(20,17,15,{alpha:.2})")
+        }
+    };
+
+    let bg_rgba = hex_to_rgba(&bg_hex, 0.85);
+    let surface_rgba = hex_to_rgba(&bg_hex, 0.90);
+    let highlight_rgba = hex_to_rgba(&primary, 0.35);
+    let highlight_active_rgba = hex_to_rgba(&primary, 0.65);
+
+    let err_col = if !error.is_empty() { error } else { "#c0442b".to_string() };
+    let warn_col = if !warning.is_empty() { warning } else { "#d89a5b".to_string() };
+
+    let content = format!(
+        r#"# Written by wallcolors on every palette change.
+
+set recolor "true"
+set recolor-keephue "true"
+set recolor-reverse-video "false"
+
+# Page background and text recolor (transparent & matches system palette)
+set recolor-lightcolor "{bg_rgba}"
+set recolor-darkcolor "{cream}"
+
+# Window background and foreground
+set default-bg "{bg_rgba}"
+set default-fg "{cream}"
+
+# Statusbar
+set statusbar-bg "{surface_rgba}"
+set statusbar-fg "{cream}"
+
+# Inputbar
+set inputbar-bg "{surface_rgba}"
+set inputbar-fg "{cream}"
+
+# Notifications
+set notification-bg "{surface_rgba}"
+set notification-fg "{cream}"
+set notification-error-bg "{err_col}"
+set notification-error-fg "{bright}"
+set notification-warning-bg "{warn_col}"
+set notification-warning-fg "{bright}"
+
+# Highlight & Selection
+set highlight-color "{highlight_rgba}"
+set highlight-active-color "{highlight_active_rgba}"
+
+# Completion
+set completion-bg "{surface_rgba}"
+set completion-fg "{cream}"
+set completion-highlight-bg "{primary}"
+set completion-highlight-fg "{bg_hex}"
+set completion-group-bg "{surface_rgba}"
+set completion-group-fg "{subtle}"
+
+# Index mode (table of contents)
+set index-bg "{surface_rgba}"
+set index-fg "{cream}"
+set index-active-bg "{primary}"
+set index-active-fg "{bg_hex}"
+
+# Render loading
+set render-loading "true"
+set render-loading-bg "{bg_rgba}"
+set render-loading-fg "{subtle}"
+"#
+    );
+
+    let _ = fs::write(dir.join("theme"), &content);
+
+    let rc_file = dir.join("zathurarc");
+    if !rc_file.is_file() {
+        let rc_content = "# Xiu zathura configuration\nset adjust-open \"width\"\nset selection-clipboard \"clipboard\"\nset window-title-basename \"true\"\nset statusbar-home-tilde \"true\"\n\ninclude theme\n";
+        let _ = fs::write(rc_file, rc_content);
+    }
+
+    for sub in &["ricelin", "xiu"] {
+        let d = cache_file(sub);
+        let _ = fs::create_dir_all(&d);
+        let _ = fs::write(d.join("zathura-theme"), &content);
+    }
+}
+
 pub fn render_spicetify(pill: &HashMap<String, String>, b: &HashMap<String, String>) {
     let d = config_file(&["spicetify"]);
     let theme_dir = d.join("Themes").join("xiu");

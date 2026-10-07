@@ -623,6 +623,7 @@ pub fn fan_out(
     render::render_helix(pill, &b, None);
     render::render_bottom(pill, &b);
     render::render_yazi(pill, &b);
+    render::render_zathura(pill, &b, None);
     render::render_spicetify(pill, &b);
     render::render_discord(pill);
     render::render_userchrome(pill);
@@ -1031,6 +1032,30 @@ fn test_eval(args: &[String]) -> i32 {
                 }
             }
             render::render_micro(&pill, &b, Some(&m_dir));
+            0
+        }
+        "render_zathura" => {
+            let pill_json = args.get(1).map(String::as_str).unwrap_or("{}");
+            let b_json = args.get(2).map(String::as_str).unwrap_or("{}");
+            let z_dir = PathBuf::from(args.get(3).map(String::as_str).unwrap_or("."));
+
+            let mut pill = HashMap::new();
+            if let Ok(Json::Obj(entries)) = json::parse(pill_json) {
+                for (k, v) in entries {
+                    if let Some(s) = v.as_str() {
+                        pill.insert(k, s.to_string());
+                    }
+                }
+            }
+            let mut b = HashMap::new();
+            if let Ok(Json::Obj(entries)) = json::parse(b_json) {
+                for (k, v) in entries {
+                    if let Some(s) = v.as_str() {
+                        b.insert(k, s.to_string());
+                    }
+                }
+            }
+            render::render_zathura(&pill, &b, Some(&z_dir));
             0
         }
         other => {

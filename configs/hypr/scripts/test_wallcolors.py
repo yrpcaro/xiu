@@ -116,6 +116,12 @@ class XiuWallcolors:
         XiuWallcolors._run("render_micro", json.dumps(sample_pill), b_str, d)
 
     @staticmethod
+    def render_zathura(sample_pill, b=None, target_dir=None):
+        b_str = json.dumps(b) if b is not None else "{}"
+        d = str(target_dir or wc._tool_dir("zathura"))
+        XiuWallcolors._run("render_zathura", json.dumps(sample_pill), b_str, d)
+
+    @staticmethod
     def _tool_dir(name):
         path = Path.home() / ".config" / name
         return path if path.is_dir() else None
@@ -366,6 +372,22 @@ def main():
             assert 'color-link tabbar "%s"' % sample_pill["dim"] in m_text, "micro tabbar is transparent"
             assert 'color-link constant.bool' in m_text, "micro constant.bool present"
             assert 'color-link diff-added' in m_text, "micro diff-added present"
+
+            # Zathura theme tests
+            zathura_dir = Path(tmpdir) / "zathura"
+            zathura_dir.mkdir()
+            wc._tool_dir = lambda name: zathura_dir if name == "zathura" else orig_tool_dir(name)
+            wc.render_zathura(sample_pill, WARM)
+            z_theme = zathura_dir / "theme"
+            assert z_theme.is_file(), "zathura theme file was created"
+            z_text = z_theme.read_text()
+            assert 'set recolor "true"' in z_text, "zathura recolor enabled"
+            assert 'set recolor-keephue "true"' in z_text, "zathura recolor keephue enabled"
+            assert 'set default-bg "rgba(' in z_text, "zathura default-bg has rgba transparency"
+            assert 'set recolor-lightcolor "rgba(' in z_text, "zathura recolor-lightcolor has rgba transparency"
+            assert ('set recolor-darkcolor "%s"' % sample_pill["cream"]) in z_text, "zathura recolor-darkcolor follows cream"
+            assert (zathura_dir / "zathurarc").is_file(), "zathurarc was created"
+            assert "include theme" in (zathura_dir / "zathurarc").read_text(), "zathurarc includes theme"
         finally:
             wc._tool_dir = orig_tool_dir
 

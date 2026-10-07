@@ -53,6 +53,7 @@ DEPLOY_SET = [
     ("helix",      "helix",                                 "helix"),
     ("bottom",     "bottom",                                "bottom"),
     ("yazi",       "yazi",                                  "yazi"),
+    ("zathura",    "zathura",                               "zathura"),
     ("mpv",        "mpv",                                   "mpv"),
     ("spicetify",  "spicetify",                             "spicetify"),
     ("portals",    "portals",                               "xdg-desktop-portal"),

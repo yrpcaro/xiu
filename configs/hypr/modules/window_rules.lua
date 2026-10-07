@@ -72,6 +72,12 @@ hl.window_rule({
 })
 
 hl.window_rule({
+    name    = "zathura-translucent",
+    match   = { class = "(zathura|org\\.pwmt\\.zathura)" },
+    opacity = "0.90 0.85",
+})
+
+hl.window_rule({
     name         = "idle-inhibit-fullscreen",
     match        = { class = ".*" },
     idle_inhibit = "fullscreen",

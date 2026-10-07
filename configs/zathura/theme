@@ -1,0 +1,52 @@
+# Written by wallcolors on every palette change.
+
+set recolor "true"
+set recolor-keephue "true"
+set recolor-reverse-video "false"
+
+# Page background and text recolor (transparent & matches system palette)
+set recolor-lightcolor "rgba(20,17,15,0.85)"
+set recolor-darkcolor "#e6e6e6"
+
+# Window background and foreground
+set default-bg "rgba(20,17,15,0.85)"
+set default-fg "#e6e6e6"
+
+# Statusbar
+set statusbar-bg "rgba(20,17,15,0.90)"
+set statusbar-fg "#e6e6e6"
+
+# Inputbar
+set inputbar-bg "rgba(20,17,15,0.90)"
+set inputbar-fg "#e6e6e6"
+
+# Notifications
+set notification-bg "rgba(20,17,15,0.90)"
+set notification-fg "#e6e6e6"
+set notification-error-bg "#c0442b"
+set notification-error-fg "#f7f7f7"
+set notification-warning-bg "#d89a5b"
+set notification-warning-fg "#f7f7f7"
+
+# Highlight & Selection
+set highlight-color "rgba(179,179,179,0.35)"
+set highlight-active-color "rgba(179,179,179,0.65)"
+
+# Completion
+set completion-bg "rgba(20,17,15,0.90)"
+set completion-fg "#e6e6e6"
+set completion-highlight-bg "#b3b3b3"
+set completion-highlight-fg "#14110f"
+set completion-group-bg "rgba(20,17,15,0.90)"
+set completion-group-fg "#bababa"
+
+# Index mode (table of contents)
+set index-bg "rgba(20,17,15,0.90)"
+set index-fg "#e6e6e6"
+set index-active-bg "#b3b3b3"
+set index-active-fg "#14110f"
+
+# Render loading
+set render-loading "true"
+set render-loading-bg "rgba(20,17,15,0.85)"
+set render-loading-fg "#bababa"
