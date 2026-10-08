@@ -1035,18 +1035,103 @@ pub fn render_mpv(
     let theme_path = mpv_dir.join("theme.conf");
     let _ = fs::write(&theme_path, theme_content);
 
-    // 2. Ensure mpv.conf includes theme.conf
+    // 2. Ensure mpv.conf includes theme.conf and remove hardcoded subtitle color overrides
     let conf_path = mpv_dir.join("mpv.conf");
     if conf_path.is_file() {
         if let Ok(content) = fs::read_to_string(&conf_path) {
-            if !content.contains("include=~~/theme.conf") {
-                let updated = format!("include=~~/theme.conf\n{}", content);
-                let _ = fs::write(&conf_path, updated);
+            let mut cleaned_lines: Vec<String> = Vec::new();
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with("sub-color=") || trimmed.starts_with("sub-border-color=") {
+                    continue;
+                }
+                cleaned_lines.push(line.to_string());
             }
+            let mut updated = cleaned_lines.join("\n") + "\n";
+            if !updated.contains("include=~~/theme.conf") {
+                updated = format!("include=~~/theme.conf\n{}", updated);
+            }
+            let _ = fs::write(&conf_path, updated);
         }
     }
 
-    // 3. Update or generate script-opts/uosc.conf with the current colors
+    // 3. Ensure scripts/theme.lua exists for dynamic live reloading
+    let scripts_dir = mpv_dir.join("scripts");
+    let _ = fs::create_dir_all(&scripts_dir);
+    let theme_lua_path = scripts_dir.join("theme.lua");
+    if !theme_lua_path.is_file() {
+        let theme_lua_code = r#"-- Xiu MPV theme reload script: monitors theme changes and applies them live
+local opt = require 'mp.options'
+local utils = require 'mp.utils'
+
+local function get_config_dir()
+    return mp.find_config_file("mpv.conf") and mp.command_native({"expand-path", "~~/"}) or nil
+end
+
+local theme_path = nil
+local last_mtime = 0
+
+local function reload_theme()
+    if not theme_path then
+        local dir = get_config_dir()
+        if dir then
+            theme_path = utils.join_path(dir, "theme.conf")
+        else
+            return
+        end
+    end
+
+    local info = utils.file_info(theme_path)
+    if not info or info.mtime == last_mtime then
+        return
+    end
+    last_mtime = info.mtime
+
+    local f = io.open(theme_path, "r")
+    if not f then return end
+
+    for line in f:lines() do
+        line = line:gsub("^%s+", ""):gsub("%s+$", "")
+        if not line:match("^#") and line:find("=") then
+            local k, v = line:match("([^=]+)=(.*)")
+            if k and v then
+                k = k:gsub("^%s+", ""):gsub("%s+$", "")
+                v = v:gsub("^[\"']", ""):gsub("[\"']$", "")
+                pcall(function()
+                    mp.set_property(k, v)
+                end)
+            end
+        end
+    end
+    f:close()
+
+    local dir = get_config_dir()
+    if dir then
+        local uosc_conf = utils.join_path(dir, "script-opts/uosc.conf")
+        local uf = io.open(uosc_conf, "r")
+        if uf then
+            for line in uf:lines() do
+                if line:match("^color=") then
+                    local color_val = line:sub(7)
+                    pcall(function()
+                        mp.commandv("change-list", "script-opts", "append", "uosc-color=" .. color_val)
+                    end)
+                    break
+                end
+            end
+            uf:close()
+        end
+    end
+end
+
+mp.register_event("file-loaded", reload_theme)
+reload_theme()
+mp.add_periodic_timer(2, reload_theme)
+"#;
+        let _ = fs::write(&theme_lua_path, theme_lua_code);
+    }
+
+    // 4. Update or generate script-opts/uosc.conf with the current colors
     let script_opts_dir = mpv_dir.join("script-opts");
     let _ = fs::create_dir_all(&script_opts_dir);
     let uosc_path = script_opts_dir.join("uosc.conf");
