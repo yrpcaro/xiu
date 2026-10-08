@@ -64,6 +64,14 @@ hl.window_rule({
 })
 
 hl.window_rule({
+    name   = "float-ripdrag",
+    match  = { class = "(ripdrag|.*ripdrag.*)" },
+    float  = true,
+    pin    = true,
+    center = true,
+})
+
+hl.window_rule({
     name   = "float-vibelark",
     match  = { class = "App", title = "VibeLark" },
     float  = true,
