@@ -29,7 +29,7 @@ SettingsSurface {
     readonly property var categories: [
         { label: "Browser", key: "x-scheme-handler/http", mimes: ["x-scheme-handler/http", "x-scheme-handler/https", "text/html"], icon: "ethernet", discover: "x-scheme-handler/http" },
         { label: "Terminal", key: "x-scheme-handler/terminal", mimes: ["x-scheme-handler/terminal"], icon: "keyboard", discover: "terminal" },
-        { label: "Code editor", key: "text/plain", mimes: ["text/plain", "text/markdown", "text/x-c", "text/x-c++", "text/x-python", "text/x-rust", "application/json"], icon: "type", discover: "text/plain" },
+        { label: "Editor", key: "text/plain", mimes: ["text/plain", "text/markdown", "text/x-c", "text/x-c++", "text/x-python", "text/x-rust", "application/json"], icon: "type", discover: "text/plain" },
         { label: "Folders", key: "inode/directory", mimes: ["inode/directory"], icon: "app-window", discover: "inode/directory" },
         { label: "Images", key: "image/png", mimes: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"], icon: "palette", discover: "image/" },
         { label: "Documents", key: "application/pdf", mimes: ["application/pdf", "application/epub+zip"], icon: "layers", discover: "application/pdf" },
