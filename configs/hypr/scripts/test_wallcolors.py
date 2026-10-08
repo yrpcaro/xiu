@@ -122,6 +122,12 @@ class XiuWallcolors:
         XiuWallcolors._run("render_zathura", json.dumps(sample_pill), b_str, d)
 
     @staticmethod
+    def render_mpv(sample_pill, b=None, target_dir=None):
+        b_str = json.dumps(b) if b is not None else "{}"
+        d = str(target_dir or wc._tool_dir("mpv"))
+        XiuWallcolors._run("render_mpv", json.dumps(sample_pill), b_str, d)
+
+    @staticmethod
     def _tool_dir(name):
         path = Path.home() / ".config" / name
         return path if path.is_dir() else None
@@ -389,6 +395,24 @@ def main():
             assert 'set statusbar-bg "rgba(' in z_text, "zathura statusbar-bg has rgba transparency"
             assert (zathura_dir / "zathurarc").is_file(), "zathurarc was created"
             assert "include theme" in (zathura_dir / "zathurarc").read_text(), "zathurarc includes theme"
+
+            # MPV and uosc theme tests
+            mpv_dir = Path(tmpdir) / "mpv"
+            mpv_dir.mkdir()
+            wc._tool_dir = lambda name: mpv_dir if name == "mpv" else orig_tool_dir(name)
+            wc.render_mpv(sample_pill, WARM)
+            m_theme = mpv_dir / "theme.conf"
+            assert m_theme.is_file(), "mpv theme file was created"
+            m_text = m_theme.read_text()
+            assert ('osd-color="#%s"' % WARM["base07"].lstrip("#")) in m_text, "mpv osd-color matches terminal fg"
+            assert ('osd-border-color="#%s"' % WARM["base00"].lstrip("#")) in m_text, "mpv osd-border-color matches terminal bg"
+            assert ('background-color="#%s"' % WARM["base00"].lstrip("#")) in m_text, "mpv background-color matches terminal bg"
+            uosc_file = mpv_dir / "script-opts" / "uosc.conf"
+            assert uosc_file.is_file(), "uosc config was created"
+            u_text = uosc_file.read_text()
+            assert ("background=%s" % WARM["base00"].lstrip("#")) in u_text, "uosc background matches system base00"
+            assert ("background_text=%s" % WARM["base07"].lstrip("#")) in u_text, "uosc background_text matches system base07"
+            assert "controls=menu" in u_text, "uosc has modern minimal controls"
         finally:
             wc._tool_dir = orig_tool_dir
 

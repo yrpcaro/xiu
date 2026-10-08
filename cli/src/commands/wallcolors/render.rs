@@ -1004,6 +1004,82 @@ set render-loading-fg "{subtle}"
     }
 }
 
+pub fn render_mpv(
+    pill: &HashMap<String, String>,
+    b: &HashMap<String, String>,
+    custom_dir: Option<&Path>,
+) {
+    let mpv_dir = match custom_dir {
+        Some(d) => d.to_path_buf(),
+        None => match tool_dir("mpv") {
+            Some(d) => d,
+            None => return,
+        },
+    };
+
+    let clean = |hex: &str| hex.trim().trim_start_matches('#').to_string();
+    let base00 = clean(b.get("base00").map(String::as_str).unwrap_or("141a20"));
+    let base02 = clean(b.get("base02").map(String::as_str).unwrap_or("2c333b"));
+    let base07 = clean(b.get("base07").map(String::as_str).unwrap_or("abb4bc"));
+    let base08 = clean(b.get("base08").map(String::as_str).unwrap_or("c0442b"));
+    let base0a = clean(b.get("base0a").map(String::as_str).unwrap_or("d89a5b"));
+    let base0b = clean(b.get("base0b").map(String::as_str).unwrap_or("8a9a5b"));
+
+    let primary = clean(pill.get("primary").map(String::as_str).unwrap_or(&base08));
+    let bright = clean(pill.get("bright").map(String::as_str).unwrap_or("ffffff"));
+
+    // 1. Write theme.conf
+    let theme_content = format!(
+        "# Written by wallcolors on every palette change.\n\nosd-color=\"#{base07}\"\nosd-border-color=\"#{base00}\"\nsub-color=\"#{base07}\"\nsub-border-color=\"#{base00}\"\nbackground-color=\"#{base00}\"\n"
+    );
+    let theme_path = mpv_dir.join("theme.conf");
+    let _ = fs::write(&theme_path, theme_content);
+
+    // 2. Ensure mpv.conf includes theme.conf
+    let conf_path = mpv_dir.join("mpv.conf");
+    if conf_path.is_file() {
+        if let Ok(content) = fs::read_to_string(&conf_path) {
+            if !content.contains("include=~~/theme.conf") {
+                let updated = format!("include=~~/theme.conf\n{}", content);
+                let _ = fs::write(&conf_path, updated);
+            }
+        }
+    }
+
+    // 3. Update or generate script-opts/uosc.conf with the current colors
+    let script_opts_dir = mpv_dir.join("script-opts");
+    let _ = fs::create_dir_all(&script_opts_dir);
+    let uosc_path = script_opts_dir.join("uosc.conf");
+
+    let color_line = format!(
+        "color=foreground={primary},foreground_text={bright},background={base00},background_text={base07},window_border={base02},curtain={base00},success={base0b},error={base08},match={base0a}"
+    );
+
+    if uosc_path.is_file() {
+        if let Ok(content) = fs::read_to_string(&uosc_path) {
+            let mut lines: Vec<String> = Vec::new();
+            let mut found_color = false;
+            for line in content.lines() {
+                if line.starts_with("color=") {
+                    lines.push(color_line.clone());
+                    found_color = true;
+                } else {
+                    lines.push(line.to_string());
+                }
+            }
+            if !found_color {
+                lines.push(color_line.clone());
+            }
+            let _ = fs::write(&uosc_path, lines.join("\n") + "\n");
+        }
+    } else {
+        let uosc_content = format!(
+            "# Written by wallcolors\ntimeline_style=line\ntimeline_line_width=2\ntimeline_size=30\ntimeline_border=1\ntimeline_step=5\ntimeline_cache=yes\ntimeline_heatmap=overlay\n\nprogress=windowed\nprogress_size=2\nprogress_line_width=20\n\ncontrols=menu,gap,subtitles,<has_many_audio>audio,space,gap,prev,play-pause,next,gap,space,speed,gap,fullscreen\ncontrols_size=28\ncontrols_margin=10\ncontrols_spacing=4\n\nscale=1\nscale_fullscreen=1.2\nfont_scale=1\ntext_border=1.2\nborder_radius=8\n\n{color_line}\n\nopacity=timeline=0.85,top_bar=0.85,volume=0.85,menu=0.95\n\nanimation_duration=120\nflash_duration=800\nproximity_in=40\nproximity_out=120\ndestination_time=playtime-remaining\npause_indicator=flash\n\nchapter_ranges=openings:30abf964,endings:30abf964,ads:{primary}80\nchapter_range_patterns=openings:オープニング;endings:エンディング\n\nsubtitles_directory=~~/subtitles\n"
+        );
+        let _ = fs::write(&uosc_path, uosc_content);
+    }
+}
+
 pub fn render_spicetify(pill: &HashMap<String, String>, b: &HashMap<String, String>) {
     let d = config_file(&["spicetify"]);
     let theme_dir = d.join("Themes").join("xiu");
