@@ -49,38 +49,52 @@ local function dismiss_special()
     return false
 end
 
-local function swipe_horizontal(target)
+local function set_special_style(style)
+    hl.animation({
+        leaf    = "specialWorkspace",
+        enabled = true,
+        speed   = 3.8,
+        bezier  = "pillMorph",
+        style   = style,
+    })
+end
+
+local function swipe_horizontal(target, anim_style)
     return function()
+        if anim_style then
+            set_special_style(anim_style)
+        end
         dismiss_special()
         hl.dispatch(hl.dsp.focus({ workspace = target }))
     end
 end
 
 -- 3 fingers horizontal: swipe between workspaces, dismissing active special workspace if open.
+-- The dismissal animation matches the swipe direction (left -> slide, right -> slide -100%).
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
     direction = "left",
-    action    = swipe_horizontal("r+1"),
+    action    = swipe_horizontal("r+1", "slide"),
 })
 
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
     direction = "right",
-    action    = swipe_horizontal("r-1"),
+    action    = swipe_horizontal("r-1", "slide -100%"),
 })
 
--- 3 fingers vertical: swipe up toggles the spotify special workspace,
--- and swipe down toggles the telegram special workspace (launching if not running).
+-- 3 fingers vertical: swipe up toggles spotify (sliding upwards matching swipe UP),
+-- and swipe down toggles telegram (sliding downwards matching swipe DOWN).
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
     direction = "up",
-    action    = toggles.toggle("spotify"),
+    action    = toggles.toggle("spotify", "slidevert"),
 })
 
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
     direction = "down",
-    action    = toggles.toggle("telegram"),
+    action    = toggles.toggle("telegram", "slidevert -100%"),
 })
 
 -- 4 fingers horizontal: carry the focused window to the neighbouring

@@ -140,8 +140,16 @@ local function place(apps, category)
     end
 end
 
-local function toggle(category)
+local function toggle(category, direction)
     return function()
+        local style = direction or (category == "telegram" and "slidevert -100%" or "slidevert")
+        hl.animation({
+            leaf    = "specialWorkspace",
+            enabled = true,
+            speed   = 3.8,
+            bezier  = "pillMorph",
+            style   = style,
+        })
         local active = hl.get_active_special_workspace()
         local open = active and active.name == "special:" .. category
         if open then
