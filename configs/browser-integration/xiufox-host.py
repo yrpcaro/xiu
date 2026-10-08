@@ -79,7 +79,7 @@ def main():
                 seen_colors = colors
                 send(colors)
 
-        time.sleep(2)
+        time.sleep(1)
 
 
 if __name__ == "__main__":
