@@ -138,16 +138,17 @@ def _default_choices(args, info, manifest):
     """The non-interactive choices for --quickstart and the no-terminal fallback."""
     full_ids = {p["id"] for p in manifest["packages"] if p.get("group") == "full"}
     profile = "full" if args.full else "quick"
+    quick_opt_ids = {"spotify", "spicetify-cli", "termfilechooser"}
     return {
         "profile": profile,
         "terminal": "foot",
         "extra_terminals": [],
         "aur_choice": info["aur_helper"] or "yay",
-        "optional_ids": set(full_ids) if profile == "full" else set(),
-        "file_manager": "dolphin",
+        "optional_ids": set(full_ids) if profile == "full" else quick_opt_ids,
+        "file_manager": "yazi",
         "greeter": "sddm" if args.sddm else "none",
         "sddm_theme": "torii",
-        "browser_theme": True,
+        "browser_theme": True if profile == "full" else False,
         "fresh_configs": False,
         "legacy_swap": "clean",
         "grub": False,
@@ -161,27 +162,56 @@ def _default_choices(args, info, manifest):
 
 def _wizard(args, info, manifest):
     """
-    Walk the few questions that shape the install. Raises RuntimeError up from the
-    UI when there is no controlling terminal, so the caller can drop to defaults.
+    Walk the streamlined 4-stage installer wizard:
+      Stage 1: Profile & AUR Preflight
+      Stage 2: Desktop Essentials (Terminal, File Manager, Greeter)
+      Stage 3: Theming & Extras (Palette sync, Spicetify, optional apps)
+      Stage 4: Review & Confirmation
+    Raises RuntimeError when there is no controlling terminal, falling back to defaults.
     """
     family = info["family"]
 
+    # --- Stage 1: Profile & AUR Preflight ---
     pidx = tui.select_one("Install profile", [
-        ("Quick", "Core rice, sensible defaults, no questions", True),
-        ("Full", "Everything, plus the daily apps", False),
-        ("Custom", "Walk every choice yourself", False),
+        ("Quick", "Core rice, foot, yazi, Spicetify, full theming (Recommended)", True),
+        ("Full", "Everything, plus all daily applications", False),
+        ("Custom", "Configure individual packages and settings", False),
     ], default=1 if args.full else 0)
     profile = ("quick", "full", "custom")[pidx]
 
     aur_choice = "yay"
     if family == "arch":
+        default_aur = 0
+        if info.get("aur_helper") == "paru":
+            default_aur = 1
         aidx = tui.select_one("AUR helper", [
-            ("yay", "Build AUR packages with yay", True),
+            ("yay", "Build AUR packages with yay (Recommended)", True),
             ("paru", "Build AUR packages with paru", False),
             ("None", "Skip the AUR, use fallbacks instead", False),
-        ], default=0)
+        ], default=default_aur)
         aur_choice = ("yay", "paru", "none")[aidx]
 
+    if profile == "quick":
+        choices = _default_choices(args, info, manifest)
+        choices["profile"] = "quick"
+        choices["aur_choice"] = aur_choice
+        summary_lines = [
+            "Profile: Quick (fast install, core essentials)",
+            "Terminal: foot",
+            "File manager: yazi (with termfilechooser portal)",
+            "Login shell: fish",
+            "Login screen: none (TTY login)",
+            "Theming: GTK 3/4, Qt, Quickshell YAMIS monochrome icons",
+            "Spotify: Spicetify configured for Spotify Launcher",
+        ]
+        if family == "arch":
+            summary_lines.append(f"AUR helper: {aur_choice}")
+        ready = tui.confirm("Ready to install?", summary_lines)
+        if not ready:
+            raise KeyboardInterrupt
+        return choices
+
+    # --- Stage 2: Desktop Essentials ---
     tidx = tui.select_one("Default terminal", [
         ("foot", "Fast, lightweight Wayland terminal (Recommended)", True),
         ("ghostty", "Modern GPU-accelerated terminal with native styling", False),
@@ -195,15 +225,15 @@ def _wizard(args, info, manifest):
     extra_terminals = [other_terms[i] for i in chosen_terms]
 
     fidx = tui.select_one("File manager", [
-        ("dolphin", "KDE file manager, native dialogs for the rice", True),
-        ("yazi", "TUI file manager, keyboard-driven with image previews", False),
+        ("yazi", "TUI file manager, keyboard-driven with image previews (Recommended)", True),
+        ("dolphin", "KDE file manager, native dialogs for the rice", False),
         ("thunar", "Xfce file manager, themed through the palette", False),
         ("none", "Keep whatever I use today", False),
     ], default=0)
-    file_manager = ("dolphin", "yazi", "thunar", "none")[fidx]
+    file_manager = ("yazi", "dolphin", "thunar", "none")[fidx]
 
     gidx = tui.select_one("Login screen", [
-        ("TTY", "No greeter; start Hyprland from a terminal login", True),
+        ("TTY", "No greeter; start Hyprland from terminal login (Recommended)", True),
         ("SDDM", "Graphical login with a xiu theme", False),
         ("greetd", "Minimal greeter with tuigreet", False),
     ], default=0)
@@ -212,14 +242,15 @@ def _wizard(args, info, manifest):
     sddm_theme = "torii"
     if greeter == "sddm":
         tidx = tui.select_one("SDDM theme", [
-            ("washi", "Mirrors the lock screen: frosted wallpaper, the Zen Kaku clock, palette-following", True),
+            ("washi", "Mirrors the lock screen: frosted wallpaper, Zen Kaku clock", True),
             ("torii", "The cinematic torii video wallpaper", False),
         ], default=0)
         sddm_theme = ("washi", "torii")[tidx]
 
+    # --- Stage 3: Theming & Extras ---
     lidx = tui.select_one("Legacy tools", [
         ("Clean swap", "remove ghostty and cliphist once foot and clipvault are in (Recommended)", True),
-        ("Fallback", "ghostty and cliphist stay available as optional terminal and clipboard backends", False),
+        ("Fallback", "ghostty and cliphist stay available as optional backends", False),
     ], default=0)
     legacy_swap = ("clean", "fallback")[lidx]
 
@@ -231,32 +262,28 @@ def _wizard(args, info, manifest):
     fresh_configs = not keep
 
     full_pkgs = [p for p in manifest["packages"] if p.get("group") == "full"]
-    optional_ids = set()
-    if profile in ("full", "custom"):
-        options = [(p["id"], p["desc"], False) for p in full_pkgs]
-        preselect = range(len(full_pkgs)) if profile == "full" else ()
-        chosen = tui.select_many("Optional apps", options, preselect=preselect)
-        optional_ids = {full_pkgs[i]["id"] for i in chosen}
+    options = [(p["id"], p["desc"], False) for p in full_pkgs]
+    preselect = range(len(full_pkgs)) if profile == "full" else ()
+    chosen = tui.select_many("Optional apps", options, preselect=preselect)
+    optional_ids = {full_pkgs[i]["id"] for i in chosen}
 
     browser_theme = tui.confirm("Browser live theme", [
-        "Register the xiu native theme host and copy the Firefox/Zen",
-        "userChrome into your profiles, so browsers follow the palette.",
+        "Register the xiu native theme host and copy Firefox/Zen userChrome into profiles.",
     ])
 
     grub = False
     if info["bootloader"] == "grub":
         grub = tui.confirm("GRUB theme", [
-            "Install the xiu GRUB theme.",
-            "Theme only, it does not touch your boot entries.",
+            "Install the xiu GRUB theme (does not touch boot entries).",
         ])
 
     brave = True if args.brave else False
     if not args.brave:
         bidx = tui.select_one("Brave browser", [
-            ("Install Brave", "Brave browser with the matching xiu theme", True),
-            ("Skip", "Leave Brave out for now", False),
-        ], default=1)
-        brave = bidx == 0
+            ("Skip", "Leave Brave out for now (Recommended)", True),
+            ("Install Brave", "Brave browser with the matching xiu theme", False),
+        ], default=0)
+        brave = bidx == 1
 
     fish = tui.confirm("Login shell", ["Set fish as your login shell. (Recommended)"])
 
@@ -268,18 +295,31 @@ def _wizard(args, info, manifest):
         ], default=0 if root_cmd == "sudo" else 1)
         root_cmd = ("sudo", "doas")[ridx]
         overlays = tui.confirm("Gentoo overlays", [
-            "Enable the GURU and hyproverlay overlays and accept their ~amd64 "
-            "packages. (Recommended)",
-            "Hyprland and quickshell only exist there. This writes two files named "
-            "ricelin under /etc/portage and touches nothing else of yours.",
+            "Enable the GURU and hyproverlay overlays and accept their ~amd64 packages.",
         ])
 
     services = True
     if info["init"] == "openrc":
         services = tui.confirm("OpenRC services", [
-            "Add NetworkManager and bluetooth to the default runlevel and start "
-            "them now. (Recommended)",
+            "Add NetworkManager and bluetooth to default runlevel and start them now.",
         ])
+
+    # --- Stage 4: Review & Confirmation ---
+    summary_lines = [
+        f"Profile: {profile.capitalize()}",
+        f"Terminal: {terminal}" + (f" (+ {', '.join(extra_terminals)})" if extra_terminals else ""),
+        f"File manager: {file_manager}",
+        f"Login screen: {greeter if greeter != 'none' else 'TTY (no greeter)'}",
+        f"Theming: GTK 3/4, Qt, Quickshell YAMIS monochrome icons",
+        f"Legacy swap: {legacy_swap}",
+    ]
+    if family == "arch":
+        summary_lines.append(f"AUR helper: {aur_choice}")
+    if optional_ids:
+        summary_lines.append(f"Optional apps: {len(optional_ids)} selected")
+    ready = tui.confirm("Ready to install?", summary_lines)
+    if not ready:
+        raise KeyboardInterrupt
 
     return {
         "profile": profile, "aur_choice": aur_choice, "optional_ids": optional_ids,
@@ -398,6 +438,35 @@ def build_xiu_cli(source, dry):
     crate = Path(source).resolve().parent / "cli" / "Cargo.toml"
     target = os.path.join(fallbacks.BUILD_DIR, "xiu-target")
     bin_ = os.path.join(fallbacks.BIN_DIR, "xiu")
+
+    # Fast path: if the local checkout already has an up-to-date release binary,
+    # install it directly without paying for a redundant cargo rebuild.
+    local_release = crate.parent / "target" / "release" / "xiu"
+    src_dir = crate.parent / "src"
+    up_to_date = False
+    if local_release.is_file():
+        try:
+            bin_mtime = local_release.stat().st_mtime
+            src_mtimes = [p.stat().st_mtime for p in src_dir.rglob("*.rs")]
+            if src_mtimes and bin_mtime >= max([crate.stat().st_mtime] + src_mtimes):
+                up_to_date = True
+        except OSError:
+            pass
+
+    if up_to_date:
+        shell_install = "mkdir -p %s && install -m755 %s %s" % (
+            shlex.quote(fallbacks.BIN_DIR),
+            shlex.quote(str(local_release)),
+            shlex.quote(bin_),
+        )
+        if dry:
+            print("  would install prebuilt xiu cli -> %s" % bin_)
+            return True, "", True
+        ok, detail = _shell(shell_install, dry)
+        if ok:
+            print("  installed prebuilt: xiu cli -> %s" % bin_)
+            return True, "", True
+
     shell_build = (
         fallbacks._CARGO_PREP
         + "; CARGO_TARGET_DIR=%s cargo build --release --manifest-path %s"
@@ -574,8 +643,18 @@ def seed_wallpapers(dry):
         (home / ".cache" / "ricelin").mkdir(parents=True, exist_ok=True)
         exts = (".jpg", ".jpeg", ".png")
         has_image = any(p.is_file() and p.suffix.lower() in exts for p in wp.iterdir())
+        def _ensure_wallpaper_state():
+            imgs = sorted([p for p in wp.iterdir() if p.is_file() and p.suffix.lower() in exts])
+            if imgs:
+                for s_sub in ("xiu/wallpaper", "ricelin-wallpaper"):
+                    s_file = Path.home() / ".local" / "state" / s_sub
+                    if not s_file.is_file():
+                        s_file.parent.mkdir(parents=True, exist_ok=True)
+                        s_file.write_text(str(imgs[0]) + "\n")
+
         if has_image:
             print(f"  wallpapers already present -> {wp}")
+            _ensure_wallpaper_state()
             return True, ""
         if not starters.is_dir():
             print(f"  no starter wallpapers to seed at {starters}")
@@ -586,6 +665,7 @@ def seed_wallpapers(dry):
                 shutil.copy2(src, wp / src.name)
                 seeded += 1
         print(f"  seeded {seeded} starter wallpaper(s) -> {wp}")
+        _ensure_wallpaper_state()
         return True, ""
     except OSError as exc:
         return False, f"{exc}: seed wallpapers"
@@ -1674,7 +1754,7 @@ def run(args):
         record(ok, detail, "Seed wallpapers",
                "Copy any image into ~/Pictures/xiu/wallpapers yourself.")
 
-        # Apply wallpaper theme so yazi and terminals follow theme immediately
+        # Apply wallpaper theme so yazi, Qt, GTK and terminals follow theme immediately
         xiu_bin = Path.home() / ".local" / "bin" / "xiu"
         if not dry:
             cmd = [str(xiu_bin), "wallcolors", "--apply"] if xiu_bin.is_file() else ["xiu", "wallcolors", "--apply"] if shutil.which("xiu") else None
@@ -1687,6 +1767,20 @@ def run(args):
                 if yz.is_dir():
                     pill, b_pal, _ = deploy._yazi_palette()
                     deploy._render_yazi(yz, pill, b_pal, apply=True)
+
+            # Rebuild icon cache for yet-another-monochrome-icon-set if present
+            yamis_dir = Path.home() / ".local" / "share" / "icons" / "yet-another-monochrome-icon-set"
+            if yamis_dir.is_dir() and shutil.which("gtk-update-icon-cache"):
+                _run(["gtk-update-icon-cache", "-q", "-f", "-t", str(yamis_dir)], False)
+
+            # Apply gsettings for dark theme and icons
+            if shutil.which("gsettings"):
+                for k, v in [
+                    ("color-scheme", "prefer-dark"),
+                    ("gtk-theme", "adw-gtk3-dark"),
+                    ("icon-theme", "yet-another-monochrome-icon-set"),
+                ]:
+                    _run(["gsettings", "set", "org.gnome.desktop.interface", k, v], False)
         else:
             print("  would run: xiu wallcolors --apply")
 
@@ -1739,12 +1833,14 @@ def run(args):
         #     vesktop's themes dir is created so the palette pipeline has
         #     somewhere to drop the xiu CSS (vesktop normally creates it on
         #     first run, which may be after the first wallpaper change).
+        spotify_dir = (Path.home() / ".local" / "share" / "spotify-launcher"
+                       / "install" / "usr" / "share" / "spotify")
+        spicetify_cmd = "spicetify" if shutil.which("spicetify") else str(Path.home() / ".spicetify" / "spicetify") if (Path.home() / ".spicetify" / "spicetify").is_file() else None
+        want_spicetify = "spicetify-cli" in choices.get("optional_ids", set()) or choices.get("profile") == "quick"
         if not dry:
-            if "spicetify-cli" in choices["optional_ids"] and shutil.which("spicetify"):
-                spotify_dir = (Path.home() / ".local" / "share" / "spotify-launcher"
-                               / "install" / "usr" / "share" / "spotify")
+            if want_spicetify and spicetify_cmd:
                 ok, detail = _run([
-                    "spicetify", "config",
+                    spicetify_cmd, "config",
                     "spotify_path", str(spotify_dir),
                     "prefs_path", str(Path.home() / ".config" / "spotify" / "prefs"),
                     "current_theme", "xiu",
@@ -1752,26 +1848,28 @@ def run(args):
                     "inject_css", "1",
                     "replace_colors", "1",
                 ], False)
-                record(ok, detail, "Configure spicetify",
-                       "Run: spicetify config spotify_path '%s' prefs_path '%s' current_theme xiu color_scheme xiu"
-                       % (spotify_dir, Path.home() / ".config" / "spotify" / "prefs"))
+                record(ok, detail, "Configure spicetify for Spotify launcher",
+                       "Run: %s config spotify_path '%s' prefs_path '%s' current_theme xiu color_scheme xiu"
+                       % (spicetify_cmd, spotify_dir, Path.home() / ".config" / "spotify" / "prefs"))
                 market_cmd = "curl -fsSL https://raw.githubusercontent.com/spicetify/spicetify-marketplace/main/resources/install.sh | sh"
                 ok, detail = _shell(market_cmd, False)
                 record(ok, detail, "Install spicetify marketplace",
                        "Run: " + market_cmd)
                 if spotify_dir.is_dir():
-                    ok, detail = _run(["spicetify", "backup", "apply"], False)
+                    ok, detail = _run([spicetify_cmd, "backup", "apply"], False)
                     record(ok, detail, "Apply spicetify",
-                           "Run: spicetify backup apply")
+                           f"Run: {spicetify_cmd} backup apply")
                 else:
                     notes.append("spotify-launcher hasn't downloaded Spotify yet — "
-                                 "launch it once, then: spicetify backup apply")
-            if "vesktop" in choices["optional_ids"]:
+                                 f"launch it once, then: {spicetify_cmd} backup apply")
+            if "vesktop" in choices.get("optional_ids", set()):
                 try:
                     (Path.home() / ".config" / "vesktop" / "themes").mkdir(
                         parents=True, exist_ok=True)
                 except OSError:
                     pass
+        elif dry and want_spicetify:
+            print(f"  would run: spicetify config spotify_path '{spotify_dir}' prefs_path '{Path.home() / '.config' / 'spotify' / 'prefs'}' current_theme xiu color_scheme xiu")
 
         # n3. clean swap: retire the legacy alternatives once their
         #    replacements are confirmed in. Fail-soft by design — the package

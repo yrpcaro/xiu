@@ -226,12 +226,46 @@ pub fn current_wallpaper() -> String {
         if p.is_file() {
             if let Ok(c) = fs::read_to_string(p) {
                 let trimmed = c.trim();
-                if !trimmed.is_empty() {
+                if !trimmed.is_empty() && Path::new(trimmed).is_file() {
                     return trimmed.to_string();
                 }
             }
         }
     }
+
+    // Check wallpaper directories when state files are missing or point to non-existent files
+    for dir in &[
+        home_path(&["Pictures", "xiu", "wallpapers"]),
+        home_path(&["Pictures", "wallpapers"]),
+        PathBuf::from("/usr/share/backgrounds"),
+    ] {
+        if dir.is_dir() {
+            if let Ok(entries) = fs::read_dir(dir) {
+                let mut files: Vec<PathBuf> = entries
+                    .flatten()
+                    .map(|e| e.path())
+                    .filter(|p| {
+                        p.is_file()
+                            && p.extension().map_or(false, |ext| {
+                                let e = ext.to_string_lossy().to_lowercase();
+                                matches!(e.as_str(), "jpg" | "jpeg" | "png" | "webp")
+                            })
+                    })
+                    .collect();
+                files.sort();
+                if let Some(first) = files.first() {
+                    let path_str = first.to_string_lossy().to_string();
+                    let s_file = state_file("xiu/wallpaper");
+                    if let Some(parent) = s_file.parent() {
+                        let _ = fs::create_dir_all(parent);
+                    }
+                    let _ = fs::write(&s_file, &path_str);
+                    return path_str;
+                }
+            }
+        }
+    }
+
     String::new()
 }
 
@@ -779,6 +813,36 @@ pub fn wallcolors(args: &[String]) -> i32 {
         None => {
             let cur = current_wallpaper();
             if cur.is_empty() || !Path::new(&cur).is_file() {
+                // If no wallpaper file is found, check if cached colors exist
+                let mut cached_pill = None;
+                for sub in &["xiu", "ricelin"] {
+                    let p = cache_file(sub).join("colors.json");
+                    if p.is_file() {
+                        if let Ok(c) = fs::read_to_string(&p) {
+                            if let Ok(crate::json::Json::Obj(entries)) = crate::json::parse(&c) {
+                                let mut m = HashMap::new();
+                                for (k, v) in entries {
+                                    if let Some(s) = v.as_str() {
+                                        m.insert(k, s.to_string());
+                                    }
+                                }
+                                if !m.is_empty() {
+                                    cached_pill = Some(m);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if let Some(pill) = cached_pill {
+                    let seed = pill.get("primary").cloned().unwrap_or_else(|| "#ffaa00".to_string());
+                    return fan_out(&pill, &seed, "tonal-spot", None, &mode);
+                }
+                // If not cached, fall back to default warm preset tokens
+                if let Some(tokens) = preset_tokens("warm") {
+                    let seed = format!("#{}", tokens.get("seed").cloned().unwrap_or_else(|| "787878".to_string()));
+                    return fan_out(&tokens, &seed, "tonal-spot", None, &mode);
+                }
                 eprintln!("wallcolors: no wallpaper to analyze (set one first)");
                 return 1;
             }

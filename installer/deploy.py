@@ -671,11 +671,88 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
     if kde.is_file():
         text = kde.read_text()
         if "Theme=yet-another-monochrome-icon-set" not in text:
-            new_text = re.sub(r"(?m)^Theme=.*$", f"Theme={icon_theme}", text)
+            if re.search(r"(?m)^Theme=.*$", text):
+                new_text = re.sub(r"(?m)^Theme=.*$", f"Theme={icon_theme}", text)
+            elif "[Icons]" in text:
+                new_text = text.replace("[Icons]", f"[Icons]\nTheme={icon_theme}")
+            else:
+                new_text = text.rstrip() + f"\n\n[Icons]\nTheme={icon_theme}\n"
             if new_text != text:
                 actions.append({"step": "kdeglobals-icons", "path": str(kde), "theme": icon_theme})
                 if apply:
                     kde.write_text(new_text)
+    else:
+        actions.append({"step": "kdeglobals-create", "path": str(kde), "wrote": "default kdeglobals"})
+        if apply:
+            kde.parent.mkdir(parents=True, exist_ok=True)
+            kde.write_text(f"[General]\nColorScheme=Xiu\n\n[Icons]\nTheme={icon_theme}\n")
+
+    for ver in ("gtk-3.0", "gtk-4.0"):
+        g_dir = config_root / ver
+        ini = g_dir / "settings.ini"
+        if not ini.is_file():
+            actions.append({"step": f"{ver}-settings", "path": str(ini), "wrote": "default settings.ini"})
+            if apply:
+                g_dir.mkdir(parents=True, exist_ok=True)
+                ini.write_text(
+                    "[Settings]\n"
+                    "gtk-theme-name=adw-gtk3-dark\n"
+                    f"gtk-icon-theme-name={icon_theme}\n"
+                    "gtk-application-prefer-dark-theme=true\n"
+                    "gtk-cursor-theme-name=Bibata-Modern-Ice\n"
+                    "gtk-cursor-theme-size=24\n"
+                )
+        else:
+            txt = ini.read_text()
+            if icon_theme not in txt or "adw-gtk3-dark" not in txt:
+                new_txt = txt
+                if "gtk-theme-name" in new_txt:
+                    new_txt = re.sub(r"(?m)^gtk-theme-name=.*$", "gtk-theme-name=adw-gtk3-dark", new_txt)
+                elif "[Settings]" in new_txt:
+                    new_txt = new_txt.replace("[Settings]", "[Settings]\ngtk-theme-name=adw-gtk3-dark")
+                else:
+                    new_txt = "[Settings]\ngtk-theme-name=adw-gtk3-dark\n" + new_txt
+
+                if "gtk-icon-theme-name" in new_txt:
+                    new_txt = re.sub(r"(?m)^gtk-icon-theme-name=.*$", f"gtk-icon-theme-name={icon_theme}", new_txt)
+                else:
+                    new_txt = new_txt.replace("[Settings]", f"[Settings]\ngtk-icon-theme-name={icon_theme}")
+                if new_txt != txt:
+                    actions.append({"step": f"{ver}-settings-update", "path": str(ini)})
+                    if apply:
+                        ini.write_text(new_txt)
+
+    xs = config_root / "xsettingsd" / "xsettingsd.conf"
+    if not xs.is_file():
+        actions.append({"step": "xsettingsd", "path": str(xs), "wrote": "default xsettingsd.conf"})
+        if apply:
+            xs.parent.mkdir(parents=True, exist_ok=True)
+            xs.write_text(
+                'Gtk/CursorThemeName "Bibata-Modern-Ice"\n'
+                'Gtk/CursorThemeSize 24\n'
+                'Net/ThemeName "adw-gtk3-dark"\n'
+                f'Net/IconThemeName "{icon_theme}"\n'
+            )
+
+    qte = config_root / "qtengine" / "config.json"
+    if not qte.is_file():
+        actions.append({"step": "qtengine", "path": str(qte), "wrote": "default config.json"})
+        if apply:
+            qte.parent.mkdir(parents=True, exist_ok=True)
+            xiu_colors_path = str(config_root / "qtengine" / "xiu.colors")
+            qte.write_text(
+                '{\n'
+                '    "theme": {\n'
+                f'        "colorScheme": "{xiu_colors_path}",\n'
+                f'        "iconTheme": "{icon_theme}",\n'
+                '        "style": "Darkly"\n'
+                '    },\n'
+                '    "misc": {\n'
+                '        "menusHaveIcons": true,\n'
+                '        "singleClickActivate": false\n'
+                '    }\n'
+                '}\n'
+            )
 
     yamis_idx = Path.home() / ".local" / "share" / "icons" / icon_theme / "index.theme"
     if yamis_idx.is_file():
@@ -686,6 +763,9 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
                 actions.append({"step": "yamis-clean-cosmic", "path": str(yamis_idx)})
                 if apply:
                     yamis_idx.write_text(cleaned)
+        if apply and shutil.which("gtk-update-icon-cache"):
+            subprocess.run(["gtk-update-icon-cache", "-q", "-f", "-t", str(yamis_idx.parent)],
+                           capture_output=True)
 
     actions.append({"step": "grub-excluded", "files": GRUB_EXCLUDED,
                     "note": "personal bootloader entries, never deployed"})

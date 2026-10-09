@@ -2552,12 +2552,9 @@ pub fn render_qt(pill: &HashMap<String, String>) {
 
     // 1. QtEngine config and colors
     let d_qtengine = home_path(&[".config", "qtengine"]);
-    let plugin6 = Path::new("/usr/lib/qt6/plugins/platformthemes/libqt6engine-plugin.so");
-    let plugin5 = Path::new("/usr/lib/qt5/plugins/platformthemes/libqt5engine-plugin.so");
-    if d_qtengine.is_dir() || plugin6.is_file() || plugin5.is_file() {
-        let _ = fs::create_dir_all(&d_qtengine);
-        let _ = fs::write(d_qtengine.join("xiu.colors"), &colors_content);
-        let config_path = d_qtengine.join("config.json");
+    let _ = fs::create_dir_all(&d_qtengine);
+    let _ = fs::write(d_qtengine.join("xiu.colors"), &colors_content);
+    let config_path = d_qtengine.join("config.json");
         let mut cfg_data = if config_path.is_file() {
             fs::read_to_string(&config_path)
                 .ok()
@@ -2592,7 +2589,6 @@ pub fn render_qt(pill: &HashMap<String, String>) {
             .args(["--session", "--type=signal", "/", "org.qtengine.ConfigWatcher.configChanged"])
             .stderr(Stdio::null())
             .status();
-    }
 
     // 2. KDE color scheme & kdeglobals
     let d_kde_schemes = home_path(&[".local", "share", "color-schemes"]);

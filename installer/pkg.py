@@ -30,6 +30,27 @@ def _require_family(family):
         raise ValueError(f"unknown family {family!r}, expected one of {tuple(distro.PM)}")
 
 
+_INSTALLED_CACHE = {}
+
+
+def invalidate_installed_cache():
+    """Clear cached package installation states after installs or removals."""
+    _INSTALLED_CACHE.clear()
+
+
+def _get_arch_installed_set():
+    if "arch" not in _INSTALLED_CACHE:
+        try:
+            r = subprocess.run(["pacman", "-Qq"], capture_output=True, text=True)
+            if r.returncode == 0:
+                _INSTALLED_CACHE["arch"] = set(r.stdout.split())
+            else:
+                _INSTALLED_CACHE["arch"] = None
+        except (OSError, subprocess.SubprocessError):
+            _INSTALLED_CACHE["arch"] = None
+    return _INSTALLED_CACHE.get("arch")
+
+
 def is_installed(name, family):
     """
     Ask the native package DB whether name is installed, read-only and quiet. A
@@ -46,11 +67,16 @@ def is_installed(name, family):
     _require_family(family)
     try:
         if family == "arch":
-            for candidate in (name, f"{name}-bin"):
-                r = subprocess.run(["pacman", "-Qq", candidate],
-                                   capture_output=True, text=True)
-                if r.returncode == 0:
+            pkgs = _get_arch_installed_set()
+            if pkgs is not None:
+                if name in pkgs or f"{name}-bin" in pkgs:
                     return True
+            else:
+                for candidate in (name, f"{name}-bin"):
+                    r = subprocess.run(["pacman", "-Qq", candidate],
+                                       capture_output=True, text=True)
+                    if r.returncode == 0:
+                        return True
             r = subprocess.run(["pacman", "-T", name],
                                capture_output=True, text=True)
             return r.returncode == 0
