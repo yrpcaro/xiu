@@ -55,9 +55,15 @@ Row {
         var apps = DesktopEntries.applications.values;
         for (var i = 0; i < apps.length; i++) {
             var e = apps[i];
-            if (e && e.id && e.id.toLowerCase() === cls.toLowerCase() && e.icon)
-                return Quickshell.iconPath(e.icon, "application-x-executable");
+            if (e && e.id && e.id.toLowerCase() === cls.toLowerCase() && e.icon) {
+                var ic = e.icon;
+                if (ic.indexOf("/") === 0) return "file://" + ic;
+                if (ic.indexOf("file://") === 0) return ic;
+                return Quickshell.iconPath(ic, "application-x-executable");
+            }
         }
+        if (cls.indexOf("/") === 0) return "file://" + cls;
+        if (cls.indexOf("file://") === 0) return cls;
         return Quickshell.iconPath(cls, "application-x-executable");
     }
 

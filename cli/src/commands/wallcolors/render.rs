@@ -12,10 +12,19 @@ use std::process::{Command, Stdio};
 pub fn tool_dir(name: &str) -> Option<PathBuf> {
     let p = home_path(&[".config", name]);
     if p.is_dir() {
-        Some(p)
-    } else {
-        None
+        return Some(p);
     }
+    let is_installed = match name {
+        "helix" => on_path("hx") || on_path("helix"),
+        "bottom" => on_path("btm") || on_path("bottom"),
+        "zed" => on_path("zed") || on_path("zed-editor"),
+        other => on_path(other),
+    };
+    if is_installed {
+        let _ = fs::create_dir_all(&p);
+        return Some(p);
+    }
+    None
 }
 
 pub fn reload_tool(binary: &str) {
@@ -1169,7 +1178,11 @@ pub fn render_spicetify(pill: &HashMap<String, String>, b: &HashMap<String, Stri
     let d = config_file(&["spicetify"]);
     let theme_dir = d.join("Themes").join("xiu");
     if !theme_dir.is_dir() {
-        return;
+        if d.is_dir() || on_path("spicetify") {
+            let _ = fs::create_dir_all(&theme_dir);
+        } else {
+            return;
+        }
     }
 
     let h = |k: &str| -> String {
@@ -1210,18 +1223,25 @@ pub fn render_spicetify(pill: &HashMap<String, String>, b: &HashMap<String, Stri
     let _ = fs::write(theme_dir.join("color.ini"), lines.join("\n") + "\n");
 
     let prefs = d.join("config-xpui.ini");
+    let mut should_refresh = false;
     if prefs.is_file() {
         if let Ok(content) = fs::read_to_string(&prefs) {
             if content.contains("current_theme = xiu")
                 || content.contains("current_theme                 = xiu")
             {
-                let _ = Command::new("spicetify")
-                    .arg("refresh")
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .status();
+                should_refresh = true;
             }
         }
+    } else if on_path("spicetify") {
+        should_refresh = true;
+    }
+
+    if should_refresh && on_path("spicetify") {
+        let _ = Command::new("spicetify")
+            .arg("refresh")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
     }
 }
 
@@ -2437,12 +2457,22 @@ selection, *:selected {{
 
     let xsettings_conf = home_path(&[".config", "xsettingsd", "xsettingsd.conf"]);
     update_xsettingsd(&xsettings_conf, theme_name, &icon_theme);
-    let _ = Command::new("killall")
+    let xset_hup = Command::new("killall")
         .args(["-HUP", "xsettingsd"])
         .stderr(Stdio::null())
         .status();
+    if (xset_hup.is_err() || !xset_hup.as_ref().unwrap().success()) && on_path("xsettingsd") {
+        let _ = Command::new("xsettingsd")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+    }
 
     if on_path("gsettings") {
+        let _ = Command::new("gsettings")
+            .args(["set", "org.gnome.desktop.interface", "gtk-theme", ""])
+            .stderr(Stdio::null())
+            .status();
         for (key, val) in &[
             ("color-scheme", color_scheme),
             ("gtk-theme", theme_name),
@@ -2634,6 +2664,23 @@ pub fn render_qt(pill: &HashMap<String, String>) {
         .status();
     let _ = Command::new("dbus-send")
         .args(["--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange", "int32:1", "int32:0"])
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("dbus-send")
+        .args(["--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange", "int32:4", "int32:0"])
+        .stderr(Stdio::null())
+        .status();
+
+    let _ = Command::new("busctl")
+        .args(["--user", "emit", "/", "org.qtengine.ConfigWatcher", "configChanged"])
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("busctl")
+        .args(["--user", "emit", "/KGlobalSettings", "org.kde.KGlobalSettings", "notifyChange", "ii", "0", "0"])
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("busctl")
+        .args(["--user", "emit", "/KGlobalSettings", "org.kde.KGlobalSettings", "notifyChange", "ii", "4", "0"])
         .stderr(Stdio::null())
         .status();
 }

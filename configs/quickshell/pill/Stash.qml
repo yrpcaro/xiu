@@ -269,7 +269,14 @@ PillSurface {
                         asynchronous: true
                         smooth: true
                         visible: status === Image.Ready && source != ""
-                        source: erow.resolved && erow.resolved.icon ? Quickshell.iconPath(erow.resolved.icon, true) : ""
+                        source: {
+                            if (!erow.resolved || !erow.resolved.icon) return "";
+                            var ic = erow.resolved.icon;
+                            if (ic.indexOf("/") === 0) return "file://" + ic;
+                            if (ic.indexOf("file://") === 0) return ic;
+                            var p = Quickshell.iconPath(ic, true);
+                            return p.length ? p : Quickshell.iconPath(ic, "application-x-executable");
+                        }
                     }
                 }
 

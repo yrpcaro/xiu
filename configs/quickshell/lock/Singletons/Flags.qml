@@ -23,7 +23,7 @@ Singleton {
 
         JsonAdapter {
             id: adapter
-            property string paletteMode: "static"
+            property string paletteMode: "dynamic"
             property bool time12h: false
             property real topGap: 1.0
         }

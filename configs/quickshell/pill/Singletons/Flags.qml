@@ -100,7 +100,7 @@ Singleton {
             property bool time12h: false
             property bool clockSeconds: false
             property bool showGlyphs: true
-            property string paletteMode: "static"
+            property string paletteMode: "dynamic"
             /** Explicit wallpaper folder override. Empty means autodetect: the dir wallpaper.sh last resolved (ricelin-wallpaper-dir state file), then ~/Pictures/xiu/wallpapers. Lives in user state so an in-app update never clobbers a custom folder. */
             property string wallpaperDir: ""
             /** Super+B random target: "all" repaints every monitor, "cursor" only the one under the pointer. */

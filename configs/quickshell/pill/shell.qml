@@ -1,3 +1,4 @@
+//@ pragma DefaultEnv QS_ICON_THEME = yet-another-monochrome-icon-set
 import QtQuick
 import QtQuick.Effects
 import Quickshell

@@ -115,6 +115,7 @@ hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 
 hl.env("QT_QPA_PLATFORMTHEME", "qtengine")
 hl.env("QT_PLUGIN_PATH", "/usr/lib/qt6/plugins:/usr/lib/qt5/plugins:/usr/lib/qt/plugins")
+hl.env("QS_ICON_THEME", "yet-another-monochrome-icon-set")
 
 hl.env("RISHOT_SAVEDIR", os.getenv("HOME") .. "/Pictures/Screenshots")
 hl.env("RISHOT_CONFIG_DIR", os.getenv("HOME") .. "/.config/quickshell/rishot")
@@ -753,6 +754,20 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
                 '    }\n'
                 '}\n'
             )
+
+    uwsm_env = config_root / "uwsm" / "env"
+    if uwsm_env.is_file():
+        txt = uwsm_env.read_text()
+        if "QS_ICON_THEME" not in txt:
+            new_txt = txt.rstrip() + f"\nQS_ICON_THEME={icon_theme}\n"
+            actions.append({"step": "uwsm-env-update", "path": str(uwsm_env)})
+            if apply:
+                uwsm_env.write_text(new_txt)
+    elif apply:
+        uwsm_env.parent.mkdir(parents=True, exist_ok=True)
+        uwsm_env.write_text(
+            f"QT_QPA_PLATFORMTHEME=qtengine\nQS_ICON_THEME={icon_theme}\n"
+        )
 
     yamis_idx = Path.home() / ".local" / "share" / "icons" / icon_theme / "index.theme"
     if yamis_idx.is_file():

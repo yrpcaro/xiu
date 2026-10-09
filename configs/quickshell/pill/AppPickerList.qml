@@ -343,7 +343,14 @@ Column {
                     asynchronous: true
                     smooth: true
                     visible: status === Image.Ready && source != ""
-                    source: appRow.entry && appRow.entry.icon ? Quickshell.iconPath(appRow.entry.icon, true) : ""
+                    source: {
+                        if (!appRow.entry || !appRow.entry.icon) return "";
+                        var ic = appRow.entry.icon;
+                        if (ic.indexOf("/") === 0) return "file://" + ic;
+                        if (ic.indexOf("file://") === 0) return ic;
+                        var p = Quickshell.iconPath(ic, true);
+                        return p.length ? p : Quickshell.iconPath(ic, "application-x-executable");
+                    }
                 }
 
                 Text {

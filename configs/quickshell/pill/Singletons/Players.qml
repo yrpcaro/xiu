@@ -222,10 +222,17 @@ Singleton {
         var apps = DesktopEntries.applications.values;
         for (var i = 0; i < apps.length; i++) {
             var e = apps[i];
-            if (e && e.id && e.id.toLowerCase() === id.toLowerCase() && e.icon)
-                return Quickshell.iconPath(e.icon, "application-x-executable");
+            if (e && e.id && e.id.toLowerCase() === id.toLowerCase() && e.icon) {
+                var ic = e.icon;
+                if (ic.indexOf("/") === 0) return "file://" + ic;
+                if (ic.indexOf("file://") === 0) return ic;
+                return Quickshell.iconPath(ic, "application-x-executable");
+            }
         }
-        return Quickshell.iconPath(id.toLowerCase(), "application-x-executable");
+        var targetId = id.toLowerCase();
+        if (targetId.indexOf("/") === 0) return "file://" + targetId;
+        if (targetId.indexOf("file://") === 0) return targetId;
+        return Quickshell.iconPath(targetId, "application-x-executable");
     }
 
     function artUrlFor(p) {

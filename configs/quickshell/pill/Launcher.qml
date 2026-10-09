@@ -448,9 +448,12 @@ PillSurface {
                         if (appRow.isCommand || !appRow.entry || !appRow.entry.icon)
                             return "";
                         var ic = appRow.entry.icon;
-                        if (appRow.isAppImage && ic.indexOf("/") === 0)
+                        if (ic.indexOf("/") === 0)
                             return "file://" + ic;
-                        return Quickshell.iconPath(ic, true);
+                        if (ic.indexOf("file://") === 0)
+                            return ic;
+                        var p = Quickshell.iconPath(ic, true);
+                        return p.length ? p : Quickshell.iconPath(ic, "application-x-executable");
                     }
                 }
 

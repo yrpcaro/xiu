@@ -1,3 +1,4 @@
+//@ pragma DefaultEnv QS_ICON_THEME = yet-another-monochrome-icon-set
 pragma ComponentBehavior: Bound
 
 import QtQuick

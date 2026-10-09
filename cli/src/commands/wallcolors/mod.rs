@@ -198,26 +198,28 @@ pub fn save_scheme(preset: &str, variant: &str, smart: bool, mode: &str) {
 }
 
 pub fn set_palette_mode_dynamic() {
-    let f = state_file("ricelin/flags.json");
-    let mut flags = if f.is_file() {
-        fs::read_to_string(&f)
-            .ok()
-            .and_then(|c| json::parse(&c).ok())
-            .unwrap_or(Json::Obj(Vec::new()))
-    } else {
-        Json::Obj(Vec::new())
-    };
-
-    if let Json::Obj(ref mut entries) = flags {
-        if let Some(pos) = entries.iter().position(|(k, _)| k == "paletteMode") {
-            entries[pos] = ("paletteMode".to_string(), Json::Str("dynamic".to_string()));
+    for rel in &["ricelin/flags.json", "xiu/flags.json"] {
+        let f = state_file(rel);
+        let mut flags = if f.is_file() {
+            fs::read_to_string(&f)
+                .ok()
+                .and_then(|c| json::parse(&c).ok())
+                .unwrap_or(Json::Obj(Vec::new()))
         } else {
-            entries.push(("paletteMode".to_string(), Json::Str("dynamic".to_string())));
+            Json::Obj(Vec::new())
+        };
+
+        if let Json::Obj(ref mut entries) = flags {
+            if let Some(pos) = entries.iter().position(|(k, _)| k == "paletteMode") {
+                entries[pos] = ("paletteMode".to_string(), Json::Str("dynamic".to_string()));
+            } else {
+                entries.push(("paletteMode".to_string(), Json::Str("dynamic".to_string())));
+            }
+            if let Some(parent) = f.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let _ = fs::write(&f, json::stringify_pretty(&flags, 2) + "\n");
         }
-        if let Some(parent) = f.parent() {
-            let _ = fs::create_dir_all(parent);
-        }
-        let _ = fs::write(&f, json::stringify_pretty(&flags, 2) + "\n");
     }
 }
 
@@ -668,6 +670,29 @@ pub fn fan_out(
     render::render_qt(pill);
     render::render_gtk(pill);
     render::render_user_templates(pill, &b);
+
+    set_palette_mode_dynamic();
+
+    // Broadcast reload notifications to compositor and running apps
+    if crate::helpers::on_path("hyprctl") {
+        let _ = Command::new("hyprctl").arg("reload").status();
+    }
+    let _ = Command::new("busctl")
+        .args([
+            "--user",
+            "call",
+            "com.mitchellh.ghostty",
+            "/com/mitchellh/ghostty",
+            "org.gtk.Actions",
+            "Activate",
+            "sava{sv}",
+            "reload-config",
+            "0",
+            "0",
+        ])
+        .status();
+    let _ = Command::new("killall").args(["-SIGUSR1", "foot"]).status();
+    let _ = Command::new("killall").args(["-SIGUSR2", "cava"]).status();
 
     0
 }

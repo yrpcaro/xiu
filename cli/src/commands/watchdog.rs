@@ -49,6 +49,7 @@ pub fn is_surface_alive(surface: &str) -> bool {
 fn launch_and_wait(surface: &str) {
     let _ = Command::new("qs")
         .args(["-c", surface, "-d"])
+        .env("QS_ICON_THEME", "yet-another-monochrome-icon-set")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn();

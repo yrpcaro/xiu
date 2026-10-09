@@ -85,7 +85,14 @@ Item {
             fillMode: Image.PreserveAspectFit
             asynchronous: true
             visible: !(row.entry && row.entry.isCommand) && status === Image.Ready && source !== ""
-            source: (row.entry && !row.entry.isCommand && row.entry.icon) ? Quickshell.iconPath(row.entry.icon, true) : ""
+            source: {
+                if (!row.entry || row.entry.isCommand || !row.entry.icon) return "";
+                var ic = row.entry.icon;
+                if (ic.indexOf("/") === 0) return "file://" + ic;
+                if (ic.indexOf("file://") === 0) return ic;
+                var p = Quickshell.iconPath(ic, true);
+                return p.length ? p : Quickshell.iconPath(ic, "application-x-executable");
+            }
         }
 
         Row {
