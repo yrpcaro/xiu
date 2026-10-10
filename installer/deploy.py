@@ -823,6 +823,105 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
                 if kde.is_file():
                     xiu_colors.write_text(kde.read_text())
 
+    kwin = config_root / "kwinrc"
+    if kwin.is_file():
+        text = kwin.read_text()
+        new_text = text
+        if "[org.kde.kdecoration2]" in new_text:
+            lines = new_text.splitlines()
+            in_sec = False
+            has_theme = False
+            has_plugin = False
+            has_library = False
+            res_lines = []
+            for line in lines:
+                if line.strip() == "[org.kde.kdecoration2]":
+                    in_sec = True
+                    res_lines.append(line)
+                elif in_sec and line.strip().startswith("[") and line.strip().endswith("]"):
+                    if not has_theme:
+                        res_lines.append("theme=Darkly")
+                    if not has_plugin:
+                        res_lines.append("plugin=org.kde.darkly")
+                    if not has_library:
+                        res_lines.append("library=org.kde.darkly")
+                    in_sec = False
+                    res_lines.append(line)
+                elif in_sec:
+                    if re.match(r"^theme\s*=", line):
+                        res_lines.append("theme=Darkly")
+                        has_theme = True
+                    elif re.match(r"^plugin\s*=", line):
+                        res_lines.append("plugin=org.kde.darkly")
+                        has_plugin = True
+                    elif re.match(r"^library\s*=", line):
+                        res_lines.append("library=org.kde.darkly")
+                        has_library = True
+                    else:
+                        res_lines.append(line)
+                else:
+                    res_lines.append(line)
+            if in_sec:
+                if not has_theme:
+                    res_lines.append("theme=Darkly")
+                if not has_plugin:
+                    res_lines.append("plugin=org.kde.darkly")
+                if not has_library:
+                    res_lines.append("library=org.kde.darkly")
+            new_text = "\n".join(res_lines) + ("\n" if new_text.endswith("\n") else "")
+        else:
+            new_text = new_text.rstrip() + "\n\n[org.kde.kdecoration2]\ntheme=Darkly\nplugin=org.kde.darkly\nlibrary=org.kde.darkly\n"
+        if new_text != text:
+            actions.append({"step": "kwinrc-update", "path": str(kwin), "decoration": "Darkly"})
+            if apply:
+                kwin.write_text(new_text)
+    else:
+        actions.append({"step": "kwinrc-create", "path": str(kwin), "wrote": "default kwinrc"})
+        if apply:
+            kwin.parent.mkdir(parents=True, exist_ok=True)
+            kwin.write_text("[org.kde.kdecoration2]\ntheme=Darkly\nplugin=org.kde.darkly\nlibrary=org.kde.darkly\n")
+
+    plasma = config_root / "plasmarc"
+    if plasma.is_file():
+        text = plasma.read_text()
+        new_text = text
+        if "[Theme]" in new_text:
+            lines = new_text.splitlines()
+            in_sec = False
+            has_name = False
+            res_lines = []
+            for line in lines:
+                if line.strip() == "[Theme]":
+                    in_sec = True
+                    res_lines.append(line)
+                elif in_sec and line.strip().startswith("[") and line.strip().endswith("]"):
+                    if not has_name:
+                        res_lines.append("name=Darkly")
+                    in_sec = False
+                    res_lines.append(line)
+                elif in_sec:
+                    if re.match(r"^name\s*=", line):
+                        res_lines.append("name=Darkly")
+                        has_name = True
+                    else:
+                        res_lines.append(line)
+                else:
+                    res_lines.append(line)
+            if in_sec and not has_name:
+                res_lines.append("name=Darkly")
+            new_text = "\n".join(res_lines) + ("\n" if new_text.endswith("\n") else "")
+        else:
+            new_text = new_text.rstrip() + "\n\n[Theme]\nname=Darkly\n"
+        if new_text != text:
+            actions.append({"step": "plasmarc-update", "path": str(plasma), "theme": "Darkly"})
+            if apply:
+                plasma.write_text(new_text)
+    else:
+        actions.append({"step": "plasmarc-create", "path": str(plasma), "wrote": "default plasmarc"})
+        if apply:
+            plasma.parent.mkdir(parents=True, exist_ok=True)
+            plasma.write_text("[Theme]\nname=Darkly\n")
+
     pill, _ = _gtk_palette()
     gtk_css = _render_gtk_css(pill)
     for ver in ("gtk-3.0", "gtk-4.0"):
@@ -1119,6 +1218,10 @@ def _selftest():
         kde_selftest = (root / "kdeglobals").read_text()
         check("[KDE]" in kde_selftest and "widgetStyle=Darkly" in kde_selftest,
               "kdeglobals has widgetStyle=Darkly in [KDE] on neutralize")
+        check((root / "kwinrc").is_file() and "theme=Darkly" in (root / "kwinrc").read_text() and "plugin=org.kde.darkly" in (root / "kwinrc").read_text(),
+              "kwinrc has Darkly window decoration on neutralize")
+        check((root / "plasmarc").is_file() and "name=Darkly" in (root / "plasmarc").read_text(),
+              "plasmarc has Darkly theme on neutralize")
         check("QT_QPA_PLATFORMTHEME=kde" in (root / "uwsm" / "env").read_text(),
               "uwsm env has QT_QPA_PLATFORMTHEME=kde on neutralize")
 

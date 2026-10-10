@@ -2386,6 +2386,123 @@ pub fn update_kdeglobals(
     let _ = fs::write(kdeglobals, out_lines.join("\n") + "\n");
 }
 
+pub fn update_kwinrc(kwinrc: &Path) {
+    let mut lines = Vec::new();
+    if kwinrc.is_file() {
+        if let Ok(c) = fs::read_to_string(kwinrc) {
+            lines = c.lines().map(String::from).collect();
+        }
+    }
+
+    let mut dec_idx = None;
+    for (i, l) in lines.iter().enumerate() {
+        if l.trim() == "[org.kde.kdecoration2]" {
+            dec_idx = Some(i);
+            break;
+        }
+    }
+
+    if let Some(idx) = dec_idx {
+        let mut end_idx = lines.len();
+        for i in (idx + 1)..lines.len() {
+            if lines[i].trim().starts_with('[') && lines[i].trim().ends_with(']') {
+                end_idx = i;
+                break;
+            }
+        }
+        let mut has_theme = false;
+        let mut has_plugin = false;
+        let mut has_library = false;
+        for line in &mut lines[(idx + 1)..end_idx] {
+            let trimmed = line.trim();
+            if trimmed.starts_with("theme=") || trimmed.starts_with("theme =") {
+                *line = "theme=Darkly".to_string();
+                has_theme = true;
+            } else if trimmed.starts_with("plugin=") || trimmed.starts_with("plugin =") {
+                *line = "plugin=org.kde.darkly".to_string();
+                has_plugin = true;
+            } else if trimmed.starts_with("library=") || trimmed.starts_with("library =") {
+                *line = "library=org.kde.darkly".to_string();
+                has_library = true;
+            }
+        }
+        let mut insert_pos = end_idx;
+        if !has_theme {
+            lines.insert(insert_pos, "theme=Darkly".to_string());
+            insert_pos += 1;
+        }
+        if !has_plugin {
+            lines.insert(insert_pos, "plugin=org.kde.darkly".to_string());
+            insert_pos += 1;
+        }
+        if !has_library {
+            lines.insert(insert_pos, "library=org.kde.darkly".to_string());
+        }
+    } else {
+        if !lines.is_empty() && !lines.last().map(|s| s.is_empty()).unwrap_or(false) {
+            lines.push(String::new());
+        }
+        lines.push("[org.kde.kdecoration2]".to_string());
+        lines.push("theme=Darkly".to_string());
+        lines.push("plugin=org.kde.darkly".to_string());
+        lines.push("library=org.kde.darkly".to_string());
+    }
+
+    if let Some(parent) = kwinrc.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::write(kwinrc, lines.join("\n") + "\n");
+}
+
+pub fn update_plasmarc(plasmarc: &Path) {
+    let mut lines = Vec::new();
+    if plasmarc.is_file() {
+        if let Ok(c) = fs::read_to_string(plasmarc) {
+            lines = c.lines().map(String::from).collect();
+        }
+    }
+
+    let mut theme_idx = None;
+    for (i, l) in lines.iter().enumerate() {
+        if l.trim() == "[Theme]" {
+            theme_idx = Some(i);
+            break;
+        }
+    }
+
+    if let Some(idx) = theme_idx {
+        let mut end_idx = lines.len();
+        for i in (idx + 1)..lines.len() {
+            if lines[i].trim().starts_with('[') && lines[i].trim().ends_with(']') {
+                end_idx = i;
+                break;
+            }
+        }
+        let mut has_name = false;
+        for line in &mut lines[(idx + 1)..end_idx] {
+            let trimmed = line.trim();
+            if trimmed.starts_with("name=") || trimmed.starts_with("name =") {
+                *line = "name=Darkly".to_string();
+                has_name = true;
+            }
+        }
+        if !has_name {
+            lines.insert(end_idx, "name=Darkly".to_string());
+        }
+    } else {
+        if !lines.is_empty() && !lines.last().map(|s| s.is_empty()).unwrap_or(false) {
+            lines.push(String::new());
+        }
+        lines.push("[Theme]".to_string());
+        lines.push("name=Darkly".to_string());
+    }
+
+    if let Some(parent) = plasmarc.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::write(plasmarc, lines.join("\n") + "\n");
+}
+
 pub fn render_gtk(pill: &HashMap<String, String>) {
     let surface = pill.get("surface").cloned().unwrap_or_else(|| "#141a20".to_string());
     let is_dark = rel_luminance(&surface) < 0.40;
@@ -2651,6 +2768,23 @@ pub fn render_qt(pill: &HashMap<String, String>) {
     let kdeglobals = home_path(&[".config", "kdeglobals"]);
     update_kdeglobals(&kdeglobals, &sections, &icon_theme, &g("primary"));
 
+    let kwinrc = home_path(&[".config", "kwinrc"]);
+    update_kwinrc(&kwinrc);
+
+    let plasmarc = home_path(&[".config", "plasmarc"]);
+    update_plasmarc(&plasmarc);
+
+    let share_desktoptheme = home_path(&[".local", "share", "plasma", "desktoptheme"]);
+    let darkly_symlink = share_desktoptheme.join("Darkly");
+    if !darkly_symlink.exists() {
+        let sys_darkly = Path::new("/usr/share/plasma/desktoptheme/darkly");
+        if sys_darkly.is_dir() {
+            let _ = fs::create_dir_all(&share_desktoptheme);
+            #[cfg(unix)]
+            let _ = std::os::unix::fs::symlink(sys_darkly, &darkly_symlink);
+        }
+    }
+
     if on_path("kwriteconfig6") {
         let _ = Command::new("kwriteconfig6")
             .args(["--file", "kdeglobals", "--group", "General", "--key", "ColorScheme", "Xiu", "--notify"])
@@ -2664,26 +2798,44 @@ pub fn render_qt(pill: &HashMap<String, String>) {
             .args(["--file", "kdeglobals", "--group", "KDE", "--key", "widgetStyle", "Darkly", "--notify"])
             .stderr(Stdio::null())
             .status();
+        let _ = Command::new("kwriteconfig6")
+            .args(["--file", "kwinrc", "--group", "org.kde.kdecoration2", "--key", "theme", "Darkly", "--notify"])
+            .stderr(Stdio::null())
+            .status();
+        let _ = Command::new("kwriteconfig6")
+            .args(["--file", "kwinrc", "--group", "org.kde.kdecoration2", "--key", "plugin", "org.kde.darkly", "--notify"])
+            .stderr(Stdio::null())
+            .status();
+        let _ = Command::new("kwriteconfig6")
+            .args(["--file", "kwinrc", "--group", "org.kde.kdecoration2", "--key", "library", "org.kde.darkly", "--notify"])
+            .stderr(Stdio::null())
+            .status();
+        let _ = Command::new("kwriteconfig6")
+            .args(["--file", "plasmarc", "--group", "Theme", "--key", "name", "Darkly", "--notify"])
+            .stderr(Stdio::null())
+            .status();
+    }
+
+    if on_path("plasma-apply-desktoptheme") {
+        let _ = Command::new("plasma-apply-desktoptheme")
+            .arg("Darkly")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
     }
 
     if on_path("plasma-apply-colorscheme") {
-        let fallback_theme = if is_dark { "BreezeDark" } else { "BreezeLight" };
         let _ = Command::new("plasma-apply-colorscheme")
-            .arg(fallback_theme)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
-        let _ = Command::new("plasma-apply-colorscheme")
-            .arg("Xiu")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
-        let _ = Command::new("plasma-apply-colorscheme")
-            .args(["-a", &g("primary")])
+            .args(["-a", &g("primary"), "Xiu"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
     }
+
+    let _ = Command::new("dbus-send")
+        .args(["--session", "--type=method_call", "--dest=org.kde.KWin", "/KWin", "org.kde.KWin.reconfigure"])
+        .stderr(Stdio::null())
+        .status();
 
     let _ = Command::new("dbus-send")
         .args(["--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange", "int32:0", "int32:0"])
@@ -2807,6 +2959,37 @@ mod tests {
         assert!(!content.contains("[General]\nwidgetStyle="));
         assert!(content.contains("[Icons]"));
         assert!(content.contains("Theme=yet-another-monochrome-icon-set"));
+        let _ = fs::remove_dir_all(&tmp_dir);
+    }
+
+    #[test]
+    fn test_update_kwinrc_sets_darkly() {
+        let tmp_dir = std::env::temp_dir().join("xiu_test_kwinrc_render");
+        let _ = fs::create_dir_all(&tmp_dir);
+        let kwin_file = tmp_dir.join("kwinrc");
+        let _ = fs::write(&kwin_file, "[org.kde.kdecoration2]\ntheme=Breeze\nplugin=org.kde.breeze\n");
+        update_kwinrc(&kwin_file);
+
+        let content = fs::read_to_string(&kwin_file).unwrap();
+        assert!(content.contains("[org.kde.kdecoration2]"));
+        assert!(content.contains("theme=Darkly"));
+        assert!(content.contains("plugin=org.kde.darkly"));
+        assert!(!content.contains("theme=Breeze"));
+        let _ = fs::remove_dir_all(&tmp_dir);
+    }
+
+    #[test]
+    fn test_update_plasmarc_sets_darkly() {
+        let tmp_dir = std::env::temp_dir().join("xiu_test_plasmarc_render");
+        let _ = fs::create_dir_all(&tmp_dir);
+        let plasma_file = tmp_dir.join("plasmarc");
+        let _ = fs::write(&plasma_file, "[Theme]\nname=Breeze\n");
+        update_plasmarc(&plasma_file);
+
+        let content = fs::read_to_string(&plasma_file).unwrap();
+        assert!(content.contains("[Theme]"));
+        assert!(content.contains("name=Darkly"));
+        assert!(!content.contains("name=Breeze"));
         let _ = fs::remove_dir_all(&tmp_dir);
     }
 }

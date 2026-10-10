@@ -89,6 +89,7 @@ pub fn load_scheme() -> (String, String, bool, String) {
         state_file("ricelin/scheme.json"),
     ];
 
+    let mut found_json = false;
     for p in json_paths {
         if let Ok(content) = fs::read_to_string(&p) {
             if let Ok(Json::Obj(entries)) = json::parse(&content) {
@@ -119,42 +120,64 @@ pub fn load_scheme() -> (String, String, bool, String) {
                         _ => {}
                     }
                 }
-                return (preset, variant, smart, mode);
+                found_json = true;
+                break;
             }
         }
     }
 
-    let paths = [
-        state_file("xiu/scheme"),
-        state_file("ricelin/scheme"),
-    ];
+    if !found_json {
+        let paths = [
+            state_file("xiu/scheme"),
+            state_file("ricelin/scheme"),
+        ];
 
-    for p in paths {
-        if let Ok(content) = fs::read_to_string(&p) {
-            for line in content.lines() {
-                let mut parts = line.splitn(2, ' ');
-                let key = parts.next().unwrap_or("").trim();
-                let val = parts.next().unwrap_or("").trim();
-                match key {
-                    "preset" => {
-                        if !val.is_empty() {
-                            preset = val.to_string();
+        for p in paths {
+            if let Ok(content) = fs::read_to_string(&p) {
+                for line in content.lines() {
+                    let mut parts = line.splitn(2, ' ');
+                    let key = parts.next().unwrap_or("").trim();
+                    let val = parts.next().unwrap_or("").trim();
+                    match key {
+                        "preset" => {
+                            if !val.is_empty() {
+                                preset = val.to_string();
+                            }
+                        }
+                        "variant" => {
+                            if !val.is_empty() {
+                                variant = val.to_string();
+                            }
+                        }
+                        "smart" => {
+                            smart = val != "off";
+                        }
+                        "mode" => {
+                            if !val.is_empty() {
+                                mode = val.to_string();
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    for flag_path in &[state_file("xiu/flags.json"), state_file("ricelin/flags.json")] {
+        if flag_path.is_file() {
+            if let Ok(c) = fs::read_to_string(flag_path) {
+                if let Ok(Json::Obj(entries)) = json::parse(&c) {
+                    for (k, v) in entries {
+                        if k == "paletteMode" {
+                            if let Json::Str(m) = v {
+                                if m == "dynamic" {
+                                    preset = "dynamic".to_string();
+                                }
+                            }
                         }
                     }
-                    "variant" => {
-                        if !val.is_empty() {
-                            variant = val.to_string();
-                        }
-                    }
-                    "smart" => {
-                        smart = val != "off";
-                    }
-                    "mode" => {
-                        if !val.is_empty() {
-                            mode = val.to_string();
-                        }
-                    }
-                    _ => {}
                 }
             }
             break;
@@ -223,13 +246,90 @@ pub fn set_palette_mode_dynamic() {
     }
 }
 
+pub fn query_daemon_wallpaper() -> Option<String> {
+    for bin in &["awww", "swww"] {
+        if crate::helpers::on_path(bin) {
+            if let Ok(out) = Command::new(bin).arg("query").output() {
+                if out.status.success() {
+                    let text = String::from_utf8_lossy(&out.stdout);
+                    for line in text.lines() {
+                        if let Some(pos) = line.find("image:") {
+                            let path = line[pos + 6..].trim();
+                            if !path.is_empty() && Path::new(path).is_file() {
+                                return Some(path.to_string());
+                            }
+                        } else if let Some(pos) = line.find("currently displaying:") {
+                            let path = line[pos + 21..].trim();
+                            if !path.is_empty() && Path::new(path).is_file() {
+                                return Some(path.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if crate::helpers::on_path("hyprctl") {
+        if let Ok(out) = Command::new("hyprctl").args(["hyprpaper", "listactive"]).output() {
+            if out.status.success() {
+                let text = String::from_utf8_lossy(&out.stdout);
+                for line in text.lines() {
+                    if let Some(pos) = line.find('=') {
+                        let path = line[pos + 1..].trim();
+                        if !path.is_empty() && Path::new(path).is_file() {
+                            return Some(path.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn resolve_still_if_video(path_str: &str) -> String {
+    let path = Path::new(path_str);
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    if matches!(ext.as_str(), "mp4" | "webm" | "mkv" | "mov") {
+        for still in &[
+            state_file("xiu/wallpaper-still.png"),
+            state_file("ricelin-wallpaper-still.png"),
+        ] {
+            if still.is_file() {
+                return still.to_string_lossy().to_string();
+            }
+        }
+    }
+    path_str.to_string()
+}
+
 pub fn current_wallpaper() -> String {
-    for p in &[state_file("xiu/wallpaper"), state_file("ricelin-wallpaper")] {
+    if let Some(daemon_wp) = query_daemon_wallpaper() {
+        let s_file = state_file("xiu/wallpaper");
+        if let Some(parent) = s_file.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::write(&s_file, &daemon_wp);
+        return resolve_still_if_video(&daemon_wp);
+    }
+
+    for p in &[
+        state_file("xiu/wallpaper"),
+        state_file("ricelin-wallpaper"),
+        state_file("ricelin/wallpaper"),
+        cache_file("xiu/wallpaper"),
+        cache_file("ricelin/wallpaper"),
+    ] {
         if p.is_file() {
             if let Ok(c) = fs::read_to_string(p) {
                 let trimmed = c.trim();
-                if !trimmed.is_empty() && Path::new(trimmed).is_file() {
-                    return trimmed.to_string();
+                if !trimmed.is_empty() {
+                    let path = Path::new(trimmed);
+                    if path.is_file() {
+                        return resolve_still_if_video(trimmed);
+                    }
                 }
             }
         }
@@ -272,7 +372,15 @@ pub fn current_wallpaper() -> String {
 }
 
 pub fn analyze(wallpaper: &str) -> (Option<f64>, f64, f64, f64) {
-    let out = Command::new("magick")
+    let magick_bin = if crate::helpers::on_path("magick") {
+        "magick"
+    } else if crate::helpers::on_path("convert") {
+        "convert"
+    } else {
+        "magick"
+    };
+
+    let out = Command::new(magick_bin)
         .args([
             wallpaper,
             "-alpha",
@@ -347,7 +455,7 @@ pub fn analyze(wallpaper: &str) -> (Option<f64>, f64, f64, f64) {
     let mean_l = if total > 0 { lum / total as f64 } else { 0.0 };
     let share = if total > 0 { chroma as f64 / total as f64 } else { 0.0 };
 
-    if buckets.is_empty() || (chroma as f64) < 0.08 * total as f64 {
+    if buckets.is_empty() || (chroma as f64) < 0.015 * total as f64 {
         return (None, 0.0, mean_l, share);
     }
 
@@ -361,7 +469,15 @@ pub fn analyze(wallpaper: &str) -> (Option<f64>, f64, f64, f64) {
 }
 
 pub fn colourfulness(wallpaper: &str) -> Option<f64> {
-    let out = Command::new("magick")
+    let magick_bin = if crate::helpers::on_path("magick") {
+        "magick"
+    } else if crate::helpers::on_path("convert") {
+        "convert"
+    } else {
+        "magick"
+    };
+
+    let out = Command::new(magick_bin)
         .args([
             wallpaper,
             "-alpha",
@@ -419,8 +535,9 @@ pub fn smart_variant(score: Option<f64>) -> &'static str {
 
 pub fn matugen(source_hex: &str, variant: &str, mode: &str) -> Result<Json, String> {
     let m = if mode == "light" { "light" } else { "dark" };
+    let hex = source_hex.trim().trim_start_matches('#');
     let mut cmd = Command::new("matugen");
-    cmd.args(["color", "hex", source_hex, "-m", m, "-j", "hex"]);
+    cmd.args(["color", "hex", hex, "-m", m, "-j", "hex"]);
     if !variant.is_empty() && variant != "auto" {
         cmd.args(["--type", &format!("scheme-{variant}")]);
     }
@@ -523,11 +640,15 @@ pub fn fan_out(
     share: Option<f64>,
     mode: &str,
 ) -> i32 {
+    let mut pill_with_meta = pill.clone();
+    pill_with_meta.entry("mode".to_string()).or_insert_with(|| mode.to_string());
+    pill_with_meta.entry("seed".to_string()).or_insert_with(|| seed.trim_start_matches('#').to_string());
+
     let mut pill_json_obj = Vec::new();
-    let mut pill_keys: Vec<String> = pill.keys().cloned().collect();
+    let mut pill_keys: Vec<String> = pill_with_meta.keys().cloned().collect();
     pill_keys.sort();
     for k in pill_keys {
-        pill_json_obj.push((k.clone(), Json::Str(pill.get(&k).unwrap().clone())));
+        pill_json_obj.push((k.clone(), Json::Str(pill_with_meta.get(&k).unwrap().clone())));
     }
     let c_json = json::stringify_pretty(&Json::Obj(pill_json_obj), 2) + "\n";
 
@@ -744,6 +865,7 @@ pub fn wallcolors(args: &[String]) -> i32 {
     let (mut preset, mut variant, mut smart, mut mode) = load_scheme();
     let mut changed = false;
     let mut wallpaper: Option<String> = None;
+    let mut preset_explicit = false;
     let mut i = 0;
 
     while i < args.len() {
@@ -756,6 +878,7 @@ pub fn wallcolors(args: &[String]) -> i32 {
                 return 1;
             }
             preset = name.clone();
+            preset_explicit = true;
             changed = true;
         } else if (a == "--mode" || a == "-m") && i + 1 < args.len() {
             i += 1;
@@ -813,6 +936,10 @@ pub fn wallcolors(args: &[String]) -> i32 {
             return fan_out(&pill, &seed, &resolved, None, mode_arg);
         } else if wallpaper.is_none() {
             wallpaper = Some(a.clone());
+            if !preset_explicit {
+                preset = "dynamic".to_string();
+                changed = true;
+            }
         } else {
             eprintln!("wallcolors: unexpected argument '{a}'");
             return 1;
@@ -822,10 +949,12 @@ pub fn wallcolors(args: &[String]) -> i32 {
 
     if changed {
         save_scheme(&preset, &variant, smart, &mode);
-        set_palette_mode_dynamic();
+        if preset == "dynamic" {
+            set_palette_mode_dynamic();
+        }
     }
 
-    if preset != "dynamic" {
+    if preset != "dynamic" && wallpaper.is_none() {
         if let Some(tokens) = preset_tokens(&preset) {
             let resolved = if variant != "auto" { &variant } else { "tonal-spot" };
             let seed = format!("#{}", tokens.get("seed").cloned().unwrap_or_else(|| "787878".to_string()));
@@ -834,7 +963,14 @@ pub fn wallcolors(args: &[String]) -> i32 {
     }
 
     let wp = match wallpaper {
-        Some(w) => w,
+        Some(w) => {
+            let s_file = state_file("xiu/wallpaper");
+            if let Some(parent) = s_file.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let _ = fs::write(&s_file, &w);
+            resolve_still_if_video(&w)
+        }
         None => {
             let cur = current_wallpaper();
             if cur.is_empty() || !Path::new(&cur).is_file() {
@@ -1004,6 +1140,16 @@ fn test_eval(args: &[String]) -> i32 {
             let theme = args.get(2).map(String::as_str).unwrap_or("adw-gtk3-dark");
             let icon = args.get(3).map(String::as_str).unwrap_or("yet-another-monochrome-icon-set");
             render::update_xsettingsd(&file, theme, icon);
+            0
+        }
+        "update_kwinrc" => {
+            let file = PathBuf::from(args.get(1).map(String::as_str).unwrap_or("kwinrc"));
+            render::update_kwinrc(&file);
+            0
+        }
+        "update_plasmarc" => {
+            let file = PathBuf::from(args.get(1).map(String::as_str).unwrap_or("plasmarc"));
+            render::update_plasmarc(&file);
             0
         }
         "update_kdeglobals" => {

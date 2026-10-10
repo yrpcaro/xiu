@@ -446,31 +446,38 @@ fn palette_update() {
 
     let mut show = pic.clone();
     if is_video(&pic) {
-        let still = state_file("ricelin-wallpaper-still.png");
+        let still = state_file("xiu/wallpaper-still.png");
+        let still_legacy = state_file("ricelin-wallpaper-still.png");
         if make_still(&pic, &still) {
+            let _ = fs::copy(&still, &still_legacy);
             show = still.to_string_lossy().to_string();
+        } else if still_legacy.is_file() {
+            show = still_legacy.to_string_lossy().to_string();
         }
     }
 
     update_state_files(&pic);
 
-    let flags_file = state_file("ricelin/flags.json");
-    let mut palette_mode = "static".to_string();
+    let flags_paths = [state_file("xiu/flags.json"), state_file("ricelin/flags.json")];
+    let mut palette_mode = "dynamic".to_string();
     let mut manual_hue = "30".to_string();
     let mut manual_dark = "dark".to_string();
 
-    if let Ok(c) = fs::read_to_string(&flags_file) {
-        if let Ok(parsed) = json::parse(&c) {
-            if let Some(m) = parsed.get("paletteMode").and_then(Json::as_str) {
-                palette_mode = m.to_string();
-            }
-            if let Some(h) = parsed.get("manualHue") {
-                if let Some(num) = h.as_i64() {
-                    manual_hue = num.to_string();
+    for flags_file in &flags_paths {
+        if let Ok(c) = fs::read_to_string(flags_file) {
+            if let Ok(parsed) = json::parse(&c) {
+                if let Some(m) = parsed.get("paletteMode").and_then(Json::as_str) {
+                    palette_mode = m.to_string();
                 }
-            }
-            if let Some(d) = parsed.get("manualDark").and_then(Json::as_bool) {
-                manual_dark = if d { "dark".to_string() } else { "light".to_string() };
+                if let Some(h) = parsed.get("manualHue") {
+                    if let Some(num) = h.as_i64() {
+                        manual_hue = num.to_string();
+                    }
+                }
+                if let Some(d) = parsed.get("manualDark").and_then(Json::as_bool) {
+                    manual_dark = if d { "dark".to_string() } else { "light".to_string() };
+                }
+                break;
             }
         }
     }
@@ -538,12 +545,15 @@ pub fn next_wallpaper() -> i32 {
     record_history();
     ensure_daemon();
 
-    let flags_file = state_file("ricelin/flags.json");
+    let flags_paths = [state_file("xiu/flags.json"), state_file("ricelin/flags.json")];
     let mut scope = "all".to_string();
-    if let Ok(c) = fs::read_to_string(&flags_file) {
-        if let Ok(parsed) = json::parse(&c) {
-            if let Some(s) = parsed.get("randomScope").and_then(Json::as_str) {
-                scope = s.to_string();
+    for flags_file in &flags_paths {
+        if let Ok(c) = fs::read_to_string(flags_file) {
+            if let Ok(parsed) = json::parse(&c) {
+                if let Some(s) = parsed.get("randomScope").and_then(Json::as_str) {
+                    scope = s.to_string();
+                }
+                break;
             }
         }
     }
@@ -1005,7 +1015,7 @@ fn record_history() {
 }
 
 fn update_state_files(path: &str) {
-    for name in &["xiu/wallpaper", "ricelin-wallpaper"] {
+    for name in &["xiu/wallpaper", "ricelin-wallpaper", "ricelin/wallpaper"] {
         let f = state_file(name);
         if let Some(parent) = f.parent() {
             let _ = fs::create_dir_all(parent);

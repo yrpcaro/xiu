@@ -1781,6 +1781,16 @@ def run(args):
                     ("icon-theme", "yet-another-monochrome-icon-set"),
                 ]:
                     _run(["gsettings", "set", "org.gnome.desktop.interface", k, v], False)
+
+            # Apply KDE window decoration and plasma style
+            if shutil.which("kwriteconfig6"):
+                _run(["kwriteconfig6", "--file", "kwinrc", "--group", "org.kde.kdecoration2", "--key", "theme", "Darkly"], False)
+                _run(["kwriteconfig6", "--file", "kwinrc", "--group", "org.kde.kdecoration2", "--key", "plugin", "org.kde.darkly"], False)
+                _run(["kwriteconfig6", "--file", "kwinrc", "--group", "org.kde.kdecoration2", "--key", "library", "org.kde.darkly"], False)
+                _run(["kwriteconfig6", "--file", "plasmarc", "--group", "Theme", "--key", "name", "Darkly"], False)
+                _run(["kwriteconfig6", "--file", "kdeglobals", "--group", "KDE", "--key", "widgetStyle", "Darkly"], False)
+            if shutil.which("plasma-apply-desktoptheme"):
+                _run(["plasma-apply-desktoptheme", "Darkly"], False)
         else:
             print("  would run: xiu wallcolors --apply")
 

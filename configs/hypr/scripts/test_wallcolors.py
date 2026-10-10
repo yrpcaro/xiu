@@ -14,7 +14,8 @@ import os
 import shutil
 import subprocess
 
-XIU_BIN = os.environ.get("XIU_BIN") or shutil.which("xiu") or str(Path.home() / ".local" / "bin" / "xiu")
+repo_target = Path(__file__).resolve().parents[3] / "cli" / "target" / "debug" / "xiu"
+XIU_BIN = os.environ.get("XIU_BIN") or (str(repo_target) if repo_target.is_file() else None) or shutil.which("xiu") or str(Path.home() / ".local" / "bin" / "xiu")
 
 
 class XiuWallcolors:
@@ -92,6 +93,14 @@ class XiuWallcolors:
         for hdr, fields in sections:
             sec_json.append([hdr, fields])
         XiuWallcolors._run("update_kdeglobals", str(kdeglobals), json.dumps(sec_json), icon_theme, primary_hex)
+
+    @staticmethod
+    def _update_kwinrc(kwinrc):
+        XiuWallcolors._run("update_kwinrc", str(kwinrc))
+
+    @staticmethod
+    def _update_plasmarc(plasmarc):
+        XiuWallcolors._run("update_plasmarc", str(plasmarc))
 
     @staticmethod
     def get_active_icon_theme(is_dark=True):
@@ -274,6 +283,23 @@ def main():
         assert cp_kde.get("General", "AccentColor") == "250,189,47"
         assert cp_kde.get("Icons", "Theme") == "yet-another-monochrome-icon-set"
         assert cp_kde.get("Colors:Selection", "DecorationFocus") == "250,189,47"
+
+        # KDE kwinrc window decoration update
+        tmp_kwin = Path(tmpdir) / "kwinrc"
+        tmp_kwin.write_text("[org.kde.kdecoration2]\ntheme=Breeze\nplugin=org.kde.breeze\n")
+        wc._update_kwinrc(tmp_kwin)
+        cp_kwin = configparser.RawConfigParser()
+        cp_kwin.read(str(tmp_kwin))
+        assert cp_kwin.get("org.kde.kdecoration2", "theme") == "Darkly"
+        assert cp_kwin.get("org.kde.kdecoration2", "plugin") == "org.kde.darkly"
+
+        # KDE plasmarc theme update
+        tmp_plasma = Path(tmpdir) / "plasmarc"
+        tmp_plasma.write_text("[Theme]\nname=Breeze\n")
+        wc._update_plasmarc(tmp_plasma)
+        cp_plasma = configparser.RawConfigParser()
+        cp_plasma.read(str(tmp_plasma))
+        assert cp_plasma.get("Theme", "name") == "Darkly"
 
         # Icon theme resolution
         assert wc.get_active_icon_theme(is_dark=True) == "yet-another-monochrome-icon-set"
