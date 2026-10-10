@@ -2359,6 +2359,13 @@ pub fn update_kdeglobals(
         kde_list.push(("widgetStyle".to_string(), "Darkly".to_string()));
     }
 
+    // Clean any stray widgetStyle outside of [KDE] (e.g. legacy entries in [General])
+    for (s_name, list) in sec_data.iter_mut() {
+        if s_name != "KDE" {
+            list.retain(|(ek, _)| !ek.eq_ignore_ascii_case("widgetStyle"));
+        }
+    }
+
     // Write back
     let mut out_lines = Vec::new();
     for (idx, sec_name) in sec_order.iter().enumerate() {
@@ -2691,6 +2698,10 @@ pub fn render_qt(pill: &HashMap<String, String>) {
         .stderr(Stdio::null())
         .status();
     let _ = Command::new("dbus-send")
+        .args(["--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange", "int32:3", "int32:0"])
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("dbus-send")
         .args(["--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange", "int32:4", "int32:0"])
         .stderr(Stdio::null())
         .status();
@@ -2709,6 +2720,10 @@ pub fn render_qt(pill: &HashMap<String, String>) {
         .status();
     let _ = Command::new("busctl")
         .args(["--user", "emit", "/KGlobalSettings", "org.kde.KGlobalSettings", "notifyChange", "ii", "2", "0"])
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("busctl")
+        .args(["--user", "emit", "/KGlobalSettings", "org.kde.KGlobalSettings", "notifyChange", "ii", "3", "0"])
         .stderr(Stdio::null())
         .status();
     let _ = Command::new("busctl")
@@ -2778,7 +2793,7 @@ mod tests {
         let tmp_dir = std::env::temp_dir().join("xiu_test_kdeglobals_render");
         let _ = fs::create_dir_all(&tmp_dir);
         let kde_file = tmp_dir.join("kdeglobals");
-        let _ = fs::write(&kde_file, "[KDE]\ncontrast=4\n[Icons]\nTheme=Breeze\n");
+        let _ = fs::write(&kde_file, "[General]\nwidgetStyle=Breeze\n[KDE]\ncontrast=4\n[Icons]\nTheme=Breeze\n");
         let win_fields = [("BackgroundNormal", "#202020"), ("ForegroundNormal", "#ffffff")];
         let sections = [("[Colors:Window]", &win_fields[..])];
         update_kdeglobals(&kde_file, &sections, "yet-another-monochrome-icon-set", "#fabd2f");
@@ -2789,6 +2804,7 @@ mod tests {
         assert!(content.contains("widgetStyle=Darkly"));
         assert!(content.contains("[General]"));
         assert!(content.contains("ColorScheme=Xiu"));
+        assert!(!content.contains("[General]\nwidgetStyle="));
         assert!(content.contains("[Icons]"));
         assert!(content.contains("Theme=yet-another-monochrome-icon-set"));
         let _ = fs::remove_dir_all(&tmp_dir);

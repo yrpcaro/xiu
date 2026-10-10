@@ -259,7 +259,7 @@ def main():
 
         # KDE kdeglobals update preserving sections
         tmp_kde = Path(tmpdir) / "kdeglobals"
-        tmp_kde.write_text("[KDE]\ncontrast=4\n[Icons]\nTheme=Breeze\n")
+        tmp_kde.write_text("[General]\nwidgetStyle=Breeze\n[KDE]\ncontrast=4\n[Icons]\nTheme=Breeze\n")
         sections = [
             ("[Colors:Window]", {"BackgroundNormal": "#202020", "ForegroundNormal": "#ffffff"}),
             ("[Colors:Selection]", {"BackgroundNormal": "#fabd2f", "DecorationFocus": "#fabd2f"}),
@@ -269,6 +269,7 @@ def main():
         cp_kde.read(str(tmp_kde))
         assert cp_kde.get("KDE", "contrast") == "4", "existing KDE section preserved"
         assert cp_kde.get("KDE", "widgetStyle") == "Darkly", "widgetStyle set to Darkly in KDE section"
+        assert not cp_kde.has_option("General", "widgetStyle"), "widgetStyle purged from General section"
         assert cp_kde.get("General", "ColorScheme") == "Xiu"
         assert cp_kde.get("General", "AccentColor") == "250,189,47"
         assert cp_kde.get("Icons", "Theme") == "yet-another-monochrome-icon-set"

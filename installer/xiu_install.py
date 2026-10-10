@@ -138,7 +138,7 @@ def _default_choices(args, info, manifest):
     """The non-interactive choices for --quickstart and the no-terminal fallback."""
     full_ids = {p["id"] for p in manifest["packages"] if p.get("group") == "full"}
     profile = "full" if args.full else "quick"
-    quick_opt_ids = {"spotify", "spicetify-cli", "termfilechooser"}
+    quick_opt_ids = {"spotify", "spicetify-cli", "termfilechooser", "adw-gtk-theme", "plasma-integration"}
     return {
         "profile": profile,
         "terminal": "foot",

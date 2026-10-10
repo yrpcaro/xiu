@@ -98,7 +98,9 @@ ForegroundVisited=189,140,58
 
 [General]
 ColorScheme=Xiu
-widgetStyle=Breeze
+
+[KDE]
+widgetStyle=Darkly
 
 [Icons]
 Theme=yet-another-monochrome-icon-set

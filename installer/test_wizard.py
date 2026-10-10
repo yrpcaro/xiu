@@ -44,6 +44,8 @@ class TestWizard(unittest.TestCase):
         self.assertIn("grub", choices)
         self.assertIn("sddm_theme", choices)
         self.assertIn("browser_theme", choices)
+        self.assertIn("plasma-integration", choices["optional_ids"])
+        self.assertIn("adw-gtk-theme", choices["optional_ids"])
 
 
 if __name__ == "__main__":

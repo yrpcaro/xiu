@@ -783,13 +783,24 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
                 new_text = new_text.replace("[Icons]", f"[Icons]\nTheme={icon_theme}")
             else:
                 new_text = new_text.rstrip() + f"\n\n[Icons]\nTheme={icon_theme}\n"
-        if "widgetStyle=Darkly" not in new_text:
-            if re.search(r"(?m)^widgetStyle=.*$", new_text):
-                new_text = re.sub(r"(?m)^widgetStyle=.*$", "widgetStyle=Darkly", new_text)
-            elif "[KDE]" in new_text:
-                new_text = new_text.replace("[KDE]", "[KDE]\nwidgetStyle=Darkly")
+
+        # Clean stray widgetStyle outside of [KDE] (e.g. from legacy [General])
+        gen_match = re.search(r"(?ms)^\[General\].*?(?=\n\[|\Z)", new_text)
+        if gen_match and "widgetStyle=" in gen_match.group(0):
+            cleaned_gen = re.sub(r"(?m)^widgetStyle=.*\n?", "", gen_match.group(0))
+            new_text = new_text[:gen_match.start()] + cleaned_gen + new_text[gen_match.end():]
+
+        kde_match = re.search(r"(?ms)^\[KDE\].*?(?=\n\[|\Z)", new_text)
+        if kde_match:
+            kde_block = kde_match.group(0)
+            if "widgetStyle=" in kde_block:
+                cleaned_kde = re.sub(r"(?m)^widgetStyle=.*$", "widgetStyle=Darkly", kde_block)
             else:
-                new_text = new_text.rstrip() + "\n\n[KDE]\nwidgetStyle=Darkly\n"
+                cleaned_kde = kde_block.replace("[KDE]", "[KDE]\nwidgetStyle=Darkly")
+            new_text = new_text[:kde_match.start()] + cleaned_kde + new_text[kde_match.end():]
+        else:
+            new_text = new_text.rstrip() + "\n\n[KDE]\nwidgetStyle=Darkly\n"
+
         if new_text != text:
             actions.append({"step": "kdeglobals-update", "path": str(kde), "theme": icon_theme})
             if apply:
@@ -801,6 +812,16 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
             kde.write_text(
                 f"[General]\nColorScheme=Xiu\n\n[Icons]\nTheme={icon_theme}\n\n[KDE]\nwidgetStyle=Darkly\n"
             )
+
+    if config_root == CONFIG_ROOT:
+        share_root = Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share"))
+        xiu_colors = share_root / "color-schemes" / "Xiu.colors"
+        if not xiu_colors.is_file():
+            actions.append({"step": "kde-color-scheme", "path": str(xiu_colors), "wrote": "default Xiu.colors"})
+            if apply:
+                xiu_colors.parent.mkdir(parents=True, exist_ok=True)
+                if kde.is_file():
+                    xiu_colors.write_text(kde.read_text())
 
     pill, _ = _gtk_palette()
     gtk_css = _render_gtk_css(pill)
@@ -828,23 +849,28 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
                 )
         else:
             txt = ini.read_text()
-            if icon_theme not in txt or "adw-gtk3-dark" not in txt:
-                new_txt = txt
-                if "gtk-theme-name" in new_txt:
-                    new_txt = re.sub(r"(?m)^gtk-theme-name=.*$", "gtk-theme-name=adw-gtk3-dark", new_txt)
-                elif "[Settings]" in new_txt:
-                    new_txt = new_txt.replace("[Settings]", "[Settings]\ngtk-theme-name=adw-gtk3-dark")
-                else:
-                    new_txt = "[Settings]\ngtk-theme-name=adw-gtk3-dark\n" + new_txt
+            new_txt = txt
+            if "gtk-theme-name" in new_txt:
+                new_txt = re.sub(r"(?m)^gtk-theme-name=.*$", "gtk-theme-name=adw-gtk3-dark", new_txt)
+            elif "[Settings]" in new_txt:
+                new_txt = new_txt.replace("[Settings]", "[Settings]\ngtk-theme-name=adw-gtk3-dark")
+            else:
+                new_txt = "[Settings]\ngtk-theme-name=adw-gtk3-dark\n" + new_txt
 
-                if "gtk-icon-theme-name" in new_txt:
-                    new_txt = re.sub(r"(?m)^gtk-icon-theme-name=.*$", f"gtk-icon-theme-name={icon_theme}", new_txt)
-                else:
-                    new_txt = new_txt.replace("[Settings]", f"[Settings]\ngtk-icon-theme-name={icon_theme}")
-                if new_txt != txt:
-                    actions.append({"step": f"{ver}-settings-update", "path": str(ini)})
-                    if apply:
-                        ini.write_text(new_txt)
+            if "gtk-icon-theme-name" in new_txt:
+                new_txt = re.sub(r"(?m)^gtk-icon-theme-name=.*$", f"gtk-icon-theme-name={icon_theme}", new_txt)
+            elif "[Settings]" in new_txt:
+                new_txt = new_txt.replace("[Settings]", f"[Settings]\ngtk-icon-theme-name={icon_theme}")
+
+            if "gtk-application-prefer-dark-theme" in new_txt:
+                new_txt = re.sub(r"(?m)^gtk-application-prefer-dark-theme=.*$", "gtk-application-prefer-dark-theme=true", new_txt)
+            elif "[Settings]" in new_txt:
+                new_txt = new_txt.replace("[Settings]", "[Settings]\ngtk-application-prefer-dark-theme=true")
+
+            if new_txt != txt:
+                actions.append({"step": f"{ver}-settings-update", "path": str(ini)})
+                if apply:
+                    ini.write_text(new_txt)
 
     xs = config_root / "xsettingsd" / "xsettingsd.conf"
     if not xs.is_file():
@@ -1090,8 +1116,9 @@ def _selftest():
               "gtk-4.0 settings.ini written on neutralize")
         check((root / "xsettingsd" / "xsettingsd.conf").is_file(),
               "xsettingsd.conf written on neutralize")
-        check("widgetStyle=Darkly" in (root / "kdeglobals").read_text(),
-              "kdeglobals has widgetStyle=Darkly on neutralize")
+        kde_selftest = (root / "kdeglobals").read_text()
+        check("[KDE]" in kde_selftest and "widgetStyle=Darkly" in kde_selftest,
+              "kdeglobals has widgetStyle=Darkly in [KDE] on neutralize")
         check("QT_QPA_PLATFORMTHEME=kde" in (root / "uwsm" / "env").read_text(),
               "uwsm env has QT_QPA_PLATFORMTHEME=kde on neutralize")
 
