@@ -57,7 +57,7 @@ Whenever you change your wallpaper via the wallpaper surface or `xiu wallpaper`,
 - **System Monitors**: btop, htop, nvtop, bottom
 - **Messaging & Communication**: Vesktop / Vencord / Equicord, Telegram Desktop
 - **Web Browsers**: Firefox and Zen (via native messaging extension and userChrome), Chromium/Brave policies
-- **Desktop Toolkits**: GTK (via adw-gtk3) and Qt (via qtengine)
+- **Desktop Toolkits**: GTK (via adw-gtk3) and Qt (via plasma-integration and Darkly)
 
 ---
 

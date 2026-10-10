@@ -2347,6 +2347,18 @@ pub fn update_kdeglobals(
         icon_list.push(("Theme".to_string(), icon_theme.to_string()));
     }
 
+    // KDE: widgetStyle=Darkly
+    let kde_sec = "KDE".to_string();
+    if !sec_order.contains(&kde_sec) {
+        sec_order.push(kde_sec.clone());
+    }
+    let kde_list = sec_data.entry(kde_sec).or_default();
+    if let Some(pos) = kde_list.iter().position(|(ek, _)| ek.eq_ignore_ascii_case("widgetStyle")) {
+        kde_list[pos] = ("widgetStyle".to_string(), "Darkly".to_string());
+    } else {
+        kde_list.push(("widgetStyle".to_string(), "Darkly".to_string()));
+    }
+
     // Write back
     let mut out_lines = Vec::new();
     for (idx, sec_name) in sec_order.iter().enumerate() {
@@ -2575,8 +2587,12 @@ pub fn render_qt(pill: &HashMap<String, String>) {
     lines.push("ColorScheme=Xiu".to_string());
     lines.push(format!("AccentColor={}", rgb_tuple(&g("primary"))));
     lines.push("".to_string());
+    lines.push("".to_string());
     lines.push("[Icons]".to_string());
     lines.push(format!("Theme={icon_theme}"));
+    lines.push("".to_string());
+    lines.push("[KDE]".to_string());
+    lines.push("widgetStyle=Darkly".to_string());
 
     let colors_content = lines.join("\n") + "\n";
 
@@ -2637,6 +2653,10 @@ pub fn render_qt(pill: &HashMap<String, String>) {
             .args(["--file", "kdeglobals", "--group", "Icons", "--key", "Theme", &icon_theme, "--notify"])
             .stderr(Stdio::null())
             .status();
+        let _ = Command::new("kwriteconfig6")
+            .args(["--file", "kdeglobals", "--group", "KDE", "--key", "widgetStyle", "Darkly", "--notify"])
+            .stderr(Stdio::null())
+            .status();
     }
 
     if on_path("plasma-apply-colorscheme") {
@@ -2667,6 +2687,10 @@ pub fn render_qt(pill: &HashMap<String, String>) {
         .stderr(Stdio::null())
         .status();
     let _ = Command::new("dbus-send")
+        .args(["--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange", "int32:2", "int32:0"])
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("dbus-send")
         .args(["--session", "--type=signal", "/KGlobalSettings", "org.kde.KGlobalSettings.notifyChange", "int32:4", "int32:0"])
         .stderr(Stdio::null())
         .status();
@@ -2677,6 +2701,14 @@ pub fn render_qt(pill: &HashMap<String, String>) {
         .status();
     let _ = Command::new("busctl")
         .args(["--user", "emit", "/KGlobalSettings", "org.kde.KGlobalSettings", "notifyChange", "ii", "0", "0"])
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("busctl")
+        .args(["--user", "emit", "/KGlobalSettings", "org.kde.KGlobalSettings", "notifyChange", "ii", "1", "0"])
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("busctl")
+        .args(["--user", "emit", "/KGlobalSettings", "org.kde.KGlobalSettings", "notifyChange", "ii", "2", "0"])
         .stderr(Stdio::null())
         .status();
     let _ = Command::new("busctl")
@@ -2739,5 +2771,26 @@ mod tests {
             assert!(content.contains("background = \"#141a20\""));
             assert!(content.contains("cursor = \"#e0563b\""));
         }
+    }
+
+    #[test]
+    fn test_update_kdeglobals_sets_widget_style() {
+        let tmp_dir = std::env::temp_dir().join("xiu_test_kdeglobals_render");
+        let _ = fs::create_dir_all(&tmp_dir);
+        let kde_file = tmp_dir.join("kdeglobals");
+        let _ = fs::write(&kde_file, "[KDE]\ncontrast=4\n[Icons]\nTheme=Breeze\n");
+        let win_fields = [("BackgroundNormal", "#202020"), ("ForegroundNormal", "#ffffff")];
+        let sections = [("[Colors:Window]", &win_fields[..])];
+        update_kdeglobals(&kde_file, &sections, "yet-another-monochrome-icon-set", "#fabd2f");
+
+        let content = fs::read_to_string(&kde_file).unwrap();
+        assert!(content.contains("[KDE]"));
+        assert!(content.contains("contrast=4"));
+        assert!(content.contains("widgetStyle=Darkly"));
+        assert!(content.contains("[General]"));
+        assert!(content.contains("ColorScheme=Xiu"));
+        assert!(content.contains("[Icons]"));
+        assert!(content.contains("Theme=yet-another-monochrome-icon-set"));
+        let _ = fs::remove_dir_all(&tmp_dir);
     }
 }

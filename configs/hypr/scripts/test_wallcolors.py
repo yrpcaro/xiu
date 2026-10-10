@@ -268,6 +268,7 @@ def main():
         cp_kde = configparser.RawConfigParser()
         cp_kde.read(str(tmp_kde))
         assert cp_kde.get("KDE", "contrast") == "4", "existing KDE section preserved"
+        assert cp_kde.get("KDE", "widgetStyle") == "Darkly", "widgetStyle set to Darkly in KDE section"
         assert cp_kde.get("General", "ColorScheme") == "Xiu"
         assert cp_kde.get("General", "AccentColor") == "250,189,47"
         assert cp_kde.get("Icons", "Theme") == "yet-another-monochrome-icon-set"

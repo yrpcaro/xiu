@@ -1,4 +1,5 @@
 # Xiu uwsm env: staged into the systemd user session by `uwsm start`.
 # Applies to every compositor; Hyprland-specific bits live in env-hyprland.
-QT_QPA_PLATFORMTHEME=qtengine
+QT_QPA_PLATFORMTHEME=kde
+QT_STYLE_OVERRIDE=Darkly
 QS_ICON_THEME=yet-another-monochrome-icon-set

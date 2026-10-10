@@ -260,6 +260,9 @@
     { "id": "adw-gtk-theme", "group": "full", "required": false, "desc": "GTK theme the palette pipeline recolors", "aur": false,
       "names": { "arch": "adw-gtk-theme", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 
+    { "id": "plasma-integration", "group": "full", "required": false, "desc": "Qt platform theme integrating Qt apps with system colors and Darkly style", "aur": false,
+      "names": { "arch": "plasma-integration", "debian": "plasma-integration", "fedora": "plasma-integration", "suse": "plasma6-integration" }, "fallback": null },
+
     { "id": "qtengine", "group": "full", "required": false, "desc": "Qt theming engine the palette pipeline feeds (activates Qt theming)", "aur": true,
       "names": { "arch": "qtengine", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 

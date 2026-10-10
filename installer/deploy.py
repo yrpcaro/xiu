@@ -113,8 +113,10 @@ hl.env("XDG_DATA_DIRS", os.getenv("HOME") .. "/.local/share:" .. (os.getenv("XDG
 
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 
-hl.env("QT_QPA_PLATFORMTHEME", "qtengine")
-hl.env("QT_PLUGIN_PATH", "/usr/lib/qt6/plugins:/usr/lib/qt5/plugins:/usr/lib/qt/plugins")
+hl.env("QT_QPA_PLATFORMTHEME", "kde")
+hl.env("QT_STYLE_OVERRIDE", "Darkly")
+hl.env("QT_USE_PORTAL", "1")
+hl.env("GTK_USE_PORTAL", "1")
 hl.env("QS_ICON_THEME", "yet-another-monochrome-icon-set")
 
 hl.env("RISHOT_SAVEDIR", os.getenv("HOME") .. "/Pictures/Screenshots")
@@ -549,6 +551,108 @@ def _render_yazi(yazi_dir, pill, b, apply):
     return str(theme_file)
 
 
+def _gtk_palette():
+    """
+    Pick the palette for GTK theming: live wallpaper colours if cached,
+    else warm fallback defaults matching cli/src/commands/wallcolors/render.rs.
+    """
+    pill = dict(WARM_DEFAULT)
+    source = "default"
+    for sub in ("xiu", "ricelin"):
+        cache_c = Path.home() / ".cache" / sub / "colors.json"
+        if cache_c.is_file():
+            try:
+                data = json.loads(cache_c.read_text())
+                if isinstance(data, dict):
+                    pill.update(data)
+                    source = "cache"
+                    break
+            except (OSError, ValueError, TypeError):
+                pass
+    return pill, source
+
+
+def _render_gtk_css(pill):
+    surface = pill.get("surface", "#141a20")
+    primary = pill.get("primary", "#e0563b")
+    cream = pill.get("cream", "#abb4bc")
+    surface_container = pill.get("surface_container", "#20262d")
+    surface_container_high = pill.get("surface_container_high", "#2c333b")
+
+    def _lum(hex_str):
+        c = hex_str.lstrip('#')
+        if len(c) != 6:
+            return 0.0
+        r, g, b = (int(c[i:i+2], 16) / 255.0 for i in (0, 2, 4))
+        def to_lin(v):
+            return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+        return 0.2126 * to_lin(r) + 0.7152 * to_lin(g) + 0.0722 * to_lin(b)
+
+    accent_fg = "#000000" if _lum(primary) > 0.45 else "#ffffff"
+
+    return f"""/* Written by wallcolors.py on every palette change. */
+@define-color accent_color {primary};
+@define-color accent_bg_color {primary};
+@define-color accent_fg_color {accent_fg};
+@define-color window_bg_color {surface};
+@define-color window_fg_color {cream};
+@define-color headerbar_bg_color {surface_container};
+@define-color headerbar_fg_color {cream};
+@define-color popover_bg_color {surface_container_high};
+@define-color popover_fg_color {cream};
+@define-color view_bg_color {surface_container};
+@define-color view_fg_color {cream};
+@define-color card_bg_color {surface_container};
+@define-color card_fg_color {cream};
+@define-color sidebar_bg_color @window_bg_color;
+@define-color sidebar_fg_color @window_fg_color;
+@define-color sidebar_border_color @window_bg_color;
+@define-color theme_selected_bg_color alpha(@accent_color, 0.25);
+@define-color theme_selected_fg_color {primary};
+@define-color theme_bg_color @window_bg_color;
+@define-color theme_fg_color @window_fg_color;
+@define-color theme_base_color @view_bg_color;
+@define-color theme_text_color @view_fg_color;
+
+/* Concrete widget selectors to guarantee recoloring across GTK engines */
+window, .background {{
+    background-color: @window_bg_color;
+    color: @window_fg_color;
+}}
+headerbar, .titlebar {{
+    background-color: @headerbar_bg_color;
+    color: @headerbar_fg_color;
+}}
+view, .view, textview text {{
+    background-color: @view_bg_color;
+    color: @view_fg_color;
+}}
+popover, .popover, menu, .menu {{
+    background-color: @popover_bg_color;
+    color: @popover_fg_color;
+}}
+card, .card {{
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+}}
+button.suggested-action {{
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}}
+button.suggested-action:hover {{
+    background-color: alpha(@accent_bg_color, 0.85);
+}}
+switch:checked {{
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}}
+selection, *:selected {{
+    background-color: @theme_selected_bg_color;
+    color: @window_fg_color;
+}}
+"""
+
+
 def _pristine(rel, config_root, src):
     """
     True when the live file is still the byte-exact repo copy, i.e. deploy just
@@ -671,25 +775,44 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
     kde = config_root / "kdeglobals"
     if kde.is_file():
         text = kde.read_text()
-        if "Theme=yet-another-monochrome-icon-set" not in text:
-            if re.search(r"(?m)^Theme=.*$", text):
-                new_text = re.sub(r"(?m)^Theme=.*$", f"Theme={icon_theme}", text)
-            elif "[Icons]" in text:
-                new_text = text.replace("[Icons]", f"[Icons]\nTheme={icon_theme}")
+        new_text = text
+        if f"Theme={icon_theme}" not in new_text:
+            if re.search(r"(?m)^Theme=.*$", new_text):
+                new_text = re.sub(r"(?m)^Theme=.*$", f"Theme={icon_theme}", new_text)
+            elif "[Icons]" in new_text:
+                new_text = new_text.replace("[Icons]", f"[Icons]\nTheme={icon_theme}")
             else:
-                new_text = text.rstrip() + f"\n\n[Icons]\nTheme={icon_theme}\n"
-            if new_text != text:
-                actions.append({"step": "kdeglobals-icons", "path": str(kde), "theme": icon_theme})
-                if apply:
-                    kde.write_text(new_text)
+                new_text = new_text.rstrip() + f"\n\n[Icons]\nTheme={icon_theme}\n"
+        if "widgetStyle=Darkly" not in new_text:
+            if re.search(r"(?m)^widgetStyle=.*$", new_text):
+                new_text = re.sub(r"(?m)^widgetStyle=.*$", "widgetStyle=Darkly", new_text)
+            elif "[KDE]" in new_text:
+                new_text = new_text.replace("[KDE]", "[KDE]\nwidgetStyle=Darkly")
+            else:
+                new_text = new_text.rstrip() + "\n\n[KDE]\nwidgetStyle=Darkly\n"
+        if new_text != text:
+            actions.append({"step": "kdeglobals-update", "path": str(kde), "theme": icon_theme})
+            if apply:
+                kde.write_text(new_text)
     else:
         actions.append({"step": "kdeglobals-create", "path": str(kde), "wrote": "default kdeglobals"})
         if apply:
             kde.parent.mkdir(parents=True, exist_ok=True)
-            kde.write_text(f"[General]\nColorScheme=Xiu\n\n[Icons]\nTheme={icon_theme}\n")
+            kde.write_text(
+                f"[General]\nColorScheme=Xiu\n\n[Icons]\nTheme={icon_theme}\n\n[KDE]\nwidgetStyle=Darkly\n"
+            )
 
+    pill, _ = _gtk_palette()
+    gtk_css = _render_gtk_css(pill)
     for ver in ("gtk-3.0", "gtk-4.0"):
         g_dir = config_root / ver
+        css_file = g_dir / "gtk.css"
+        if not css_file.is_file():
+            actions.append({"step": f"{ver}-css", "path": str(css_file), "wrote": "default gtk.css"})
+            if apply:
+                g_dir.mkdir(parents=True, exist_ok=True)
+                css_file.write_text(gtk_css)
+
         ini = g_dir / "settings.ini"
         if not ini.is_file():
             actions.append({"step": f"{ver}-settings", "path": str(ini), "wrote": "default settings.ini"})
@@ -734,6 +857,23 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
                 'Net/ThemeName "adw-gtk3-dark"\n'
                 f'Net/IconThemeName "{icon_theme}"\n'
             )
+    else:
+        txt = xs.read_text()
+        new_txt = txt
+        if 'Net/ThemeName "adw-gtk3-dark"' not in new_txt:
+            if re.search(r'(?m)^Net/ThemeName\s+.*$', new_txt):
+                new_txt = re.sub(r'(?m)^Net/ThemeName\s+.*$', 'Net/ThemeName "adw-gtk3-dark"', new_txt)
+            else:
+                new_txt = new_txt.rstrip() + '\nNet/ThemeName "adw-gtk3-dark"\n'
+        if f'Net/IconThemeName "{icon_theme}"' not in new_txt:
+            if re.search(r'(?m)^Net/IconThemeName\s+.*$', new_txt):
+                new_txt = re.sub(r'(?m)^Net/IconThemeName\s+.*$', f'Net/IconThemeName "{icon_theme}"', new_txt)
+            else:
+                new_txt = new_txt.rstrip() + f'\nNet/IconThemeName "{icon_theme}"\n'
+        if new_txt != txt:
+            actions.append({"step": "xsettingsd-update", "path": str(xs)})
+            if apply:
+                xs.write_text(new_txt)
 
     qte = config_root / "qtengine" / "config.json"
     if not qte.is_file():
@@ -758,15 +898,24 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
     uwsm_env = config_root / "uwsm" / "env"
     if uwsm_env.is_file():
         txt = uwsm_env.read_text()
-        if "QS_ICON_THEME" not in txt:
-            new_txt = txt.rstrip() + f"\nQS_ICON_THEME={icon_theme}\n"
+        new_txt = txt
+        if "QT_QPA_PLATFORMTHEME=qtengine" in new_txt:
+            new_txt = new_txt.replace("QT_QPA_PLATFORMTHEME=qtengine", "QT_QPA_PLATFORMTHEME=kde\nQT_STYLE_OVERRIDE=Darkly")
+        elif "QT_QPA_PLATFORMTHEME=kde" not in new_txt:
+            new_txt = "QT_QPA_PLATFORMTHEME=kde\nQT_STYLE_OVERRIDE=Darkly\n" + new_txt
+        if "QT_STYLE_OVERRIDE" not in new_txt:
+            new_txt = new_txt.replace("QT_QPA_PLATFORMTHEME=kde", "QT_QPA_PLATFORMTHEME=kde\nQT_STYLE_OVERRIDE=Darkly")
+        if "QS_ICON_THEME" not in new_txt:
+            new_txt = new_txt.rstrip() + f"\nQS_ICON_THEME={icon_theme}\n"
+        if new_txt != txt:
             actions.append({"step": "uwsm-env-update", "path": str(uwsm_env)})
             if apply:
                 uwsm_env.write_text(new_txt)
     elif apply:
-        uwsm_env.parent.mkdir(parents=True, exist_ok=True)
+        uwsm_parent = uwsm_env.parent
+        uwsm_parent.mkdir(parents=True, exist_ok=True)
         uwsm_env.write_text(
-            f"QT_QPA_PLATFORMTHEME=qtengine\nQS_ICON_THEME={icon_theme}\n"
+            f"QT_QPA_PLATFORMTHEME=kde\nQT_STYLE_OVERRIDE=Darkly\nQS_ICON_THEME={icon_theme}\n"
         )
 
     yamis_idx = Path.home() / ".local" / "share" / "icons" / icon_theme / "index.theme"
@@ -931,6 +1080,20 @@ def _selftest():
         ffjson = (root / "fastfetch" / "config.jsonc").read_text()
         check("__" not in ffjson and "system" in ffjson,
               "fastfetch config.jsonc rendered, no placeholders left")
+        check((root / "gtk-3.0" / "gtk.css").is_file(),
+              "gtk-3.0 gtk.css written on neutralize")
+        check((root / "gtk-4.0" / "gtk.css").is_file(),
+              "gtk-4.0 gtk.css written on neutralize")
+        check((root / "gtk-3.0" / "settings.ini").is_file(),
+              "gtk-3.0 settings.ini written on neutralize")
+        check((root / "gtk-4.0" / "settings.ini").is_file(),
+              "gtk-4.0 settings.ini written on neutralize")
+        check((root / "xsettingsd" / "xsettingsd.conf").is_file(),
+              "xsettingsd.conf written on neutralize")
+        check("widgetStyle=Darkly" in (root / "kdeglobals").read_text(),
+              "kdeglobals has widgetStyle=Darkly on neutralize")
+        check("QT_QPA_PLATFORMTHEME=kde" in (root / "uwsm" / "env").read_text(),
+              "uwsm env has QT_QPA_PLATFORMTHEME=kde on neutralize")
 
         # 7. uninstall: managed items removed, pristine backup restored
         plan = uninstall(config_root=root, apply=False)
