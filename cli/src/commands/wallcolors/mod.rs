@@ -89,7 +89,6 @@ pub fn load_scheme() -> (String, String, bool, String) {
         state_file("ricelin/scheme.json"),
     ];
 
-    let mut found_json = false;
     for p in json_paths {
         if let Ok(content) = fs::read_to_string(&p) {
             if let Ok(Json::Obj(entries)) = json::parse(&content) {
@@ -120,64 +119,42 @@ pub fn load_scheme() -> (String, String, bool, String) {
                         _ => {}
                     }
                 }
-                found_json = true;
-                break;
+                return (preset, variant, smart, mode);
             }
         }
     }
 
-    if !found_json {
-        let paths = [
-            state_file("xiu/scheme"),
-            state_file("ricelin/scheme"),
-        ];
+    let paths = [
+        state_file("xiu/scheme"),
+        state_file("ricelin/scheme"),
+    ];
 
-        for p in paths {
-            if let Ok(content) = fs::read_to_string(&p) {
-                for line in content.lines() {
-                    let mut parts = line.splitn(2, ' ');
-                    let key = parts.next().unwrap_or("").trim();
-                    let val = parts.next().unwrap_or("").trim();
-                    match key {
-                        "preset" => {
-                            if !val.is_empty() {
-                                preset = val.to_string();
-                            }
-                        }
-                        "variant" => {
-                            if !val.is_empty() {
-                                variant = val.to_string();
-                            }
-                        }
-                        "smart" => {
-                            smart = val != "off";
-                        }
-                        "mode" => {
-                            if !val.is_empty() {
-                                mode = val.to_string();
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    for flag_path in &[state_file("xiu/flags.json"), state_file("ricelin/flags.json")] {
-        if flag_path.is_file() {
-            if let Ok(c) = fs::read_to_string(flag_path) {
-                if let Ok(Json::Obj(entries)) = json::parse(&c) {
-                    for (k, v) in entries {
-                        if k == "paletteMode" {
-                            if let Json::Str(m) = v {
-                                if m == "dynamic" {
-                                    preset = "dynamic".to_string();
-                                }
-                            }
+    for p in paths {
+        if let Ok(content) = fs::read_to_string(&p) {
+            for line in content.lines() {
+                let mut parts = line.splitn(2, ' ');
+                let key = parts.next().unwrap_or("").trim();
+                let val = parts.next().unwrap_or("").trim();
+                match key {
+                    "preset" => {
+                        if !val.is_empty() {
+                            preset = val.to_string();
                         }
                     }
+                    "variant" => {
+                        if !val.is_empty() {
+                            variant = val.to_string();
+                        }
+                    }
+                    "smart" => {
+                        smart = val != "off";
+                    }
+                    "mode" => {
+                        if !val.is_empty() {
+                            mode = val.to_string();
+                        }
+                    }
+                    _ => {}
                 }
             }
             break;
@@ -455,7 +432,7 @@ pub fn analyze(wallpaper: &str) -> (Option<f64>, f64, f64, f64) {
     let mean_l = if total > 0 { lum / total as f64 } else { 0.0 };
     let share = if total > 0 { chroma as f64 / total as f64 } else { 0.0 };
 
-    if buckets.is_empty() || (chroma as f64) < 0.015 * total as f64 {
+    if buckets.is_empty() || (chroma as f64) < 0.08 * total as f64 {
         return (None, 0.0, mean_l, share);
     }
 
@@ -640,15 +617,11 @@ pub fn fan_out(
     share: Option<f64>,
     mode: &str,
 ) -> i32 {
-    let mut pill_with_meta = pill.clone();
-    pill_with_meta.entry("mode".to_string()).or_insert_with(|| mode.to_string());
-    pill_with_meta.entry("seed".to_string()).or_insert_with(|| seed.trim_start_matches('#').to_string());
-
     let mut pill_json_obj = Vec::new();
-    let mut pill_keys: Vec<String> = pill_with_meta.keys().cloned().collect();
+    let mut pill_keys: Vec<String> = pill.keys().cloned().collect();
     pill_keys.sort();
     for k in pill_keys {
-        pill_json_obj.push((k.clone(), Json::Str(pill_with_meta.get(&k).unwrap().clone())));
+        pill_json_obj.push((k.clone(), Json::Str(pill.get(&k).unwrap().clone())));
     }
     let c_json = json::stringify_pretty(&Json::Obj(pill_json_obj), 2) + "\n";
 
@@ -865,7 +838,6 @@ pub fn wallcolors(args: &[String]) -> i32 {
     let (mut preset, mut variant, mut smart, mut mode) = load_scheme();
     let mut changed = false;
     let mut wallpaper: Option<String> = None;
-    let mut preset_explicit = false;
     let mut i = 0;
 
     while i < args.len() {
@@ -878,7 +850,6 @@ pub fn wallcolors(args: &[String]) -> i32 {
                 return 1;
             }
             preset = name.clone();
-            preset_explicit = true;
             changed = true;
         } else if (a == "--mode" || a == "-m") && i + 1 < args.len() {
             i += 1;
@@ -936,10 +907,6 @@ pub fn wallcolors(args: &[String]) -> i32 {
             return fan_out(&pill, &seed, &resolved, None, mode_arg);
         } else if wallpaper.is_none() {
             wallpaper = Some(a.clone());
-            if !preset_explicit {
-                preset = "dynamic".to_string();
-                changed = true;
-            }
         } else {
             eprintln!("wallcolors: unexpected argument '{a}'");
             return 1;
@@ -949,12 +916,10 @@ pub fn wallcolors(args: &[String]) -> i32 {
 
     if changed {
         save_scheme(&preset, &variant, smart, &mode);
-        if preset == "dynamic" {
-            set_palette_mode_dynamic();
-        }
+        set_palette_mode_dynamic();
     }
 
-    if preset != "dynamic" && wallpaper.is_none() {
+    if preset != "dynamic" {
         if let Some(tokens) = preset_tokens(&preset) {
             let resolved = if variant != "auto" { &variant } else { "tonal-spot" };
             let seed = format!("#{}", tokens.get("seed").cloned().unwrap_or_else(|| "787878".to_string()));

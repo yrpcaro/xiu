@@ -459,7 +459,7 @@ fn palette_update() {
     update_state_files(&pic);
 
     let flags_paths = [state_file("xiu/flags.json"), state_file("ricelin/flags.json")];
-    let mut palette_mode = "dynamic".to_string();
+    let mut palette_mode = "static".to_string();
     let mut manual_hue = "30".to_string();
     let mut manual_dark = "dark".to_string();
 
