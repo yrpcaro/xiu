@@ -69,32 +69,56 @@ local function swipe_horizontal(target, anim_style)
     end
 end
 
+local function live_action(fn)
+    local triggered = false
+    return {
+        start = function(_e)
+            triggered = true
+            fn()
+        end,
+        update = function(_e)
+            if not triggered then
+                triggered = true
+                fn()
+            end
+        end,
+        finish = function(_e)
+            if not triggered then
+                fn()
+            end
+            triggered = false
+        end,
+    }
+end
+
 -- 3 fingers horizontal: swipe between workspaces, dismissing active special workspace if open.
 -- The dismissal animation matches the swipe direction (left -> slide, right -> slide -100%).
+-- Actions trigger during the gesture so animations play in real time alongside finger motion.
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
     direction = "left",
-    action    = swipe_horizontal("r+1", "slide"),
+    action    = live_action(swipe_horizontal("r+1", "slide")),
 })
 
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
     direction = "right",
-    action    = swipe_horizontal("r-1", "slide -100%"),
+    action    = live_action(swipe_horizontal("r-1", "slide -100%")),
 })
 
 -- 3 fingers vertical: swipe up toggles spotify (sliding upwards matching swipe UP),
 -- and swipe down toggles telegram (sliding downwards matching swipe DOWN).
+-- Triggered during the gesture so animations play immediately as fingers swipe.
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
     direction = "up",
-    action    = toggles.toggle("spotify", "slidevert"),
+    action    = live_action(toggles.toggle("spotify", "slidevert")),
 })
 
 hl.gesture({
     fingers   = vars.gestureWorkspaceFingers,
     direction = "down",
-    action    = toggles.toggle("telegram", "slidevert -100%"),
+    action    = live_action(toggles.toggle("telegram", "slidevert -100%")),
 })
 
 -- 4 fingers horizontal: carry the focused window to the neighbouring
