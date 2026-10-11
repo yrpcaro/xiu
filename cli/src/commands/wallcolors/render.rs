@@ -936,11 +936,16 @@ pub fn render_zathura(
     };
 
     let bg_rgba = hex_to_rgba(&bg_hex, 0.85);
+    let fg_rgba = hex_to_rgba(&fg_hex, 0.85);
+    let subtle_rgba = hex_to_rgba(&subtle, 0.85);
+    let bright_rgba = hex_to_rgba(&bright, 0.85);
     let highlight_rgba = hex_to_rgba(&primary, 0.35);
     let highlight_active_rgba = hex_to_rgba(&primary, 0.65);
 
     let err_col = if !error.is_empty() { error } else { "#c0442b".to_string() };
     let warn_col = if !warning.is_empty() { warning } else { "#d89a5b".to_string() };
+    let err_rgba = hex_to_rgba(&err_col, 0.85);
+    let warn_rgba = hex_to_rgba(&warn_col, 0.85);
 
     let content = format!(
         r#"# Written by wallcolors on every palette change.
@@ -951,27 +956,27 @@ set recolor-reverse-video "false"
 
 # Page background and text recolor (matches terminal background, transparency & blur)
 set recolor-lightcolor "{bg_rgba}"
-set recolor-darkcolor "{fg_hex}"
+set recolor-darkcolor "{fg_rgba}"
 
 # Window background and foreground
 set default-bg "{bg_rgba}"
-set default-fg "{fg_hex}"
+set default-fg "{fg_rgba}"
 
 # Statusbar
 set statusbar-bg "{bg_rgba}"
-set statusbar-fg "{fg_hex}"
+set statusbar-fg "{fg_rgba}"
 
 # Inputbar
 set inputbar-bg "{bg_rgba}"
-set inputbar-fg "{fg_hex}"
+set inputbar-fg "{fg_rgba}"
 
 # Notifications
 set notification-bg "{bg_rgba}"
-set notification-fg "{fg_hex}"
-set notification-error-bg "{err_col}"
-set notification-error-fg "{bright}"
-set notification-warning-bg "{warn_col}"
-set notification-warning-fg "{bright}"
+set notification-fg "{fg_rgba}"
+set notification-error-bg "{err_rgba}"
+set notification-error-fg "{bright_rgba}"
+set notification-warning-bg "{warn_rgba}"
+set notification-warning-fg "{bright_rgba}"
 
 # Highlight & Selection
 set highlight-color "{highlight_rgba}"
@@ -979,22 +984,22 @@ set highlight-active-color "{highlight_active_rgba}"
 
 # Completion
 set completion-bg "{bg_rgba}"
-set completion-fg "{fg_hex}"
+set completion-fg "{fg_rgba}"
 set completion-highlight-bg "{primary}"
 set completion-highlight-fg "{bg_hex}"
 set completion-group-bg "{bg_rgba}"
-set completion-group-fg "{subtle}"
+set completion-group-fg "{subtle_rgba}"
 
 # Index mode (table of contents)
 set index-bg "{bg_rgba}"
-set index-fg "{fg_hex}"
+set index-fg "{fg_rgba}"
 set index-active-bg "{primary}"
 set index-active-fg "{bg_hex}"
 
 # Render loading
 set render-loading "true"
 set render-loading-bg "{bg_rgba}"
-set render-loading-fg "{subtle}"
+set render-loading-fg "{subtle_rgba}"
 "#
     );
 

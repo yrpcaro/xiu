@@ -6,27 +6,27 @@ set recolor-reverse-video "false"
 
 # Page background and text recolor (matches terminal background, transparency & blur)
 set recolor-lightcolor "rgba(20,26,32,0.85)"
-set recolor-darkcolor "#abb4bc"
+set recolor-darkcolor "rgba(171,180,188,0.85)"
 
 # Window background and foreground
 set default-bg "rgba(20,26,32,0.85)"
-set default-fg "#abb4bc"
+set default-fg "rgba(171,180,188,0.85)"
 
 # Statusbar
 set statusbar-bg "rgba(20,26,32,0.85)"
-set statusbar-fg "#abb4bc"
+set statusbar-fg "rgba(171,180,188,0.85)"
 
 # Inputbar
 set inputbar-bg "rgba(20,26,32,0.85)"
-set inputbar-fg "#abb4bc"
+set inputbar-fg "rgba(171,180,188,0.85)"
 
 # Notifications
 set notification-bg "rgba(20,26,32,0.85)"
-set notification-fg "#abb4bc"
-set notification-error-bg "#c0442b"
-set notification-error-fg "#ffffff"
-set notification-warning-bg "#d89a5b"
-set notification-warning-fg "#ffffff"
+set notification-fg "rgba(171,180,188,0.85)"
+set notification-error-bg "rgba(192,68,43,0.85)"
+set notification-error-fg "rgba(255,255,255,0.85)"
+set notification-warning-bg "rgba(216,154,91,0.85)"
+set notification-warning-fg "rgba(255,255,255,0.85)"
 
 # Highlight & Selection
 set highlight-color "rgba(224,86,59,0.35)"
@@ -34,19 +34,19 @@ set highlight-active-color "rgba(224,86,59,0.65)"
 
 # Completion
 set completion-bg "rgba(20,26,32,0.85)"
-set completion-fg "#abb4bc"
+set completion-fg "rgba(171,180,188,0.85)"
 set completion-highlight-bg "#e0563b"
 set completion-highlight-fg "#141a20"
 set completion-group-bg "rgba(20,26,32,0.85)"
-set completion-group-fg "#5e666e"
+set completion-group-fg "rgba(94,102,110,0.85)"
 
 # Index mode (table of contents)
 set index-bg "rgba(20,26,32,0.85)"
-set index-fg "#abb4bc"
+set index-fg "rgba(171,180,188,0.85)"
 set index-active-bg "#e0563b"
 set index-active-fg "#141a20"
 
 # Render loading
 set render-loading "true"
 set render-loading-bg "rgba(20,26,32,0.85)"
-set render-loading-fg "#5e666e"
+set render-loading-fg "rgba(94,102,110,0.85)"
