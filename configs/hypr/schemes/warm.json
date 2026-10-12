@@ -1,0 +1,21 @@
+{
+  "mode": "dark",
+  "seed": "e0563b",
+  "surface": "#211711",
+  "surface_container_low": "#221813",
+  "surface_container": "#251a13",
+  "surface_container_high": "#2e231b",
+  "surface_container_highest": "#382b21",
+  "outline": "#594636",
+  "outline_variant": "#3a2a22",
+  "primary": "#e0563b",
+  "primary_container": "#a3371f",
+  "on_primary_container": "#ffb38a",
+  "cream": "#e6d6cb",
+  "bright": "#fff6f0",
+  "subtle": "#b9a99e",
+  "dim": "#8a7d74",
+  "faint": "#6f635b",
+  "icon_dim": "#cdbfb4",
+  "tick_rest": "#cbb6a3"
+}

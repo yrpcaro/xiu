@@ -25,7 +25,7 @@ Singleton {
 
         JsonAdapter {
             id: adapter
-            property string primary: "#f5bd6f"
+            property string primary: "#e0563b"
             property string cream: "#e6d6cb"
             property string bright: "#fff6f0"
             property string dim: "#8a7d74"

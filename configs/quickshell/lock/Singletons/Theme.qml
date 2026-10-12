@@ -9,7 +9,7 @@ import Quickshell
  * static mode renders byte-identical to the old fixed theme.
  */
 Singleton {
-    readonly property bool dyn: Flags.paletteMode !== "static"
+    readonly property bool dyn: true
 
     readonly property color accent: dyn ? Dyn.primary : vermLit
     readonly property color verm:   dyn ? Qt.darker(Dyn.primary, 1.18) : "#c0442b"

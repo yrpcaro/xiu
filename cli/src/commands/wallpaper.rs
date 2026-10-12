@@ -459,9 +459,7 @@ fn palette_update() {
     update_state_files(&pic);
 
     let flags_paths = [state_file("xiu/flags.json"), state_file("ricelin/flags.json")];
-    let mut palette_mode = "static".to_string();
-    let mut manual_hue = "30".to_string();
-    let mut manual_dark = "dark".to_string();
+    let mut palette_mode = "dynamic".to_string();
 
     for flags_file in &flags_paths {
         if let Ok(c) = fs::read_to_string(flags_file) {
@@ -469,42 +467,30 @@ fn palette_update() {
                 if let Some(m) = parsed.get("paletteMode").and_then(Json::as_str) {
                     palette_mode = m.to_string();
                 }
-                if let Some(h) = parsed.get("manualHue") {
-                    if let Some(num) = h.as_i64() {
-                        manual_hue = num.to_string();
-                    }
-                }
-                if let Some(d) = parsed.get("manualDark").and_then(Json::as_bool) {
-                    manual_dark = if d { "dark".to_string() } else { "light".to_string() };
-                }
                 break;
             }
         }
     }
 
-    if palette_mode == "manual" {
-        let args = vec!["--hue".to_string(), manual_hue, manual_dark];
-        let _ = crate::commands::wallcolors::wallcolors(&args);
-    } else {
+    if palette_mode == "dynamic" {
         let args = vec![show.clone()];
         let _ = crate::commands::wallcolors::wallcolors(&args);
+        let _ = Command::new("hyprctl").arg("reload").status();
+        let _ = Command::new("busctl")
+            .args([
+                "--user",
+                "call",
+                "com.mitchellh.ghostty",
+                "/com/mitchellh/ghostty",
+                "org.gtk.Actions",
+                "Activate",
+                "sava{sv}",
+                "reload-config",
+                "0",
+                "0",
+            ])
+            .status();
     }
-
-    let _ = Command::new("hyprctl").arg("reload").status();
-    let _ = Command::new("busctl")
-        .args([
-            "--user",
-            "call",
-            "com.mitchellh.ghostty",
-            "/com/mitchellh/ghostty",
-            "org.gtk.Actions",
-            "Activate",
-            "sava{sv}",
-            "reload-config",
-            "0",
-            "0",
-        ])
-        .status();
 
     sddm_sync(&show);
 }

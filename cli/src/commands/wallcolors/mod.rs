@@ -76,6 +76,33 @@ pub fn preset_tokens(name: &str) -> Option<HashMap<String, String>> {
     Some(tokens)
 }
 
+pub fn static_tokens() -> HashMap<String, String> {
+    if let Some(tokens) = preset_tokens("warm") {
+        return tokens;
+    }
+    let mut m = HashMap::new();
+    m.insert("mode".to_string(), "dark".to_string());
+    m.insert("seed".to_string(), "e0563b".to_string());
+    m.insert("surface".to_string(), "#211711".to_string());
+    m.insert("surface_container_low".to_string(), "#221813".to_string());
+    m.insert("surface_container".to_string(), "#251a13".to_string());
+    m.insert("surface_container_high".to_string(), "#2e231b".to_string());
+    m.insert("surface_container_highest".to_string(), "#382b21".to_string());
+    m.insert("outline".to_string(), "#594636".to_string());
+    m.insert("outline_variant".to_string(), "#3a2a22".to_string());
+    m.insert("primary".to_string(), "#e0563b".to_string());
+    m.insert("primary_container".to_string(), "#a3371f".to_string());
+    m.insert("on_primary_container".to_string(), "#ffb38a".to_string());
+    m.insert("cream".to_string(), "#e6d6cb".to_string());
+    m.insert("bright".to_string(), "#fff6f0".to_string());
+    m.insert("subtle".to_string(), "#b9a99e".to_string());
+    m.insert("dim".to_string(), "#8a7d74".to_string());
+    m.insert("faint".to_string(), "#6f635b".to_string());
+    m.insert("icon_dim".to_string(), "#cdbfb4".to_string());
+    m.insert("tick_rest".to_string(), "#cbb6a3".to_string());
+    m
+}
+
 pub fn load_scheme() -> (String, String, bool, String) {
     let mut preset = "dynamic".to_string();
     let mut variant = "auto".to_string();
@@ -197,7 +224,7 @@ pub fn save_scheme(preset: &str, variant: &str, smart: bool, mode: &str) {
     }
 }
 
-pub fn set_palette_mode_dynamic() {
+pub fn set_palette_mode(mode: &str) {
     for rel in &["ricelin/flags.json", "xiu/flags.json"] {
         let f = state_file(rel);
         let mut flags = if f.is_file() {
@@ -211,9 +238,9 @@ pub fn set_palette_mode_dynamic() {
 
         if let Json::Obj(ref mut entries) = flags {
             if let Some(pos) = entries.iter().position(|(k, _)| k == "paletteMode") {
-                entries[pos] = ("paletteMode".to_string(), Json::Str("dynamic".to_string()));
+                entries[pos] = ("paletteMode".to_string(), Json::Str(mode.to_string()));
             } else {
-                entries.push(("paletteMode".to_string(), Json::Str("dynamic".to_string())));
+                entries.push(("paletteMode".to_string(), Json::Str(mode.to_string())));
             }
             if let Some(parent) = f.parent() {
                 let _ = fs::create_dir_all(parent);
@@ -221,6 +248,95 @@ pub fn set_palette_mode_dynamic() {
             let _ = fs::write(&f, json::stringify_pretty(&flags, 2) + "\n");
         }
     }
+}
+
+pub fn get_palette_mode() -> String {
+    for rel in &["xiu/flags.json", "ricelin/flags.json"] {
+        let f = state_file(rel);
+        if let Ok(c) = fs::read_to_string(&f) {
+            if let Ok(parsed) = json::parse(&c) {
+                if let Some(m) = parsed.get("paletteMode").and_then(Json::as_str) {
+                    return m.to_string();
+                }
+            }
+        }
+    }
+    "dynamic".to_string()
+}
+
+#[allow(dead_code)]
+pub fn set_palette_mode_dynamic() {
+    set_palette_mode("dynamic");
+}
+
+pub fn set_manual_params(hue: Option<f64>, dark: Option<bool>, sat: Option<f64>) {
+    for rel in &["ricelin/flags.json", "xiu/flags.json"] {
+        let f = state_file(rel);
+        let mut flags = if f.is_file() {
+            fs::read_to_string(&f)
+                .ok()
+                .and_then(|c| json::parse(&c).ok())
+                .unwrap_or(Json::Obj(Vec::new()))
+        } else {
+            Json::Obj(Vec::new())
+        };
+
+        if let Json::Obj(ref mut entries) = flags {
+            if let Some(h) = hue {
+                let h_round = h.round() as i64;
+                if let Some(pos) = entries.iter().position(|(k, _)| k == "manualHue") {
+                    entries[pos] = ("manualHue".to_string(), Json::Num(h_round as f64));
+                } else {
+                    entries.push(("manualHue".to_string(), Json::Num(h_round as f64)));
+                }
+            }
+            if let Some(d) = dark {
+                if let Some(pos) = entries.iter().position(|(k, _)| k == "manualDark") {
+                    entries[pos] = ("manualDark".to_string(), Json::Bool(d));
+                } else {
+                    entries.push(("manualDark".to_string(), Json::Bool(d)));
+                }
+            }
+            if let Some(s) = sat {
+                if let Some(pos) = entries.iter().position(|(k, _)| k == "manualSat") {
+                    entries[pos] = ("manualSat".to_string(), Json::Num(s));
+                } else {
+                    entries.push(("manualSat".to_string(), Json::Num(s)));
+                }
+            }
+            if let Some(parent) = f.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let _ = fs::write(&f, json::stringify_pretty(&flags, 2) + "\n");
+        }
+    }
+}
+
+pub fn get_manual_params() -> (f64, String, f64) {
+    let mut hue = 30.0;
+    let mut mode = "dark".to_string();
+    let mut sat = 0.5;
+
+    for rel in &["xiu/flags.json", "ricelin/flags.json"] {
+        let f = state_file(rel);
+        if let Ok(c) = fs::read_to_string(&f) {
+            if let Ok(parsed) = json::parse(&c) {
+                if let Some(h) = parsed.get("manualHue") {
+                    if let Some(num) = h.as_f64().or_else(|| h.as_i64().map(|n| n as f64)) {
+                        hue = num;
+                    }
+                }
+                if let Some(d) = parsed.get("manualDark").and_then(Json::as_bool) {
+                    mode = if d { "dark".to_string() } else { "light".to_string() };
+                }
+                if let Some(s) = parsed.get("manualSat").and_then(Json::as_f64) {
+                    sat = s;
+                }
+                break;
+            }
+        }
+    }
+    (hue, mode, sat)
 }
 
 pub fn query_daemon_wallpaper() -> Option<String> {
@@ -765,8 +881,6 @@ pub fn fan_out(
     render::render_gtk(pill);
     render::render_user_templates(pill, &b);
 
-    set_palette_mode_dynamic();
-
     // Broadcast reload notifications to compositor and running apps
     if crate::helpers::on_path("hyprctl") {
         let _ = Command::new("hyprctl").arg("reload").status();
@@ -794,7 +908,8 @@ pub fn fan_out(
 pub fn wallcolors(args: &[String]) -> i32 {
     if args.len() == 1 && (args[0] == "-h" || args[0] == "--help") {
         eprintln!(
-            "usage: xiu wallcolors [wallpaper] | --mode <dark|light> | --toggle | --hue H [mode] [sat] | --preset NAME | \
+            "usage: xiu wallcolors [wallpaper] | --static | --manual | --dynamic [wallpaper] | \
+             --mode <dark|light> | --toggle | --hue H [mode] [sat] | --preset NAME | \
              --variant NAME | --smart | --no-smart | --list-presets | --state | \
              --preview <wallpaper> | --apply"
         );
@@ -838,18 +953,41 @@ pub fn wallcolors(args: &[String]) -> i32 {
     let (mut preset, mut variant, mut smart, mut mode) = load_scheme();
     let mut changed = false;
     let mut wallpaper: Option<String> = None;
+    let mut is_static = false;
+    let mut is_manual = false;
+    let mut is_dynamic = false;
+    let mut is_preset = false;
     let mut i = 0;
 
     while i < args.len() {
         let a = &args[i];
-        if a == "--preset" && i + 1 < args.len() {
+        if a == "--static" {
+            is_static = true;
+            changed = true;
+        } else if a == "--manual" {
+            is_manual = true;
+            changed = true;
+        } else if a == "--dynamic" {
+            is_dynamic = true;
+            changed = true;
+            if i + 1 < args.len() && !args[i + 1].starts_with('-') {
+                i += 1;
+                wallpaper = Some(args[i].clone());
+            }
+        } else if a == "--preset" && i + 1 < args.len() {
             i += 1;
             let name = &args[i];
             if name != "dynamic" && preset_tokens(name).is_none() {
                 eprintln!("wallcolors: unknown preset '{name}' (see --list-presets)");
                 return 1;
             }
-            preset = name.clone();
+            if name == "dynamic" {
+                is_dynamic = true;
+                preset = "dynamic".to_string();
+            } else {
+                is_preset = true;
+                preset = name.clone();
+            }
             changed = true;
         } else if (a == "--mode" || a == "-m") && i + 1 < args.len() {
             i += 1;
@@ -903,10 +1041,15 @@ pub fn wallcolors(args: &[String]) -> i32 {
             } else {
                 0.5
             };
+            set_palette_mode("manual");
+            set_manual_params(Some(h_val), Some(mode_arg == "dark"), Some(sat));
+            save_scheme("manual", &variant, smart, mode_arg);
             let (pill, seed, resolved) = generate_manual(hue, mode_arg, sat, &variant);
             return fan_out(&pill, &seed, &resolved, None, mode_arg);
-        } else if wallpaper.is_none() {
+        } else if wallpaper.is_none() && !a.starts_with('-') {
             wallpaper = Some(a.clone());
+            is_dynamic = true;
+            changed = true;
         } else {
             eprintln!("wallcolors: unexpected argument '{a}'");
             return 1;
@@ -914,16 +1057,64 @@ pub fn wallcolors(args: &[String]) -> i32 {
         i += 1;
     }
 
-    if changed {
-        save_scheme(&preset, &variant, smart, &mode);
-        set_palette_mode_dynamic();
+    if is_static {
+        set_palette_mode("static");
+        save_scheme("warm", &variant, smart, &mode);
+        let tokens = static_tokens();
+        let resolved = if variant != "auto" { &variant } else { "tonal-spot" };
+        let seed = format!("#{}", tokens.get("seed").cloned().unwrap_or_else(|| "e0563b".to_string()));
+        return fan_out(&tokens, &seed, resolved, None, &mode);
     }
 
-    if preset != "dynamic" {
-        if let Some(tokens) = preset_tokens(&preset) {
+    if is_manual {
+        set_palette_mode("manual");
+        save_scheme("manual", &variant, smart, &mode);
+        let (h_val, manual_mode, sat) = get_manual_params();
+        let m = if mode == "light" || mode == "dark" { &mode } else { &manual_mode };
+        let hue = (h_val.rem_euclid(360.0)) / 360.0;
+        let (pill, seed, resolved) = generate_manual(hue, m, sat, &variant);
+        return fan_out(&pill, &seed, &resolved, None, m);
+    }
+
+    if is_preset {
+        set_palette_mode("static");
+        save_scheme(&preset, &variant, smart, &mode);
+        let tokens = preset_tokens(&preset).unwrap_or_else(static_tokens);
+        let resolved = if variant != "auto" { &variant } else { "tonal-spot" };
+        let seed = format!("#{}", tokens.get("seed").cloned().unwrap_or_else(|| "e0563b".to_string()));
+        return fan_out(&tokens, &seed, resolved, None, &mode);
+    }
+
+    if is_dynamic {
+        set_palette_mode("dynamic");
+        preset = "dynamic".to_string();
+        if changed {
+            save_scheme(&preset, &variant, smart, &mode);
+        }
+    } else {
+        let pal_mode = get_palette_mode();
+        if pal_mode == "manual" {
+            if changed {
+                save_scheme("manual", &variant, smart, &mode);
+            }
+            let (h_val, manual_mode, sat) = get_manual_params();
+            let m = if mode == "light" || mode == "dark" { &mode } else { &manual_mode };
+            let hue = (h_val.rem_euclid(360.0)) / 360.0;
+            let (pill, seed, resolved) = generate_manual(hue, m, sat, &variant);
+            return fan_out(&pill, &seed, &resolved, None, m);
+        } else if pal_mode == "static" || (preset != "dynamic" && preset_tokens(&preset).is_some()) {
+            let p_name = if preset != "dynamic" { &preset } else { "warm" };
+            if changed {
+                save_scheme(p_name, &variant, smart, &mode);
+            }
+            let tokens = preset_tokens(p_name).unwrap_or_else(static_tokens);
             let resolved = if variant != "auto" { &variant } else { "tonal-spot" };
-            let seed = format!("#{}", tokens.get("seed").cloned().unwrap_or_else(|| "787878".to_string()));
+            let seed = format!("#{}", tokens.get("seed").cloned().unwrap_or_else(|| "e0563b".to_string()));
             return fan_out(&tokens, &seed, resolved, None, &mode);
+        } else {
+            if changed {
+                save_scheme(&preset, &variant, smart, &mode);
+            }
         }
     }
 
@@ -965,12 +1156,9 @@ pub fn wallcolors(args: &[String]) -> i32 {
                     return fan_out(&pill, &seed, "tonal-spot", None, &mode);
                 }
                 // If not cached, fall back to default warm preset tokens
-                if let Some(tokens) = preset_tokens("warm") {
-                    let seed = format!("#{}", tokens.get("seed").cloned().unwrap_or_else(|| "787878".to_string()));
-                    return fan_out(&tokens, &seed, "tonal-spot", None, &mode);
-                }
-                eprintln!("wallcolors: no wallpaper to analyze (set one first)");
-                return 1;
+                let tokens = static_tokens();
+                let seed = format!("#{}", tokens.get("seed").cloned().unwrap_or_else(|| "e0563b".to_string()));
+                return fan_out(&tokens, &seed, "tonal-spot", None, &mode);
             }
             cur
         }
