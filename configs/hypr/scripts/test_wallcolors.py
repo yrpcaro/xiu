@@ -419,10 +419,15 @@ def main():
             assert 'set recolor-keephue "true"' in z_text, "zathura recolor keephue enabled"
             assert 'set default-bg "rgba(' in z_text, "zathura default-bg has rgba transparency"
             assert 'set recolor-lightcolor "rgba(' in z_text, "zathura recolor-lightcolor has rgba transparency"
-            assert ('set recolor-darkcolor "%s"' % WARM["base07"]) in z_text, "zathura recolor-darkcolor follows terminal foreground"
+            assert 'set recolor-darkcolor "rgba(171,180,188,1.0)"' in z_text, "zathura recolor-darkcolor follows terminal fg in RGBA"
             assert 'set statusbar-bg "rgba(' in z_text, "zathura statusbar-bg has rgba transparency"
             assert (zathura_dir / "zathurarc").is_file(), "zathurarc was created"
             assert "include theme" in (zathura_dir / "zathurarc").read_text(), "zathurarc includes theme"
+            for line in z_text.splitlines():
+                line = line.strip()
+                if line.startswith("set ") and not line.startswith("set recolor") and not line.startswith("set render-loading "):
+                    assert '"rgba(' in line, f"zathura setting uses rgba: {line}"
+                    assert '#' not in line, f"zathura setting has no hex color: {line}"
 
             # MPV and uosc theme tests
             mpv_dir = Path(tmpdir) / "mpv"

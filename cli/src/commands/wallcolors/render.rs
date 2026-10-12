@@ -919,9 +919,18 @@ pub fn render_zathura(
     let bright = g(pill, "bright");
     let error = g(b, "base08");
     let warning = g(b, "base0a");
+    let success = g(b, "base0b");
+    let surface_container = g(pill, "surface_container");
 
     let bg_hex = format!("#{base00}");
     let fg_hex = format!("#{base07}");
+    let err_col = if !error.is_empty() { error } else { "#c0442b".to_string() };
+    let warn_col = if !warning.is_empty() { warning } else { "#d89a5b".to_string() };
+    let succ_col = if !success.is_empty() { success } else { "#8a9a5b".to_string() };
+    let bright_col = if !bright.is_empty() { bright } else { fg_hex.clone() };
+    let subtle_col = if !subtle.is_empty() { subtle } else { fg_hex.clone() };
+    let prim_col = if !primary.is_empty() { primary } else { "#e0563b".to_string() };
+    let surf_col = if !surface_container.is_empty() { surface_container } else { bg_hex.clone() };
 
     let hex_to_rgba = |hex: &str, alpha: f32| -> String {
         let s = hex.trim().trim_start_matches('#');
@@ -929,18 +938,33 @@ pub fn render_zathura(
             let r = u8::from_str_radix(&s[0..2], 16).unwrap_or(0);
             let g = u8::from_str_radix(&s[2..4], 16).unwrap_or(0);
             let b = u8::from_str_radix(&s[4..6], 16).unwrap_or(0);
-            format!("rgba({r},{g},{b},{alpha:.2})")
+            if (alpha - 1.0).abs() < 0.001 {
+                format!("rgba({r},{g},{b},1.0)")
+            } else {
+                format!("rgba({r},{g},{b},{alpha:.2})")
+            }
+        } else if (alpha - 1.0).abs() < 0.001 {
+            "rgba(230,214,203,1.0)".to_string()
         } else {
             format!("rgba(20,17,15,{alpha:.2})")
         }
     };
 
     let bg_rgba = hex_to_rgba(&bg_hex, 0.85);
-    let highlight_rgba = hex_to_rgba(&primary, 0.35);
-    let highlight_active_rgba = hex_to_rgba(&primary, 0.65);
+    let fg_rgba = hex_to_rgba(&fg_hex, 1.0);
+    let bright_rgba = hex_to_rgba(&bright_col, 1.0);
+    let subtle_rgba = hex_to_rgba(&subtle_col, 1.0);
+    let primary_rgba = hex_to_rgba(&prim_col, 1.0);
+    let surface_rgba = hex_to_rgba(&surf_col, 0.85);
 
-    let err_col = if !error.is_empty() { error } else { "#c0442b".to_string() };
-    let warn_col = if !warning.is_empty() { warning } else { "#d89a5b".to_string() };
+    let err_bg_rgba = hex_to_rgba(&err_col, 0.85);
+    let err_fg_rgba = hex_to_rgba(&err_col, 1.0);
+    let warn_bg_rgba = hex_to_rgba(&warn_col, 0.85);
+    let warn_fg_rgba = hex_to_rgba(&warn_col, 1.0);
+    let succ_fg_rgba = hex_to_rgba(&succ_col, 1.0);
+
+    let highlight_rgba = hex_to_rgba(&prim_col, 0.35);
+    let highlight_active_rgba = hex_to_rgba(&prim_col, 0.65);
 
     let content = format!(
         r#"# Written by wallcolors on every palette change.
@@ -951,50 +975,56 @@ set recolor-reverse-video "false"
 
 # Page background and text recolor (matches terminal background, transparency & blur)
 set recolor-lightcolor "{bg_rgba}"
-set recolor-darkcolor "{fg_hex}"
+set recolor-darkcolor "{fg_rgba}"
 
 # Window background and foreground
 set default-bg "{bg_rgba}"
-set default-fg "{fg_hex}"
+set default-fg "{fg_rgba}"
 
 # Statusbar
 set statusbar-bg "{bg_rgba}"
-set statusbar-fg "{fg_hex}"
+set statusbar-fg "{fg_rgba}"
 
 # Inputbar
 set inputbar-bg "{bg_rgba}"
-set inputbar-fg "{fg_hex}"
+set inputbar-fg "{fg_rgba}"
 
 # Notifications
 set notification-bg "{bg_rgba}"
-set notification-fg "{fg_hex}"
-set notification-error-bg "{err_col}"
-set notification-error-fg "{bright}"
-set notification-warning-bg "{warn_col}"
-set notification-warning-fg "{bright}"
+set notification-fg "{fg_rgba}"
+set notification-error-bg "{err_bg_rgba}"
+set notification-error-fg "{bright_rgba}"
+set notification-warning-bg "{warn_bg_rgba}"
+set notification-warning-fg "{bright_rgba}"
 
 # Highlight & Selection
 set highlight-color "{highlight_rgba}"
 set highlight-active-color "{highlight_active_rgba}"
+set highlight-fg "{fg_rgba}"
 
 # Completion
 set completion-bg "{bg_rgba}"
-set completion-fg "{fg_hex}"
-set completion-highlight-bg "{primary}"
-set completion-highlight-fg "{bg_hex}"
-set completion-group-bg "{bg_rgba}"
-set completion-group-fg "{subtle}"
+set completion-fg "{fg_rgba}"
+set completion-highlight-bg "{primary_rgba}"
+set completion-highlight-fg "{bg_rgba}"
+set completion-group-bg "{surface_rgba}"
+set completion-group-fg "{subtle_rgba}"
 
 # Index mode (table of contents)
 set index-bg "{bg_rgba}"
-set index-fg "{fg_hex}"
-set index-active-bg "{primary}"
-set index-active-fg "{bg_hex}"
+set index-fg "{fg_rgba}"
+set index-active-bg "{primary_rgba}"
+set index-active-fg "{bg_rgba}"
 
 # Render loading
 set render-loading "true"
 set render-loading-bg "{bg_rgba}"
-set render-loading-fg "{subtle}"
+set render-loading-fg "{subtle_rgba}"
+
+# Signatures
+set signature-error-color "{err_fg_rgba}"
+set signature-warning-color "{warn_fg_rgba}"
+set signature-success-color "{succ_fg_rgba}"
 "#
     );
 
@@ -1002,7 +1032,15 @@ set render-loading-fg "{subtle}"
 
     let rc_file = dir.join("zathurarc");
     if !rc_file.is_file() {
-        let rc_content = "# Xiu zathura configuration\nset adjust-open \"width\"\nset selection-clipboard \"clipboard\"\nset window-title-basename \"true\"\nset statusbar-home-tilde \"true\"\n\ninclude theme\n";
+        let rc_content = r#"# Xiu zathura configuration
+set font "JetBrainsMono Nerd Font 10"
+set adjust-open "width"
+set selection-clipboard "clipboard"
+set window-title-basename "true"
+set statusbar-home-tilde "true"
+
+include theme
+"#;
         let _ = fs::write(rc_file, rc_content);
     }
 
