@@ -417,7 +417,7 @@ def main():
             z_text = z_theme.read_text()
             assert 'set recolor "true"' in z_text, "zathura recolor enabled"
             assert 'set recolor-keephue "true"' in z_text, "zathura recolor keephue enabled"
-            assert 'set default-bg "rgba(' in z_text, "zathura default-bg has rgba transparency"
+            assert 'set default-bg "rgba(20,26,32,1.0)"' in z_text, "zathura default-bg uses rgba with 1.0 opacity"
             assert 'set recolor-lightcolor "rgba(' in z_text, "zathura recolor-lightcolor has rgba transparency"
             assert 'set recolor-darkcolor "rgba(171,180,188,1.0)"' in z_text, "zathura recolor-darkcolor follows terminal fg in RGBA"
             assert 'set statusbar-bg "rgba(' in z_text, "zathura statusbar-bg has rgba transparency"

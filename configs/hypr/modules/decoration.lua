@@ -86,6 +86,7 @@ hl.config({
             vibrancy          = 0.17,
             noise             = 0.01,
             new_optimizations = true,
+            ignore_opacity    = true,
             special           = false,
         },
     },

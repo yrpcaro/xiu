@@ -951,6 +951,7 @@ pub fn render_zathura(
     };
 
     let bg_rgba = hex_to_rgba(&bg_hex, 0.85);
+    let default_bg_rgba = hex_to_rgba(&bg_hex, 1.0);
     let fg_rgba = hex_to_rgba(&fg_hex, 1.0);
     let bright_rgba = hex_to_rgba(&bright_col, 1.0);
     let subtle_rgba = hex_to_rgba(&subtle_col, 1.0);
@@ -978,7 +979,7 @@ set recolor-lightcolor "{bg_rgba}"
 set recolor-darkcolor "{fg_rgba}"
 
 # Window background and foreground
-set default-bg "{bg_rgba}"
+set default-bg "{default_bg_rgba}"
 set default-fg "{fg_rgba}"
 
 # Statusbar
