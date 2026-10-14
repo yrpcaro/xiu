@@ -54,6 +54,8 @@ DEPLOY_SET = [
     ("bottom",     "bottom",                                "bottom"),
     ("yazi",       "yazi",                                  "yazi"),
     ("zathura",    "zathura",                               "zathura"),
+    ("tealdeer",   "tealdeer",                              "tealdeer"),
+    ("navi",       "navi",                                  "navi"),
     ("mpv",        "mpv",                                   "mpv"),
     ("spicetify",  "spicetify",                             "spicetify"),
     ("portals",    "portals",                               "xdg-desktop-portal"),

@@ -66,6 +66,22 @@ end
 if type -q rip
     alias rm rip
 end
+if type -q tldr
+    alias man tldr
+end
+if type -q moor
+    alias less moor
+    set -gx PAGER moor
+else if type -q moar
+    alias less moar
+    set -gx PAGER moar
+end
+if type -q sd
+    alias sed sd
+end
+if type -q difft
+    alias diff difft
+end
 
 # nvim owns the vi/vim names when it is around
 if type -q nvim
@@ -115,6 +131,11 @@ if type -q fzf
     end
     source /usr/share/fzf/key-bindings.fish 2>/dev/null
     source /usr/share/fzf/completions.fish 2>/dev/null
+end
+
+# navi cheatsheet widget on Ctrl+G
+if type -q navi
+    navi widget fish | source 2>/dev/null
 end
 
 # No greeting at all: nothing prints between opening the terminal and the

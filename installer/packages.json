@@ -115,6 +115,21 @@
     { "id": "rip2", "group": "core", "required": true, "desc": "rm replacement with a recoverable graveyard, behind the fish alias", "aur": true,
       "names": { "arch": "rip2-bin", "debian": null, "fedora": null, "suse": null, "gentoo": null }, "binary": "rip", "fallback": "cargo" },
 
+    { "id": "tealdeer", "group": "core", "required": true, "desc": "Fast tldr client replacing man behind the fish alias", "aur": false,
+      "names": { "arch": "tealdeer", "debian": "tealdeer", "fedora": "tealdeer", "suse": "tealdeer", "gentoo": "app-misc/tealdeer" }, "binary": "tldr", "repo": { "gentoo": "overlay:guru" }, "fallback": "cargo" },
+
+    { "id": "moor", "group": "core", "required": true, "desc": "Modern terminal pager replacing less behind the fish alias", "aur": false,
+      "names": { "arch": "moor", "debian": "moor", "fedora": null, "suse": null, "gentoo": "sys-apps/moor" }, "binary": "moor", "fallback": "cargo" },
+
+    { "id": "sd", "group": "core", "required": true, "desc": "Intuitive find & replace replacing sed behind the fish alias", "aur": false,
+      "names": { "arch": "sd", "debian": null, "fedora": null, "suse": null, "gentoo": null }, "binary": "sd", "fallback": "cargo" },
+
+    { "id": "difftastic", "group": "core", "required": true, "desc": "Syntax-aware diff tool replacing diff behind the fish alias", "aur": false,
+      "names": { "arch": "difftastic", "debian": null, "fedora": "difftastic", "suse": null, "gentoo": null }, "binary": "difft", "fallback": "cargo" },
+
+    { "id": "navi", "group": "core", "required": true, "desc": "Interactive command-line cheatsheet tool", "aur": false,
+      "names": { "arch": "navi", "debian": "navi", "fedora": "navi", "suse": null, "gentoo": null }, "binary": "navi", "fallback": "cargo" },
+
     { "id": "starship", "group": "core", "required": true, "desc": "The fish prompt", "aur": false,
       "names": { "arch": "starship", "debian": "starship", "fedora": "starship", "suse": "starship", "gentoo": "app-shells/starship" }, "fallback": "cargo" },
 

@@ -1,0 +1,17 @@
+# Xiu navi configuration.
+# navi is an interactive command-line cheatsheet tool that uses fzf
+# to browse and fill commands, styled with the xiu color palette.
+
+style:
+  tag:
+    color: cyan
+    width: 24
+  comment:
+    color: yellow
+  snippet:
+    color: green
+
+finder:
+  command: fzf
+  overrides: "--height 40% --layout=reverse --color=fg:7,bg:-1,hl:6,fg+:15,bg+:0,hl+:14,info:8,border:8,prompt:4,marker:13,spinner:8,header:8"
+  overrides_var: "--height 50% --layout=reverse --color=fg:7,bg:-1,hl:6,fg+:15,bg+:0,hl+:14,info:8,border:8,prompt:4,marker:13,spinner:8,header:8"
