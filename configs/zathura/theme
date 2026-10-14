@@ -5,7 +5,7 @@ set recolor-keephue "true"
 set recolor-reverse-video "false"
 
 # Page background and text recolor (matches terminal background, transparency & blur)
-set recolor-lightcolor "rgba(20,26,32,0.85)"
+set recolor-lightcolor "rgba(20,26,32,0.0)"
 set recolor-darkcolor "#abb4bc"
 
 # Window background and foreground

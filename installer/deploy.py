@@ -653,6 +653,10 @@ window, .background {{
   color: var(--window-fg-color);
 }}
 
+window#zathura, #zathura, window.org-pwmt-zathura, window.zathura {{
+  background-color: transparent;
+}}
+
 headerbar, .titlebar {{
   background-color: var(--headerbar-bg-color);
   color: var(--headerbar-fg-color);
@@ -731,6 +735,10 @@ def _render_adwaita_gtk3_css(pill):
 window, .background {{
     background-color: @theme_bg_color;
     color: @theme_fg_color;
+}}
+
+window#zathura, #zathura, window.org-pwmt-zathura, window.zathura {{
+    background-color: transparent;
 }}
 
 headerbar, .titlebar {{
@@ -1355,8 +1363,12 @@ def _selftest():
               "fastfetch config.jsonc rendered, no placeholders left")
         check((root / "gtk-3.0" / "gtk.css").is_file(),
               "gtk-3.0 gtk.css written on neutralize")
+        check("window#zathura" in (root / "gtk-3.0" / "gtk.css").read_text(),
+              "gtk-3.0 gtk.css contains zathura transparency rule")
         check((root / "gtk-4.0" / "gtk.css").is_file(),
               "gtk-4.0 gtk.css written on neutralize")
+        check("window#zathura" in (root / "gtk-4.0" / "gtk.css").read_text(),
+              "gtk-4.0 gtk.css contains zathura transparency rule")
         check((root / "gtk-3.0" / "settings.ini").is_file(),
               "gtk-3.0 settings.ini written on neutralize")
         check((root / "gtk-4.0" / "settings.ini").is_file(),

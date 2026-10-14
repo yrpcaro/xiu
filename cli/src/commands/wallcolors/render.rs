@@ -940,18 +940,23 @@ pub fn render_zathura(
             let b = u8::from_str_radix(&s[4..6], 16).unwrap_or(0);
             if (alpha - 1.0).abs() < 0.001 {
                 format!("rgba({r},{g},{b},1.0)")
+            } else if alpha.abs() < 0.001 {
+                format!("rgba({r},{g},{b},0.0)")
             } else {
                 format!("rgba({r},{g},{b},{alpha:.2})")
             }
         } else if (alpha - 1.0).abs() < 0.001 {
             "rgba(230,214,203,1.0)".to_string()
+        } else if alpha.abs() < 0.001 {
+            "rgba(20,17,15,0.0)".to_string()
         } else {
             format!("rgba(20,17,15,{alpha:.2})")
         }
     };
 
     let bg_rgba = hex_to_rgba(&bg_hex, 0.85);
-    let default_bg_rgba = hex_to_rgba(&bg_hex, 1.0);
+    let recolor_light_rgba = hex_to_rgba(&bg_hex, 0.0);
+    let default_bg_rgba = hex_to_rgba(&bg_hex, 0.85);
     let fg_rgba = hex_to_rgba(&fg_hex, 1.0);
     let bright_rgba = hex_to_rgba(&bright_col, 1.0);
     let subtle_rgba = hex_to_rgba(&subtle_col, 1.0);
@@ -975,7 +980,7 @@ set recolor-keephue "true"
 set recolor-reverse-video "false"
 
 # Page background and text recolor (matches terminal background, transparency & blur)
-set recolor-lightcolor "{bg_rgba}"
+set recolor-lightcolor "{recolor_light_rgba}"
 set recolor-darkcolor "{fg_rgba}"
 
 # Window background and foreground
@@ -2614,6 +2619,10 @@ window, .background {{
   color: var(--window-fg-color);
 }}
 
+window#zathura, #zathura, window.org-pwmt-zathura, window.zathura {{
+  background-color: transparent;
+}}
+
 headerbar, .titlebar {{
   background-color: var(--headerbar-bg-color);
   color: var(--headerbar-fg-color);
@@ -2684,6 +2693,10 @@ pub fn render_adwaita_gtk3_css(
 window, .background {{
     background-color: @theme_bg_color;
     color: @theme_fg_color;
+}}
+
+window#zathura, #zathura, window.org-pwmt-zathura, window.zathura {{
+    background-color: transparent;
 }}
 
 headerbar, .titlebar {{
@@ -3199,6 +3212,8 @@ mod tests {
         assert!(css.contains("@define-color window_bg_color #141a20;"));
         assert!(css.contains("toast {"));
         assert!(css.contains("toggle:checked {"));
+        assert!(css.contains("window#zathura, #zathura, window.org-pwmt-zathura, window.zathura {"));
+        assert!(css.contains("background-color: transparent;"));
     }
 
     #[test]
@@ -3210,5 +3225,7 @@ mod tests {
         assert!(css.contains("@define-color theme_selected_bg_color #ffaa00;"));
         assert!(css.contains("headerbar, .titlebar {"));
         assert!(css.contains(".suggested-action"));
+        assert!(css.contains("window#zathura, #zathura, window.org-pwmt-zathura, window.zathura {"));
+        assert!(css.contains("background-color: transparent;"));
     }
 }

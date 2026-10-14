@@ -11,11 +11,11 @@ set recolor-keephue "true"
 set recolor-reverse-video "false"
 
 # Page background and text recolor
-set recolor-lightcolor "rgba(33,23,17,0.85)"
+set recolor-lightcolor "rgba(33,23,17,0.0)"
 set recolor-darkcolor "rgba(230,214,203,1.0)"
 
 # Window background and foreground
-set default-bg "rgba(33,23,17,1.0)"
+set default-bg "rgba(33,23,17,0.85)"
 set default-fg "rgba(230,214,203,1.0)"
 
 # Statusbar
