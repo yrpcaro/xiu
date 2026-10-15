@@ -13,6 +13,10 @@ hl.env("PATH", os.getenv("HOME") .. "/.local/bin:" .. (os.getenv("PATH") or ""))
 -- apps always resolve user-installed icon themes, fonts, and desktop entries.
 hl.env("XDG_DATA_DIRS", os.getenv("HOME") .. "/.local/share:" .. (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"))
 
+-- Default editor across compositor and spawned apps
+hl.env("EDITOR", "helix")
+hl.env("VISUAL", "helix")
+
 -- Hardware video acceleration and graphics environment.
 -- Only apply Nvidia-specific variables when the proprietary nvidia driver is loaded.
 local has_nvidia = (os.execute("test -c /dev/nvidia0") == 0) or (os.execute("test -d /proc/driver/nvidia") == 0)

@@ -67,7 +67,7 @@ sixel_fraction = 15
 
 [opener]
 edit = [
-    { run = '${EDITOR:-nvim} "$@"', block = true, desc = "Edit" },
+    { run = '${EDITOR:-helix} "$@"', block = true, desc = "Edit" },
 ]
 play = [
     { run = 'mpv "$@"', orphan = true, desc = "Play" },

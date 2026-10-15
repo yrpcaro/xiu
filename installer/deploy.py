@@ -115,6 +115,9 @@ hl.env("HYPRCURSOR_SIZE",  "24")
 hl.env("PATH", os.getenv("HOME") .. "/.local/bin:" .. (os.getenv("PATH") or ""))
 hl.env("XDG_DATA_DIRS", os.getenv("HOME") .. "/.local/share:" .. (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"))
 
+hl.env("EDITOR", "helix")
+hl.env("VISUAL", "helix")
+
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 
 hl.env("QT_QPA_PLATFORMTHEME", "kde")
@@ -1239,6 +1242,8 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
             new_txt = new_txt.replace("QT_QPA_PLATFORMTHEME=kde", "QT_QPA_PLATFORMTHEME=kde\nQT_STYLE_OVERRIDE=Darkly")
         if "QS_ICON_THEME" not in new_txt:
             new_txt = new_txt.rstrip() + f"\nQS_ICON_THEME={icon_theme}\n"
+        if "EDITOR=" not in new_txt:
+            new_txt = new_txt.rstrip() + "\nEDITOR=helix\nVISUAL=helix\n"
         if new_txt != txt:
             actions.append({"step": "uwsm-env-update", "path": str(uwsm_env)})
             if apply:
@@ -1247,7 +1252,7 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
         uwsm_parent = uwsm_env.parent
         uwsm_parent.mkdir(parents=True, exist_ok=True)
         uwsm_env.write_text(
-            f"QT_QPA_PLATFORMTHEME=kde\nQT_STYLE_OVERRIDE=Darkly\nQS_ICON_THEME={icon_theme}\n"
+            f"QT_QPA_PLATFORMTHEME=kde\nQT_STYLE_OVERRIDE=Darkly\nQS_ICON_THEME={icon_theme}\nEDITOR=helix\nVISUAL=helix\n"
         )
 
     yamis_idx = Path.home() / ".local" / "share" / "icons" / icon_theme / "index.theme"
@@ -1435,6 +1440,8 @@ def _selftest():
               "plasmarc has Darkly theme on neutralize")
         check("QT_QPA_PLATFORMTHEME=kde" in (root / "uwsm" / "env").read_text(),
               "uwsm env has QT_QPA_PLATFORMTHEME=kde on neutralize")
+        check("EDITOR=helix" in (root / "uwsm" / "env").read_text(),
+              "uwsm env has EDITOR=helix on neutralize")
 
         # 7. uninstall: managed items removed, pristine backup restored
         plan = uninstall(config_root=root, apply=False)

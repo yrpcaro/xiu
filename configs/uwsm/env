@@ -3,3 +3,5 @@
 QT_QPA_PLATFORMTHEME=kde
 QT_STYLE_OVERRIDE=Darkly
 QS_ICON_THEME=yet-another-monochrome-icon-set
+EDITOR=helix
+VISUAL=helix

@@ -41,6 +41,7 @@ pub const WELL_KNOWN: &[(&str, &str)] = &[
     ("dev.zed.Zed.desktop", "zeditor"),
     ("zed.desktop", "zeditor"),
     ("helix.desktop", "helix"),
+    ("Helix.desktop", "helix"),
     ("nvim.desktop", "nvim"),
     ("neovim.desktop", "nvim"),
     ("micro.desktop", "micro"),
@@ -300,6 +301,7 @@ mod tests {
         assert_eq!(resolve_cmd("dev.zed.Zed.desktop"), "zeditor");
         assert_eq!(resolve_cmd("code.desktop"), "code");
         assert_eq!(resolve_cmd("helix.desktop"), "helix");
+        assert_eq!(resolve_cmd("Helix.desktop"), "helix");
         assert_eq!(resolve_cmd("nvim.desktop"), "nvim");
     }
 

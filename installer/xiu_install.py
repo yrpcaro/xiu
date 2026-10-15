@@ -728,7 +728,7 @@ def set_xdg_defaults(choices, dry):
     home = Path.home()
     mimeapps = home / ".config" / "mimeapps.list"
     if dry:
-        print("  would set xdg defaults (file manager, imv, zathura) -> %s" % mimeapps)
+        print("  would set xdg defaults (file manager, imv, zathura, helix) -> %s" % mimeapps)
         return True, ""
     # The yazi wrapper lands first so the folder default points at a desktop
     # file that exists; the source is the repo checkout the installer runs
@@ -769,6 +769,12 @@ def set_xdg_defaults(choices, dry):
     for desktop, mimes in DEFAULT_MIMES.items():
         if desktop_exists(desktop):
             want.setdefault(desktop, []).extend(mimes)
+    editor_desktop = next((d for d in ("Helix.desktop", "helix.desktop") if desktop_exists(d)), None)
+    if editor_desktop:
+        want.setdefault(editor_desktop, []).extend([
+            "text/plain", "text/markdown", "text/x-c", "text/x-c++",
+            "text/x-python", "text/x-rust", "application/json",
+        ])
     if not want:
         print("  no xdg defaults to set (none of the desktop files present)")
         return True, ""

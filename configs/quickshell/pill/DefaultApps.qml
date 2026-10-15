@@ -53,9 +53,10 @@ SettingsSurface {
                 "org.wezfurlong.wezterm.desktop", "wezterm.desktop"
             ],
             "text/plain": [
+                "Helix.desktop", "helix.desktop",
                 "code.desktop", "visual-studio-code.desktop", "code-oss.desktop",
                 "dev.zed.Zed.desktop", "zed.desktop",
-                "helix.desktop", "nvim.desktop", "neovim.desktop",
+                "nvim.desktop", "neovim.desktop",
                 "micro.desktop", "org.gnome.TextEditor.desktop", "gedit.desktop", "kate.desktop"
             ],
             "audio/mpeg": ["spotify.desktop", "spotify-launcher.desktop", "amberol.desktop", "io.bassi.Amberol.desktop", "org.gnome.Lollypop.desktop", "rhythmbox.desktop", "clementine.desktop"],
