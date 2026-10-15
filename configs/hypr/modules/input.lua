@@ -10,6 +10,7 @@ hl.config({
         numlock_by_default = false,
         touchpad = {
             natural_scroll = true,
+            tap_to_click   = true,
         },
     },
     cursor = {

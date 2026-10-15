@@ -95,8 +95,8 @@ def is_installed(name, family):
 
 
 def aur_helper():
-    """The AUR helper on PATH, yay preferred over paru, or None when neither is."""
-    for helper in ("yay", "paru"):
+    """The AUR helper on PATH, paru preferred over yay, or None when neither is."""
+    for helper in ("paru", "yay"):
         if shutil.which(helper):
             return helper
     return None

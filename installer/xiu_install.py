@@ -19,6 +19,7 @@ Quick-profile defaults, so it pairs with --dry-run for a non-interactive check.
 import argparse
 import getpass
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -138,25 +139,50 @@ def _default_choices(args, info, manifest):
     """The non-interactive choices for --quickstart and the no-terminal fallback."""
     full_ids = {p["id"] for p in manifest["packages"] if p.get("group") == "full"}
     profile = "full" if args.full else "quick"
-    quick_opt_ids = {"spotify", "spicetify-cli", "termfilechooser"}
+    quick_opt_ids = {
+        "yazi",
+        "ripdrag",
+        "surge",
+        "uwsm",
+        "zathura",
+        "zathura-pdf-mupdf",
+        "imv",
+        "bottom",
+        "zed",
+        "spotify",
+        "spicetify-cli",
+        "telegram-desktop",
+        "micro",
+        "dolphin",
+    }
+    aur_choice = "paru" if (info.get("aur_helper") == "paru" or shutil.which("paru")) else (info.get("aur_helper") or "paru")
     return {
         "profile": profile,
         "terminal": "foot",
         "extra_terminals": [],
-        "aur_choice": info["aur_helper"] or "yay",
+        "aur_choice": aur_choice,
         "optional_ids": set(full_ids) if profile == "full" else quick_opt_ids,
-        "file_manager": "yazi",
+        "file_manager": "dolphin",
+        "editor": "helix",
+        "browser": "brave",
+        "media_player": "mpv",
         "greeter": "sddm" if args.sddm else "none",
-        "sddm_theme": "torii",
-        "browser_theme": True if profile == "full" else False,
-        "fresh_configs": False,
+        "sddm_theme": "washi",
+        "browser_theme": False,
+        "fresh_configs": True,
         "legacy_swap": "clean",
         "grub": False,
         "fish": True,
-        "brave": args.brave,
+        "brave": True,
         "root_cmd": info.get("root_cmd") or _root_cmd(),
         "overlays": True,
         "services": True,
+        "chat_theme": True,
+        "spicetify": True,
+        "kb_layout": "us,ir",
+        "natural_scroll": True,
+        "tap_to_click": True,
+        "idle_timeout": "5m",
     }
 
 
@@ -173,23 +199,21 @@ def _wizard(args, info, manifest):
 
     # --- Stage 1: Profile & AUR Preflight ---
     pidx = tui.select_one("Install profile", [
-        ("Quick", "Core rice, foot, yazi, Spicetify, full theming (Recommended)", True),
+        ("Quick", "Core rice, foot, dolphin, Spicetify, full theming (Recommended)", True),
         ("Full", "Everything, plus all daily applications", False),
         ("Custom", "Configure individual packages and settings", False),
     ], default=1 if args.full else 0)
     profile = ("quick", "full", "custom")[pidx]
 
-    aur_choice = "yay"
+    aur_choice = "paru"
     if family == "arch":
-        default_aur = 0
-        if info.get("aur_helper") == "paru":
-            default_aur = 1
+        default_aur = 0 if info.get("aur_helper") == "paru" or not info.get("aur_helper") else 1
         aidx = tui.select_one("AUR helper", [
-            ("yay", "Build AUR packages with yay (Recommended)", True),
-            ("paru", "Build AUR packages with paru", False),
+            ("paru", "Build AUR packages with paru (Recommended)", True),
+            ("yay", "Build AUR packages with yay", False),
             ("None", "Skip the AUR, use fallbacks instead", False),
         ], default=default_aur)
-        aur_choice = ("yay", "paru", "none")[aidx]
+        aur_choice = ("paru", "yay", "none")[aidx]
 
     if profile == "quick":
         choices = _default_choices(args, info, manifest)
@@ -198,7 +222,10 @@ def _wizard(args, info, manifest):
         summary_lines = [
             "Profile: Quick (fast install, core essentials)",
             "Terminal: foot",
-            "File manager: yazi (with termfilechooser portal)",
+            "File manager: dolphin",
+            "Text editor: helix",
+            "Web browser: brave",
+            "Media player: mpv",
             "Login shell: fish",
             "Login screen: none (TTY login)",
             "Theming: GTK 3/4, Qt, Quickshell YAMIS monochrome icons",
@@ -708,6 +735,10 @@ DEFAULT_MIMES = {
         "application/pdf", "application/epub+zip", "application/oxps",
         "application/x-fictionbook", "application/x-mobipocket-ebook",
     ],
+    "mpv.desktop": [
+        "video/mp4", "video/mkv", "video/webm", "video/x-matroska", "video/quicktime",
+        "audio/mpeg", "audio/flac", "audio/ogg", "audio/wav",
+    ],
 }
 
 
@@ -775,6 +806,12 @@ def set_xdg_defaults(choices, dry):
             "text/plain", "text/markdown", "text/x-c", "text/x-c++",
             "text/x-python", "text/x-rust", "application/json",
         ])
+    browser_desktop = next((d for d in ("brave-browser.desktop", "brave.desktop") if desktop_exists(d)), None)
+    if choices.get("browser") == "brave" and browser_desktop:
+        want.setdefault(browser_desktop, []).extend([
+            "text/html", "application/xhtml+xml", "x-scheme-handler/http",
+            "x-scheme-handler/https", "x-scheme-handler/about", "x-scheme-handler/unknown",
+        ])
     if not want:
         print("  no xdg defaults to set (none of the desktop files present)")
         return True, ""
@@ -821,7 +858,7 @@ def set_xdg_defaults(choices, dry):
 
 def seed_vars(choices, dry):
     """
-    Land the wizard's terminal and file-manager choice where Hyprland reads it:
+    Land the wizard's terminal, file-manager, editor and browser choice where Hyprland reads it:
     ~/.config/xiu/vars.lua, the override file vars.lua loads on every start.
     Written only when the file doesn't exist — a box that already
     personalized it keeps every line as-is. Fail-soft like every step.
@@ -829,8 +866,10 @@ def seed_vars(choices, dry):
     dest = deploy.CONFIG_ROOT / "xiu" / "vars.lua"
     terminal = choices.get("terminal", "foot")
     fm = choices.get("file_manager", "dolphin")
+    ed = choices.get("editor", "helix")
+    br = choices.get("browser", "brave")
     if dry:
-        print("  would seed vars.lua (terminal: %s, file manager: %s)" % (terminal, fm))
+        print("  would seed vars.lua (terminal: %s, file manager: %s, editor: %s, browser: %s)" % (terminal, fm, ed, br))
         return True, ""
     try:
         if dest.is_file():
@@ -844,13 +883,94 @@ def seed_vars(choices, dry):
             "none": '    -- fileManager = "dolphin",  -- uncomment to set yours',
         }.get(fm, '    -- fileManager = "dolphin",')
         term_line = f'    terminal = "{terminal}",  -- chosen in the installer'
-        body = f"{term_line}\n{body_fm}"
+        ed_cmd = f"{terminal} -e {ed}" if ed in ("helix", "nvim", "micro") else ed
+        ed_line = f'    editor = "{ed_cmd}",  -- chosen in the installer'
+        br_line = f'    browser = "{br}",  -- chosen in the installer'
+        body = f"{term_line}\n{body_fm}\n{ed_line}\n{br_line}"
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(VARS_TEMPLATE % {"body": body})
         print(f"  seeded vars.lua -> {dest}")
         return True, ""
     except OSError as exc:
         return False, f"{exc}: seed vars.lua"
+
+
+def apply_input_preferences(choices, dry):
+    """
+    Apply keyboard layout and touchpad preferences to ~/.config/hypr/modules/input.lua.
+    """
+    kb = choices.get("kb_layout", "us,ir")
+    ns = choices.get("natural_scroll", True)
+    tc = choices.get("tap_to_click", True)
+    dest = deploy.CONFIG_ROOT / "hypr" / "modules" / "input.lua"
+    if dry:
+        print("  would apply input preferences (layout: %s, natural scroll: %s, tap to click: %s) -> %s"
+              % (kb, ns, tc, dest))
+        return True, ""
+    try:
+        if not dest.is_file():
+            return True, ""
+        content = dest.read_text()
+        if kb != "keep":
+            content = re.sub(r'kb_layout\s*=\s*"[^"]*"', f'kb_layout          = "{kb}"', content)
+            if kb == "us":
+                content = re.sub(r'kb_variant\s*=\s*"[^"]*",?\n?', '', content)
+            elif kb == "us,ir":
+                if 'kb_variant' not in content:
+                    content = content.replace(f'kb_layout          = "{kb}",', f'kb_layout          = "{kb}",\n        kb_variant         = ",winkeys",')
+        ns_str = "true" if ns else "false"
+        content = re.sub(r'natural_scroll\s*=\s*(?:true|false)', f'natural_scroll = {ns_str}', content)
+        tc_str = "true" if tc else "false"
+        if "tap_to_click" in content:
+            content = re.sub(r'tap_to_click\s*=\s*(?:true|false)', f'tap_to_click   = {tc_str}', content)
+        elif "touchpad = {" in content:
+            content = content.replace("touchpad = {", f"touchpad = {{\n            tap_to_click   = {tc_str},")
+        dest.write_text(content)
+        print(f"  applied input preferences -> {dest}")
+        return True, ""
+    except OSError as exc:
+        return False, f"{exc}: apply input preferences"
+
+
+def apply_idle_preferences(choices, dry):
+    """
+    Apply lockscreen idle timeout preferences to ~/.config/hypr/hypridle.conf.
+    """
+    timeout_choice = choices.get("idle_timeout", "5m")
+    dest = deploy.CONFIG_ROOT / "hypr" / "hypridle.conf"
+    if dry:
+        print("  would apply idle timeout preferences (%s) -> %s" % (timeout_choice, dest))
+        return True, ""
+    try:
+        timeouts = {
+            "5m": (300, 360),
+            "10m": (600, 660),
+            "15m": (900, 960),
+        }
+        if timeout_choice in timeouts:
+            lock_s, dpms_s = timeouts[timeout_choice]
+            idle_cfg = f"""general {{
+    lock_cmd = xiu lock
+    before_sleep_cmd = loginctl lock-session
+    after_sleep_cmd = hyprctl dispatch dpms on
+}}
+
+listener {{
+    timeout = {lock_s}
+    on-timeout = xiu lock --idle
+}}
+
+listener {{
+    timeout = {dpms_s}
+    on-timeout = hyprctl dispatch dpms off
+    on-resume = hyprctl dispatch dpms on
+}}
+"""
+            dest.write_text(idle_cfg)
+            print(f"  applied idle timeout ({timeout_choice}) -> {dest}")
+        return True, ""
+    except OSError as exc:
+        return False, f"{exc}: apply idle preferences"
 
 
 # The yazi plugins the shipped yazi.toml keymap binds. ya pkg add is
@@ -1739,6 +1859,14 @@ def run(args):
         record(ok, detail, "Set xdg default apps",
                "Edit ~/.config/mimeapps.list [Default Applications] yourself.")
 
+        ok, detail = apply_input_preferences(choices, dry)
+        record(ok, detail, "Apply input preferences",
+               "Edit ~/.config/hypr/modules/input.lua yourself.")
+
+        ok, detail = apply_idle_preferences(choices, dry)
+        record(ok, detail, "Apply idle timeout",
+               "Edit ~/.config/hypr/hypridle.conf yourself.")
+
         # l3. yazi plugins, through yazi's own package manager (no-op when
         #     yazi isn't installed — the group is optional).
         ok, detail = install_yazi_plugins(dry)
@@ -1852,28 +1980,24 @@ def run(args):
         spotify_dir = (Path.home() / ".local" / "share" / "spotify-launcher"
                        / "install" / "usr" / "share" / "spotify")
         spicetify_cmd = "spicetify" if shutil.which("spicetify") else str(Path.home() / ".spicetify" / "spicetify") if (Path.home() / ".spicetify" / "spicetify").is_file() else None
-        want_spicetify = "spicetify-cli" in choices.get("optional_ids", set()) or choices.get("profile") == "quick"
+        want_spicetify = "spicetify-cli" in choices.get("optional_ids", set()) or choices.get("profile") == "quick" or choices.get("spicetify")
         if not dry:
             if want_spicetify and spicetify_cmd:
                 ok, detail = _run([
                     spicetify_cmd, "config",
                     "spotify_path", str(spotify_dir),
                     "prefs_path", str(Path.home() / ".config" / "spotify" / "prefs"),
-                    "current_theme", "xiu",
-                    "color_scheme", "xiu",
-                    "inject_css", "1",
-                    "replace_colors", "1",
                 ], False)
-                record(ok, detail, "Configure spicetify for Spotify launcher",
-                       "Run: %s config spotify_path '%s' prefs_path '%s' current_theme xiu color_scheme xiu"
+                record(ok, detail, "Configure Spicetify for Spotify launcher",
+                       "Run: %s config spotify_path '%s' prefs_path '%s'"
                        % (spicetify_cmd, spotify_dir, Path.home() / ".config" / "spotify" / "prefs"))
                 market_cmd = "curl -fsSL https://raw.githubusercontent.com/spicetify/spicetify-marketplace/main/resources/install.sh | sh"
                 ok, detail = _shell(market_cmd, False)
-                record(ok, detail, "Install spicetify marketplace",
+                record(ok, detail, "Install Spicetify Marketplace",
                        "Run: " + market_cmd)
                 if spotify_dir.is_dir():
                     ok, detail = _run([spicetify_cmd, "backup", "apply"], False)
-                    record(ok, detail, "Apply spicetify",
+                    record(ok, detail, "Apply Spicetify",
                            f"Run: {spicetify_cmd} backup apply")
                 else:
                     notes.append("spotify-launcher hasn't downloaded Spotify yet — "
@@ -1885,7 +2009,7 @@ def run(args):
                 except OSError:
                     pass
         elif dry and want_spicetify:
-            print(f"  would run: spicetify config spotify_path '{spotify_dir}' prefs_path '{Path.home() / '.config' / 'spotify' / 'prefs'}' current_theme xiu color_scheme xiu")
+            print(f"  would run: {spicetify_cmd or 'spicetify'} config spotify_path '{spotify_dir}' prefs_path '{Path.home() / '.config' / 'spotify' / 'prefs'}'")
 
         # n3. clean swap: retire the legacy alternatives once their
         #    replacements are confirmed in. Fail-soft by design — the package

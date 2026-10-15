@@ -871,7 +871,6 @@ pub fn fan_out(
     render::render_yazi(pill, &b);
     render::render_zathura(pill, &b, None);
     render::render_mpv(pill, &b, None);
-    render::render_spicetify(pill, &b);
     render::render_discord(pill);
     render::render_userchrome(pill);
     render::render_vscode(pill);

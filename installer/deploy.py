@@ -59,7 +59,6 @@ DEPLOY_SET = [
     ("surge",      "surge",                                 "surge"),
     ("mangofetch", "mangofetch",                            "mangofetch"),
     ("mpv",        "mpv",                                   "mpv"),
-    ("spicetify",  "spicetify",                             "spicetify"),
     ("portals",    "portals",                               "xdg-desktop-portal"),
     ("termfilechooser", "xdg-desktop-portal-termfilechooser", "xdg-desktop-portal-termfilechooser"),
     ("uwsm",       "uwsm",                                  "uwsm"),
