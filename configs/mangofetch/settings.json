@@ -1,0 +1,11 @@
+{
+  "app_settings": {
+    "appearance": {
+      "tui_theme": "xiu",
+      "theme": "system",
+      "layout": "sidebar",
+      "enable_animations": true,
+      "use_nerd_fonts": true
+    }
+  }
+}

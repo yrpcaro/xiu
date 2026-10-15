@@ -56,6 +56,8 @@ DEPLOY_SET = [
     ("zathura",    "zathura",                               "zathura"),
     ("tealdeer",   "tealdeer",                              "tealdeer"),
     ("navi",       "navi",                                  "navi"),
+    ("surge",      "surge",                                 "surge"),
+    ("mangofetch", "mangofetch",                            "mangofetch"),
     ("mpv",        "mpv",                                   "mpv"),
     ("spicetify",  "spicetify",                             "spicetify"),
     ("portals",    "portals",                               "xdg-desktop-portal"),
@@ -920,6 +922,48 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
         out = _render_yazi(yz, pill, b_pal, apply)
         actions.append({"step": "yazi-theme", "path": str(yz / "theme.toml"),
                         "palette": source, "rendered": out is not None})
+
+    surge_cfg = config_root / "surge" / "settings.toml"
+    if surge_cfg.is_file():
+        txt = surge_cfg.read_text()
+        new_txt = txt
+        if 'theme_path = "xiu"' not in new_txt and "theme_path = 'xiu'" not in new_txt:
+            new_txt = re.sub(r'(?m)^theme_path\s*=\s*.*$', 'theme_path = "xiu"', new_txt)
+        if new_txt != txt:
+            actions.append({"step": "surge-theme", "path": str(surge_cfg)})
+            if apply:
+                surge_cfg.write_text(new_txt)
+
+    mf_theme = config_root / "mangofetch" / "themes" / "xiu.json"
+    if mf_theme.is_file():
+        share_root = Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share"))
+        mf_share = share_root / "mangofetch"
+        mf_share_theme = mf_share / "themes" / "xiu.json"
+        mf_share_settings = mf_share / "settings.json"
+        actions.append({"step": "mangofetch-theme", "path": str(mf_share_theme)})
+        if apply:
+            mf_share_theme.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(mf_theme, mf_share_theme)
+            if mf_share_settings.is_file():
+                try:
+                    s_data = json.loads(mf_share_settings.read_text())
+                    s_data.setdefault("app_settings", {}).setdefault("appearance", {})["tui_theme"] = "xiu"
+                    mf_share_settings.write_text(json.dumps(s_data, indent=2) + "\n")
+                except (OSError, ValueError):
+                    pass
+            else:
+                mf_share.mkdir(parents=True, exist_ok=True)
+                mf_share_settings.write_text(json.dumps({
+                    "app_settings": {
+                        "appearance": {
+                            "tui_theme": "xiu",
+                            "theme": "system",
+                            "layout": "sidebar",
+                            "enable_animations": True,
+                            "use_nerd_fonts": True,
+                        }
+                    }
+                }, indent=2) + "\n")
 
     icon_theme = "yet-another-monochrome-icon-set"
     kde = config_root / "kdeglobals"

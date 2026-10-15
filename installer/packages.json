@@ -245,6 +245,12 @@
     { "id": "yazi", "group": "full", "required": false, "desc": "TUI file manager (keyboard-driven, image previews)", "aur": false,
       "names": { "arch": "yazi", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 
+    { "id": "surge", "group": "full", "required": false, "desc": "TUI download manager (multi-source, customizable themes)", "aur": true,
+      "names": { "arch": "surge-bin", "debian": null, "fedora": null, "suse": null, "gentoo": null }, "binary": "surge", "fallback": null },
+
+    { "id": "mangofetch", "group": "full", "required": false, "desc": "Terminal media and stream downloader (rich TUI, themes)", "aur": true,
+      "names": { "arch": "mangofetch-bin", "debian": null, "fedora": null, "suse": null, "gentoo": null }, "binary": "mangofetch", "fallback": "cargo" },
+
     { "id": "simple-mtpfs", "group": "full", "required": false, "desc": "FUSE MTP filesystem — Android phones under ~/mnt/phone (mount-phone.sh)", "aur": true,
       "names": { "arch": "simple-mtpfs", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 

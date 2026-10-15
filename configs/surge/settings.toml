@@ -1,0 +1,12 @@
+# Xiu Surge configuration.
+# Sets xiu as the default theme for Surge.
+
+[general]
+theme = 0
+theme_path = "xiu"
+show_speed_graph = true
+live_speed_graph = false
+log_retention_count = 5
+clipboard_monitor = true
+download_complete_notification = true
+warn_on_duplicate = true

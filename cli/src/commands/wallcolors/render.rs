@@ -20,6 +20,8 @@ pub fn tool_dir(name: &str) -> Option<PathBuf> {
         "zed" => on_path("zed") || on_path("zed-editor"),
         "tealdeer" => on_path("tldr") || on_path("tealdeer"),
         "navi" => on_path("navi"),
+        "surge" => on_path("surge"),
+        "mangofetch" => on_path("mangofetch"),
         other => on_path(other),
     };
     if is_installed {
@@ -2584,6 +2586,261 @@ finder:
     let _ = fs::write(dir.join("config.yaml"), content);
 }
 
+pub fn render_surge(
+    pill: &HashMap<String, String>,
+    b: &HashMap<String, String>,
+    override_dir: Option<&Path>,
+) {
+    let dir = match override_dir {
+        Some(d) => d.to_path_buf(),
+        None => match tool_dir("surge") {
+            Some(d) => d,
+            None => return,
+        },
+    };
+    let themes_dir = dir.join("themes");
+    let _ = fs::create_dir_all(&themes_dir);
+
+    let g = |m: &HashMap<String, String>, k: &str, fallback: &str| -> String {
+        m.get(k).filter(|s| !s.is_empty()).cloned().unwrap_or_else(|| fallback.to_string())
+    };
+
+    let primary = g(pill, "primary", "#e0563b");
+    let bg = g(b, "base00", "#1c120c");
+    let fg = g(b, "base05", "#e6d6cb");
+    let black = g(b, "base01", "#2e231b");
+    let red = g(b, "base08", "#c0442b");
+    let green = g(b, "base0b", "#8a9a5b");
+    let yellow = g(b, "base0a", "#d89a5b");
+    let blue = g(b, "base0d", "#6f8da0");
+    let magenta = g(b, "base0e", "#b06a78");
+    let cyan = g(b, "base0c", "#7fa89a");
+    let white = g(b, "base06", "#e6d6cb");
+
+    let br_black = g(b, "base02", "#594636");
+    let br_red = primary.clone();
+    let br_green = g(b, "base0b", "#a0b26e");
+    let br_yellow = g(b, "base0a", "#f0b85e");
+    let br_blue = g(b, "base0d", "#8aa8bd");
+    let br_magenta = g(b, "base0e", "#c87d8d");
+    let br_cyan = g(b, "base0c", "#9bc2b3");
+    let br_white = g(b, "base07", "#f5eae1");
+
+    let toml_content = format!(
+        r##"# Xiu Surge theme.
+# Automatically updated by wallcolors on every palette change.
+
+[colors]
+name = "xiu"
+
+[colors.primary]
+background = "{bg}"
+foreground = "{fg}"
+accent = "{primary}"
+
+[colors.normal]
+black = "{black}"
+red = "{red}"
+green = "{green}"
+yellow = "{yellow}"
+blue = "{blue}"
+magenta = "{magenta}"
+cyan = "{cyan}"
+white = "{white}"
+
+[colors.bright]
+black = "{br_black}"
+red = "{br_red}"
+green = "{br_green}"
+yellow = "{br_yellow}"
+blue = "{br_blue}"
+magenta = "{br_magenta}"
+cyan = "{br_cyan}"
+white = "{br_white}"
+
+[colors.light.primary]
+background = "#fff6f0"
+foreground = "{bg}"
+accent = "{red}"
+
+[colors.light.normal]
+black = "{black}"
+red = "{red}"
+green = "{green}"
+yellow = "{yellow}"
+blue = "{blue}"
+magenta = "{magenta}"
+cyan = "{cyan}"
+white = "{white}"
+
+[colors.light.bright]
+black = "{br_black}"
+red = "{br_red}"
+green = "{br_green}"
+yellow = "{br_yellow}"
+blue = "{br_blue}"
+magenta = "{br_magenta}"
+cyan = "{br_cyan}"
+white = "{br_white}"
+"##
+    );
+
+    let _ = fs::write(themes_dir.join("xiu.toml"), toml_content);
+
+    let settings_path = dir.join("settings.toml");
+    if settings_path.is_file() {
+        if let Ok(mut settings_txt) = fs::read_to_string(&settings_path) {
+            let mut modified = false;
+            if !settings_txt.contains("theme_path") {
+                if settings_txt.contains("[general]") {
+                    settings_txt = settings_txt.replace("[general]", "[general]\ntheme_path = \"xiu\"");
+                    modified = true;
+                } else {
+                    settings_txt = format!("[general]\ntheme_path = \"xiu\"\n\n{settings_txt}");
+                    modified = true;
+                }
+            } else if settings_txt.contains("theme_path = \"~/.config/surge/themes/xiu.toml\"")
+                || settings_txt.contains("theme_path = '/home/")
+                || settings_txt.contains("theme_path = \"/home/")
+            {
+                if let Ok(re) = regex::Regex::new(r#"(?m)^theme_path\s*=\s*.*$"#) {
+                    settings_txt = re.replace(&settings_txt, "theme_path = \"xiu\"").to_string();
+                    modified = true;
+                }
+            }
+            if modified {
+                let _ = fs::write(&settings_path, settings_txt);
+            }
+        }
+    } else {
+        let settings_txt = r#"# Xiu Surge configuration.
+# Sets xiu as the default theme for Surge.
+
+[general]
+theme = 0
+theme_path = "xiu"
+show_speed_graph = true
+live_speed_graph = false
+log_retention_count = 5
+clipboard_monitor = true
+download_complete_notification = true
+warn_on_duplicate = true
+"#;
+        let _ = fs::write(&settings_path, settings_txt);
+    }
+}
+
+pub fn render_mangofetch(
+    pill: &HashMap<String, String>,
+    b: &HashMap<String, String>,
+    override_dir: Option<&Path>,
+) {
+    let config_dir = match override_dir {
+        Some(d) => d.to_path_buf(),
+        None => match tool_dir("mangofetch") {
+            Some(d) => d,
+            None => return,
+        },
+    };
+    let themes_dir = config_dir.join("themes");
+    let _ = fs::create_dir_all(&themes_dir);
+
+    let g = |m: &HashMap<String, String>, k: &str, fallback: &str| -> String {
+        m.get(k).filter(|s| !s.is_empty()).cloned().unwrap_or_else(|| fallback.to_string())
+    };
+
+    let accent = g(pill, "primary", "#e0563b");
+    let secondary = g(b, "base0d", "#6f8da0");
+    let highlight = g(b, "base0a", "#d89a5b");
+    let bg = g(b, "base00", "#1c120c");
+    let surface = g(b, "base01", "#2e231b");
+    let surface_dim = g(b, "base02", "#594636");
+    let text = g(b, "base05", "#e6d6cb");
+    let text_dim = g(b, "base03", "#8b7d75");
+    let success = g(b, "base0b", "#8a9a5b");
+    let warning = g(b, "base0a", "#f0b85e");
+    let error = g(b, "base08", "#c0442b");
+    let progress = accent.clone();
+
+    let json_content = format!(
+        r#"{{
+  "accent": "{accent}",
+  "secondary": "{secondary}",
+  "highlight": "{highlight}",
+  "background": "{bg}",
+  "surface": "{surface}",
+  "surface_dim": "{surface_dim}",
+  "text": "{text}",
+  "text_dim": "{text_dim}",
+  "success": "{success}",
+  "warning": "{warning}",
+  "error": "{error}",
+  "progress": "{progress}"
+}}
+"#
+    );
+
+    let _ = fs::write(themes_dir.join("xiu.json"), &json_content);
+
+    if override_dir.is_none() {
+        let share_themes = home_path(&[".local", "share", "mangofetch", "themes"]);
+        let _ = fs::create_dir_all(&share_themes);
+        let _ = fs::write(share_themes.join("xiu.json"), &json_content);
+
+        let share_settings = home_path(&[".local", "share", "mangofetch", "settings.json"]);
+        if share_settings.is_file() {
+            if let Ok(mut content) = fs::read_to_string(&share_settings) {
+                if let Ok(re_theme) = regex::Regex::new(r#""tui_theme"\s*:\s*"[^"]*""#) {
+                    if re_theme.is_match(&content) {
+                        content = re_theme.replace(&content, r#""tui_theme": "xiu""#).to_string();
+                        let _ = fs::write(&share_settings, content);
+                    } else if let Some(pos) = content.find(r#""appearance""#) {
+                        if let Some(brace) = content[pos..].find('{') {
+                            let insert_idx = pos + brace + 1;
+                            content.insert_str(insert_idx, "\n      \"tui_theme\": \"xiu\",");
+                            let _ = fs::write(&share_settings, content);
+                        }
+                    }
+                }
+            }
+        } else {
+            let initial = r#"{
+  "app_settings": {
+    "appearance": {
+      "tui_theme": "xiu",
+      "theme": "system",
+      "layout": "sidebar",
+      "enable_animations": true,
+      "use_nerd_fonts": true
+    }
+  }
+}
+"#;
+            if let Some(parent) = share_settings.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let _ = fs::write(&share_settings, initial);
+        }
+    }
+
+    let config_settings = config_dir.join("settings.json");
+    if !config_settings.is_file() {
+        let initial = r#"{
+  "app_settings": {
+    "appearance": {
+      "tui_theme": "xiu",
+      "theme": "system",
+      "layout": "sidebar",
+      "enable_animations": true,
+      "use_nerd_fonts": true
+    }
+  }
+}
+"#;
+        let _ = fs::write(&config_settings, initial);
+    }
+}
+
 pub fn update_plasmarc(plasmarc: &Path) {
     let mut lines = Vec::new();
     if plasmarc.is_file() {
@@ -3313,5 +3570,62 @@ mod tests {
         assert!(css.contains(".suggested-action"));
         assert!(css.contains("window#zathura, #zathura, window.org-pwmt-zathura, window.zathura {"));
         assert!(css.contains("background-color: transparent;"));
+    }
+
+    #[test]
+    fn test_render_surge_valid() {
+        let tmp_dir = std::env::temp_dir().join("xiu_test_surge_render");
+        let _ = fs::create_dir_all(&tmp_dir);
+        let mut pill = HashMap::new();
+        pill.insert("primary".to_string(), "#e0563b".to_string());
+        let mut b = HashMap::new();
+        b.insert("base00".to_string(), "#1c120c".to_string());
+        b.insert("base05".to_string(), "#e6d6cb".to_string());
+
+        render_surge(&pill, &b, Some(&tmp_dir));
+
+        let theme_file = tmp_dir.join("themes").join("xiu.toml");
+        assert!(theme_file.is_file());
+        let content = fs::read_to_string(&theme_file).unwrap();
+        assert!(content.contains("[colors]"));
+        assert!(content.contains("[colors.primary]"));
+        assert!(content.contains("background = \"#1c120c\""));
+        assert!(content.contains("accent = \"#e0563b\""));
+
+        let settings_file = tmp_dir.join("settings.toml");
+        assert!(settings_file.is_file());
+        let settings_txt = fs::read_to_string(&settings_file).unwrap();
+        assert!(settings_txt.contains("theme_path = \"xiu\""));
+
+        let _ = fs::remove_dir_all(&tmp_dir);
+    }
+
+    #[test]
+    fn test_render_mangofetch_valid() {
+        let tmp_dir = std::env::temp_dir().join("xiu_test_mangofetch_render");
+        let _ = fs::create_dir_all(&tmp_dir);
+        let mut pill = HashMap::new();
+        pill.insert("primary".to_string(), "#e0563b".to_string());
+        let mut b = HashMap::new();
+        b.insert("base00".to_string(), "#1c120c".to_string());
+        b.insert("base05".to_string(), "#e6d6cb".to_string());
+        b.insert("base08".to_string(), "#c0442b".to_string());
+
+        render_mangofetch(&pill, &b, Some(&tmp_dir));
+
+        let theme_file = tmp_dir.join("themes").join("xiu.json");
+        assert!(theme_file.is_file());
+        let content = fs::read_to_string(&theme_file).unwrap();
+        assert!(content.contains("\"accent\": \"#e0563b\""));
+        assert!(content.contains("\"text\": \"#e6d6cb\""));
+        assert!(content.contains("\"error\": \"#c0442b\""));
+        assert!(content.contains("\"background\": \"#1c120c\""));
+
+        let settings_file = tmp_dir.join("settings.json");
+        assert!(settings_file.is_file());
+        let settings_txt = fs::read_to_string(&settings_file).unwrap();
+        assert!(settings_txt.contains("\"tui_theme\": \"xiu\""));
+
+        let _ = fs::remove_dir_all(&tmp_dir);
     }
 }

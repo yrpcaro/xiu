@@ -878,6 +878,8 @@ pub fn fan_out(
     render::render_zed(pill, Some(&b), None);
     render::render_tealdeer(pill, None);
     render::render_navi(pill, None);
+    render::render_surge(pill, &b, None);
+    render::render_mangofetch(pill, &b, None);
     render::render_browser(pill);
     render::render_qt(pill);
     render::render_gtk(pill);

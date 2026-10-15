@@ -1,0 +1,55 @@
+# Xiu Surge theme.
+# Automatically updated by wallcolors on every palette change.
+
+[colors]
+name = "xiu"
+
+[colors.primary]
+background = "#1c120c"
+foreground = "#e6d6cb"
+accent = "#e0563b"
+
+[colors.normal]
+black = "#2e231b"
+red = "#c0442b"
+green = "#8a9a5b"
+yellow = "#d89a5b"
+blue = "#6f8da0"
+magenta = "#b06a78"
+cyan = "#7fa89a"
+white = "#e6d6cb"
+
+[colors.bright]
+black = "#594636"
+red = "#e0563b"
+green = "#a0b26e"
+yellow = "#f0b85e"
+blue = "#8aa8bd"
+magenta = "#c87d8d"
+cyan = "#9bc2b3"
+white = "#f5eae1"
+
+[colors.light.primary]
+background = "#fff6f0"
+foreground = "#1c120c"
+accent = "#c0442b"
+
+[colors.light.normal]
+black = "#2e231b"
+red = "#c0442b"
+green = "#8a9a5b"
+yellow = "#d89a5b"
+blue = "#6f8da0"
+magenta = "#b06a78"
+cyan = "#7fa89a"
+white = "#e6d6cb"
+
+[colors.light.bright]
+black = "#594636"
+red = "#e0563b"
+green = "#a0b26e"
+yellow = "#f0b85e"
+blue = "#8aa8bd"
+magenta = "#c87d8d"
+cyan = "#9bc2b3"
+white = "#f5eae1"
