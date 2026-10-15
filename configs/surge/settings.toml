@@ -3,7 +3,7 @@
 
 [general]
 theme = 0
-theme_path = "xiu"
+theme_path = "/home/xiu/.config/surge/themes/xiu.toml"
 show_speed_graph = true
 live_speed_graph = false
 log_retention_count = 5

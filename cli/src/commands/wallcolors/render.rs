@@ -2685,26 +2685,26 @@ white = "{br_white}"
 "##
     );
 
-    let _ = fs::write(themes_dir.join("xiu.toml"), toml_content);
+    let theme_file = themes_dir.join("xiu.toml");
+    let _ = fs::write(&theme_file, toml_content);
 
+    let theme_file_str = theme_file.to_string_lossy();
     let settings_path = dir.join("settings.toml");
     if settings_path.is_file() {
         if let Ok(mut settings_txt) = fs::read_to_string(&settings_path) {
             let mut modified = false;
+            let target_line = format!(r#"theme_path = "{theme_file_str}""#);
             if !settings_txt.contains("theme_path") {
                 if settings_txt.contains("[general]") {
-                    settings_txt = settings_txt.replace("[general]", "[general]\ntheme_path = \"xiu\"");
+                    settings_txt = settings_txt.replace("[general]", &format!("[general]\n{target_line}"));
                     modified = true;
                 } else {
-                    settings_txt = format!("[general]\ntheme_path = \"xiu\"\n\n{settings_txt}");
+                    settings_txt = format!("[general]\n{target_line}\n\n{settings_txt}");
                     modified = true;
                 }
-            } else if settings_txt.contains("theme_path = \"~/.config/surge/themes/xiu.toml\"")
-                || settings_txt.contains("theme_path = '/home/")
-                || settings_txt.contains("theme_path = \"/home/")
-            {
+            } else if !settings_txt.contains(&target_line) {
                 if let Ok(re) = regex::Regex::new(r#"(?m)^theme_path\s*=\s*.*$"#) {
-                    settings_txt = re.replace(&settings_txt, "theme_path = \"xiu\"").to_string();
+                    settings_txt = re.replace(&settings_txt, target_line.as_str()).to_string();
                     modified = true;
                 }
             }
@@ -2713,19 +2713,21 @@ white = "{br_white}"
             }
         }
     } else {
-        let settings_txt = r#"# Xiu Surge configuration.
+        let settings_txt = format!(
+            r#"# Xiu Surge configuration.
 # Sets xiu as the default theme for Surge.
 
 [general]
 theme = 0
-theme_path = "xiu"
+theme_path = "{theme_file_str}"
 show_speed_graph = true
 live_speed_graph = false
 log_retention_count = 5
 clipboard_monitor = true
 download_complete_notification = true
 warn_on_duplicate = true
-"#;
+"#
+        );
         let _ = fs::write(&settings_path, settings_txt);
     }
 }
@@ -3595,7 +3597,8 @@ mod tests {
         let settings_file = tmp_dir.join("settings.toml");
         assert!(settings_file.is_file());
         let settings_txt = fs::read_to_string(&settings_file).unwrap();
-        assert!(settings_txt.contains("theme_path = \"xiu\""));
+        let expected_theme_path = theme_file.to_string_lossy();
+        assert!(settings_txt.contains(&format!("theme_path = \"{expected_theme_path}\"")));
 
         let _ = fs::remove_dir_all(&tmp_dir);
     }

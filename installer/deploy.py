@@ -926,10 +926,15 @@ def neutralize(config_root=CONFIG_ROOT, apply=False, src=CONFIGS):
     surge_cfg = config_root / "surge" / "settings.toml"
     if surge_cfg.is_file():
         txt = surge_cfg.read_text()
-        new_txt = txt
-        if 'theme_path = "xiu"' not in new_txt and "theme_path = 'xiu'" not in new_txt:
-            new_txt = re.sub(r'(?m)^theme_path\s*=\s*.*$', 'theme_path = "xiu"', new_txt)
-        if new_txt != txt:
+        surge_theme_path = str(config_root / "surge" / "themes" / "xiu.toml")
+        target_line = f'theme_path = "{surge_theme_path}"'
+        if target_line not in txt:
+            new_txt = re.sub(r'(?m)^theme_path\s*=\s*.*$', target_line, txt)
+            if new_txt == txt:
+                if "[general]" in new_txt:
+                    new_txt = new_txt.replace("[general]", f"[general]\n{target_line}")
+                else:
+                    new_txt = f"[general]\n{target_line}\n\n{new_txt}"
             actions.append({"step": "surge-theme", "path": str(surge_cfg)})
             if apply:
                 surge_cfg.write_text(new_txt)
