@@ -225,6 +225,18 @@
       "note": "debian has no reliable bibata package, so debian is left null and routes through the github fallback (the Bibata release tarball) like fedora and suse",
       "fallback": "github" },
 
+    { "id": "adw-gtk-theme", "group": "core", "required": true, "desc": "GTK theme the palette pipeline recolors", "aur": false,
+      "names": { "arch": "adw-gtk-theme", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "plasma-integration", "group": "core", "required": true, "desc": "Qt platform theme integrating Qt apps with system colors and Darkly style", "aur": false,
+      "names": { "arch": "plasma-integration", "debian": "plasma-integration", "fedora": "plasma-integration", "suse": "plasma6-integration" }, "fallback": null },
+
+    { "id": "qtengine", "group": "core", "required": true, "desc": "Qt theming engine the palette pipeline feeds (activates Qt theming)", "aur": true,
+      "names": { "arch": "qtengine", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
+    { "id": "darkly", "group": "core", "required": true, "desc": "Qt style paired with qtengine", "aur": true,
+      "names": { "arch": "darkly", "debian": null, "fedora": null, "suse": null }, "fallback": null },
+
     { "id": "rishot", "group": "core", "required": true, "desc": "Screenshot and annotate, bound to the Print key", "aur": false,
       "names": { "arch": null, "debian": null, "fedora": null, "suse": null, "gentoo": null }, "fallback": "curl" },
 
@@ -277,18 +289,6 @@
 
     { "id": "ripdrag", "group": "full", "required": false, "desc": "Drag and drop utility for Yazi", "aur": true,
       "names": { "arch": "ripdrag", "debian": null, "fedora": null, "suse": null, "gentoo": null }, "fallback": "cargo" },
-
-    { "id": "adw-gtk-theme", "group": "full", "required": false, "desc": "GTK theme the palette pipeline recolors", "aur": false,
-      "names": { "arch": "adw-gtk-theme", "debian": null, "fedora": null, "suse": null }, "fallback": null },
-
-    { "id": "plasma-integration", "group": "full", "required": false, "desc": "Qt platform theme integrating Qt apps with system colors and Darkly style", "aur": false,
-      "names": { "arch": "plasma-integration", "debian": "plasma-integration", "fedora": "plasma-integration", "suse": "plasma6-integration" }, "fallback": null },
-
-    { "id": "qtengine", "group": "full", "required": false, "desc": "Qt theming engine the palette pipeline feeds (activates Qt theming)", "aur": true,
-      "names": { "arch": "qtengine", "debian": null, "fedora": null, "suse": null }, "fallback": null },
-
-    { "id": "darkly", "group": "full", "required": false, "desc": "Qt style paired with qtengine", "aur": true,
-      "names": { "arch": "darkly", "debian": null, "fedora": null, "suse": null }, "fallback": null },
 
     { "id": "sddm", "group": "full", "required": false, "desc": "Display manager option (torii theme ships in the repo)", "aur": false,
       "names": { "arch": "sddm", "debian": "sddm", "fedora": "sddm", "suse": "sddm" }, "fallback": null },
