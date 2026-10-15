@@ -72,9 +72,11 @@ end
 if type -q moor
     alias less moor
     set -gx PAGER moor
+    set -gx MOOR '--terminal-fg --no-linenumbers'
 else if type -q moar
     alias less moar
     set -gx PAGER moar
+    set -gx MOAR '--terminal-fg --no-linenumbers'
 end
 if type -q sd
     alias sed sd

@@ -18,6 +18,8 @@ pub fn tool_dir(name: &str) -> Option<PathBuf> {
         "helix" => on_path("hx") || on_path("helix"),
         "bottom" => on_path("btm") || on_path("bottom"),
         "zed" => on_path("zed") || on_path("zed-editor"),
+        "tealdeer" => on_path("tldr") || on_path("tealdeer"),
+        "navi" => on_path("navi"),
         other => on_path(other),
     };
     if is_installed {
@@ -2496,6 +2498,90 @@ pub fn update_kwinrc(kwinrc: &Path) {
         let _ = fs::create_dir_all(parent);
     }
     let _ = fs::write(kwinrc, lines.join("\n") + "\n");
+}
+
+pub fn render_tealdeer(_pill: &HashMap<String, String>, override_dir: Option<&Path>) {
+    let dir = match override_dir {
+        Some(d) => d.to_path_buf(),
+        None => match tool_dir("tealdeer") {
+            Some(d) => d,
+            None => return,
+        },
+    };
+    let _ = fs::create_dir_all(&dir);
+
+    // Tealdeer styling follows the terminal's palette with completely transparent background
+    let content = r#"# Xiu tealdeer configuration.
+# Colors follow the terminal's palette with a transparent background.
+
+[display]
+compact = false
+use_pager = true
+show_title = true
+
+[updates]
+auto_update = true
+auto_update_interval_hours = 168
+
+[style.description]
+foreground = "white"
+
+[style.command_name]
+foreground = "red"
+bold = true
+
+[style.example_text]
+foreground = "green"
+
+[style.example_code]
+foreground = "cyan"
+
+[style.example_variable]
+foreground = "yellow"
+italic = true
+"#;
+
+    let _ = fs::write(dir.join("config.toml"), content);
+}
+
+pub fn render_navi(pill: &HashMap<String, String>, override_dir: Option<&Path>) {
+    let dir = match override_dir {
+        Some(d) => d.to_path_buf(),
+        None => match tool_dir("navi") {
+            Some(d) => d,
+            None => return,
+        },
+    };
+    let _ = fs::create_dir_all(&dir);
+
+    let primary = pill.get("primary").map(String::as_str).unwrap_or("");
+    let pointer_opt = if !primary.is_empty() {
+        format!(",pointer:{primary}")
+    } else {
+        String::new()
+    };
+
+    let content = format!(
+        r#"# Xiu navi configuration.
+# navi uses fzf styled with the xiu color palette and transparent background.
+
+style:
+  tag:
+    color: cyan
+    width: 24
+  comment:
+    color: yellow
+  snippet:
+    color: green
+
+finder:
+  command: fzf
+  overrides: "--height 40% --layout=reverse --color=fg:7,bg:-1,hl:6,fg+:15,bg+:0,hl+:14,info:8,border:8,prompt:4,marker:13,spinner:8,header:8{pointer_opt}"
+  overrides_var: "--height 50% --layout=reverse --color=fg:7,bg:-1,hl:6,fg+:15,bg+:0,hl+:14,info:8,border:8,prompt:4,marker:13,spinner:8,header:8{pointer_opt}"
+"#
+    );
+
+    let _ = fs::write(dir.join("config.yaml"), content);
 }
 
 pub fn update_plasmarc(plasmarc: &Path) {
