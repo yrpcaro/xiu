@@ -246,10 +246,11 @@ hl.bind(mod .. " + code:27", toggles.toggle("todo")) -- todo workspace [R]
 -- Apps
 local function wrap_app(cmd)
     if not cmd or cmd == "" then return "" end
-    if cmd == "yazi" then
-        return vars.terminal .. " -e yazi"
-    elseif cmd == "helix" or cmd == "nvim" or cmd == "micro" or cmd == "nano" or cmd == "vim" or cmd == "vi" then
-        return vars.terminal .. " -e " .. cmd
+    local term = vars.terminal or "foot"
+    local term_apps = { yazi = true, helix = true, nvim = true, micro = true, nano = true, vim = true, vi = true }
+    local inner = cmd:match("%-e%s+([^%s]+)$") or cmd
+    if term_apps[inner] then
+        return term .. " -e " .. inner
     end
     return cmd
 end

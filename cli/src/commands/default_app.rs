@@ -99,7 +99,8 @@ pub struct CategoryInfo {
 }
 
 pub fn lookup_category(cat: &str) -> Option<CategoryInfo> {
-    match cat.trim().to_lowercase().as_str() {
+    let lower = cat.trim().to_lowercase();
+    match lower.as_str() {
         "x-scheme-handler/http" | "x-scheme-handler/https" | "browser" | "web" => Some(CategoryInfo {
             canonical: "browser",
             var_name: "browser",
@@ -140,7 +141,59 @@ pub fn lookup_category(cat: &str) -> Option<CategoryInfo> {
             var_name: "videoPlayer",
             mimes: MIMES_VIDEO_PLAYER,
         }),
-        _ => None,
+        _ => {
+            if MIMES_BROWSER.contains(&lower.as_str()) {
+                Some(CategoryInfo {
+                    canonical: "browser",
+                    var_name: "browser",
+                    mimes: MIMES_BROWSER,
+                })
+            } else if MIMES_TERMINAL.contains(&lower.as_str()) {
+                Some(CategoryInfo {
+                    canonical: "terminal",
+                    var_name: "terminal",
+                    mimes: MIMES_TERMINAL,
+                })
+            } else if MIMES_EDITOR.contains(&lower.as_str()) || lower.starts_with("text/") {
+                Some(CategoryInfo {
+                    canonical: "editor",
+                    var_name: "editor",
+                    mimes: MIMES_EDITOR,
+                })
+            } else if MIMES_FILE_MANAGER.contains(&lower.as_str()) {
+                Some(CategoryInfo {
+                    canonical: "fileManager",
+                    var_name: "fileManager",
+                    mimes: MIMES_FILE_MANAGER,
+                })
+            } else if MIMES_IMAGE_VIEWER.contains(&lower.as_str()) || lower.starts_with("image/") {
+                Some(CategoryInfo {
+                    canonical: "imageViewer",
+                    var_name: "imageViewer",
+                    mimes: MIMES_IMAGE_VIEWER,
+                })
+            } else if MIMES_DOCUMENT_VIEWER.contains(&lower.as_str()) {
+                Some(CategoryInfo {
+                    canonical: "documentViewer",
+                    var_name: "documentViewer",
+                    mimes: MIMES_DOCUMENT_VIEWER,
+                })
+            } else if MIMES_MUSIC_PLAYER.contains(&lower.as_str()) || lower.starts_with("audio/") {
+                Some(CategoryInfo {
+                    canonical: "musicPlayer",
+                    var_name: "musicPlayer",
+                    mimes: MIMES_MUSIC_PLAYER,
+                })
+            } else if MIMES_VIDEO_PLAYER.contains(&lower.as_str()) || lower.starts_with("video/") {
+                Some(CategoryInfo {
+                    canonical: "videoPlayer",
+                    var_name: "videoPlayer",
+                    mimes: MIMES_VIDEO_PLAYER,
+                })
+            } else {
+                None
+            }
+        }
     }
 }
 
@@ -227,10 +280,35 @@ pub fn resolve_cmd(desktop_id: &str) -> String {
                 for line in content.lines() {
                     if let Some(rest) = line.strip_prefix("Exec=") {
                         let trimmed = rest.trim();
-                        if let Some(first_word) = trimmed.split_whitespace().next() {
-                            let p = Path::new(first_word);
-                            if let Some(file_name) = p.file_name() {
-                                return file_name.to_string_lossy().to_string();
+                        let mut words = trimmed.split_whitespace();
+                        let mut first_word = match words.next() {
+                            Some(w) => w,
+                            None => continue,
+                        };
+                        // Handle "env VAR=VAL ... actual_cmd"
+                        if first_word == "env" {
+                            while let Some(next) = words.next() {
+                                if !next.contains('=') {
+                                    first_word = next;
+                                    break;
+                                }
+                            }
+                        } else if first_word == "flatpak" {
+                            // "flatpak run <app_id>"
+                            if let Some(arg) = words.next() {
+                                if arg == "run" {
+                                    if let Some(app) = words.next() {
+                                        first_word = app;
+                                    }
+                                }
+                            }
+                        }
+                        let p = Path::new(first_word);
+                        if let Some(file_name) = p.file_name() {
+                            let name = file_name.to_string_lossy().to_string();
+                            let clean = name.trim_matches(|c| c == '"' || c == '\'');
+                            if !clean.is_empty() {
+                                return clean.to_string();
                             }
                         }
                     }
@@ -240,6 +318,33 @@ pub fn resolve_cmd(desktop_id: &str) -> String {
     }
 
     desktop_id.strip_suffix(".desktop").unwrap_or(desktop_id).to_string()
+}
+
+pub fn resolve_desktop_id(cmd_or_id: &str) -> String {
+    if cmd_or_id.ends_with(".desktop") {
+        return cmd_or_id.to_string();
+    }
+
+    for (id, cmd) in WELL_KNOWN {
+        if *cmd == cmd_or_id {
+            return id.to_string();
+        }
+    }
+
+    let candidate_dirs = [
+        home_path(&[".local", "share", "applications"]),
+        PathBuf::from("/usr/local/share/applications"),
+        PathBuf::from("/usr/share/applications"),
+    ];
+
+    let target_desktop = format!("{cmd_or_id}.desktop");
+    for app_dir in &candidate_dirs {
+        if app_dir.join(&target_desktop).is_file() {
+            return target_desktop;
+        }
+    }
+
+    target_desktop
 }
 
 pub fn update_vars_file(var_name: &str, cmd: &str, path: Option<&Path>) -> Result<(), std::io::Error> {
@@ -584,10 +689,17 @@ pub fn update_portal_file_chooser(
     };
 
     let pconfs = match custom_portal_dir {
-        Some(dir) => vec![dir.join("portals.conf"), dir.join("hyprland-portals.conf")],
+        Some(dir) => vec![
+            dir.join("portals.conf"),
+            dir.join("hyprland-portals.conf"),
+            dir.join("kde-portals.conf"),
+            dir.join("gnome-portals.conf"),
+        ],
         None => vec![
             config_file(&["xdg-desktop-portal", "portals.conf"]),
             config_file(&["xdg-desktop-portal", "hyprland-portals.conf"]),
+            config_file(&["xdg-desktop-portal", "kde-portals.conf"]),
+            config_file(&["xdg-desktop-portal", "gnome-portals.conf"]),
         ],
     };
 
@@ -595,11 +707,9 @@ pub fn update_portal_file_chooser(
         update_portal_config_file(backend, &pconf)?;
     }
 
-    if backend.starts_with("termfilechooser") {
-        let term = resolve_active_terminal();
-        update_termfilechooser_configs(&term, custom_portal_dir)?;
-        ensure_xiu_yazi_desktop(custom_portal_dir)?;
-    }
+    let term = resolve_active_terminal();
+    update_termfilechooser_configs(&term, custom_portal_dir)?;
+    ensure_xiu_yazi_desktop(&term, custom_portal_dir)?;
 
     if custom_portal_dir.is_none() {
         let _ = Command::new("systemctl")
@@ -630,21 +740,19 @@ pub fn update_termfilechooser_configs(
     Ok(())
 }
 
-pub fn ensure_xiu_yazi_desktop(custom_dir: Option<&Path>) -> Result<(), std::io::Error> {
+pub fn ensure_xiu_yazi_desktop(term: &str, custom_dir: Option<&Path>) -> Result<(), std::io::Error> {
     let dest = match custom_dir {
         Some(dir) => dir.join("applications").join("xiu-yazi.desktop"),
         None => home_path(&[".local", "share", "applications", "xiu-yazi.desktop"]),
     };
 
-    if dest.is_file() {
-        return Ok(());
-    }
-
     if let Some(parent) = dest.parent() {
         fs::create_dir_all(parent)?;
     }
 
-    let content = "[Desktop Entry]\nType=Application\nName=Yazi (xiu)\nIcon=yazi\nComment=The file manager in foot, xiu's terminal\nTryExec=foot\nExec=foot -e yazi %f\nMimeType=inode/directory;\nCategories=System;FileManager;FileTools;\nKeywords=File;Manager;Explorer;\n";
+    let content = format!(
+        "[Desktop Entry]\nType=Application\nName=Yazi (xiu)\nIcon=yazi\nComment=The file manager in {term}, xiu's terminal\nTryExec={term}\nExec={term} -e yazi %f\nMimeType=inode/directory;\nCategories=System;FileManager;FileTools;\nKeywords=File;Manager;Explorer;\n"
+    );
     fs::write(dest, content)?;
     Ok(())
 }
@@ -665,6 +773,11 @@ pub fn resolve_active_terminal() -> String {
         }
     }
     if let Ok(t) = std::env::var("TERMCMD") {
+        if !t.trim().is_empty() {
+            return t.trim().to_string();
+        }
+    }
+    if let Ok(t) = std::env::var("TERMINAL") {
         if !t.trim().is_empty() {
             return t.trim().to_string();
         }
@@ -694,6 +807,47 @@ pub fn update_fish_editor(cmd: &str, custom_fish_dir: Option<&Path>) -> Result<(
         let _ = Command::new("fish")
             .args(["-c", &format!("set -Ux EDITOR {cmd}; set -Ux VISUAL {cmd}")])
             .status();
+    }
+
+    Ok(())
+}
+
+pub fn update_fish_default_apps(
+    terminal: Option<&str>,
+    browser: Option<&str>,
+    custom_fish_dir: Option<&Path>,
+) -> Result<(), std::io::Error> {
+    let conf_d = match custom_fish_dir {
+        Some(dir) => dir.join("fish").join("conf.d"),
+        None => config_file(&["fish", "conf.d"]),
+    };
+
+    fs::create_dir_all(&conf_d)?;
+    let p = conf_d.join("00-default-apps.fish");
+
+    let mut lines = vec!["# Configured by xiu default-app".to_string()];
+    if let Some(t) = terminal {
+        lines.push(format!("set -gx TERMINAL {t}"));
+    }
+    if let Some(b) = browser {
+        lines.push(format!("set -gx BROWSER {b}"));
+    }
+    lines.push(String::new());
+    fs::write(&p, lines.join("\n"))?;
+
+    if custom_fish_dir.is_none() {
+        let mut cmds = Vec::new();
+        if let Some(t) = terminal {
+            cmds.push(format!("set -Ux TERMINAL {t}"));
+        }
+        if let Some(b) = browser {
+            cmds.push(format!("set -Ux BROWSER {b}"));
+        }
+        if !cmds.is_empty() {
+            let _ = Command::new("fish")
+                .args(["-c", &cmds.join("; ")])
+                .status();
+        }
     }
 
     Ok(())
@@ -794,7 +948,9 @@ pub fn default_app(probe: bool, category: Option<&str>, desktop_id: Option<&str>
         return 0;
     };
 
-    let cmd = resolve_cmd(did);
+    let (cmd, did_resolved) = (resolve_cmd(did), resolve_desktop_id(did));
+    let did = did_resolved.as_str();
+
     if let Err(e) = update_vars_file(info.var_name, &cmd, None) {
         eprintln!("xiu default-app: failed to update vars.lua: {e}");
         return 1;
@@ -804,31 +960,34 @@ pub fn default_app(probe: bool, category: Option<&str>, desktop_id: Option<&str>
     let _ = update_mimeapps_file(info.mimes, did, None);
 
     // 2. Category-specific settings, portal, and environment propagation
+    let uwsm_env = config_file(&["uwsm", "env"]);
+    let env_d_apps = config_file(&["environment.d", "10-default-apps.conf"]);
+    let env_d_editor = config_file(&["environment.d", "10-editor.conf"]);
+
     match info.canonical {
         "editor" => {
-            let uwsm_env = config_file(&["uwsm", "env"]);
             let _ = update_key_value_file(&uwsm_env, "EDITOR", &cmd);
             let _ = update_key_value_file(&uwsm_env, "VISUAL", &cmd);
 
-            let env_d = config_file(&["environment.d", "10-editor.conf"]);
-            let _ = update_key_value_file(&env_d, "EDITOR", &cmd);
-            let _ = update_key_value_file(&env_d, "VISUAL", &cmd);
+            let _ = update_key_value_file(&env_d_editor, "EDITOR", &cmd);
+            let _ = update_key_value_file(&env_d_editor, "VISUAL", &cmd);
 
             let _ = update_fish_editor(&cmd, None);
             let _ = update_kdeglobals_file("General", "Editor", &cmd, None);
+            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("EDITOR,{cmd}")]).status();
+            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("VISUAL,{cmd}")]).status();
         }
         "fileManager" => {
             let _ = update_portal_file_chooser(&cmd, did, None);
             let _ = update_kdeglobals_file("General", "FileManager", &cmd, None);
         }
         "terminal" => {
-            let uwsm_env = config_file(&["uwsm", "env"]);
             let _ = update_key_value_file(&uwsm_env, "TERMINAL", &cmd);
+            let _ = update_key_value_file(&env_d_apps, "TERMINAL", &cmd);
 
-            let env_d = config_file(&["environment.d", "10-default-apps.conf"]);
-            let _ = update_key_value_file(&env_d, "TERMINAL", &cmd);
-
+            let _ = update_fish_default_apps(Some(&cmd), None, None);
             let _ = update_termfilechooser_configs(&cmd, None);
+            let _ = ensure_xiu_yazi_desktop(&cmd, None);
 
             let _ = update_kdeglobals_file("General", "TerminalApplication", &cmd, None);
             let _ = update_kdeglobals_file("General", "TerminalService", did, None);
@@ -839,15 +998,39 @@ pub fn default_app(probe: bool, category: Option<&str>, desktop_id: Option<&str>
             let _ = Command::new("gsettings")
                 .args(["set", "org.gnome.desktop.default-applications.terminal", "exec-arg", "-e"])
                 .status();
+            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("TERMINAL,{cmd}")]).status();
         }
         "browser" => {
-            let uwsm_env = config_file(&["uwsm", "env"]);
             let _ = update_key_value_file(&uwsm_env, "BROWSER", &cmd);
+            let _ = update_key_value_file(&env_d_apps, "BROWSER", &cmd);
 
-            let env_d = config_file(&["environment.d", "10-default-apps.conf"]);
-            let _ = update_key_value_file(&env_d, "BROWSER", &cmd);
-
+            let _ = update_fish_default_apps(None, Some(&cmd), None);
             let _ = update_kdeglobals_file("General", "BrowserApplication", did, None);
+            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("BROWSER,{cmd}")]).status();
+        }
+        "imageViewer" => {
+            let _ = update_key_value_file(&uwsm_env, "IMAGEVIEWER", &cmd);
+            let _ = update_key_value_file(&env_d_apps, "IMAGEVIEWER", &cmd);
+            let _ = update_kdeglobals_file("General", "ImageViewer", &cmd, None);
+            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("IMAGEVIEWER,{cmd}")]).status();
+        }
+        "documentViewer" => {
+            let _ = update_key_value_file(&uwsm_env, "PDFVIEWER", &cmd);
+            let _ = update_key_value_file(&env_d_apps, "PDFVIEWER", &cmd);
+            let _ = update_kdeglobals_file("General", "DocumentViewer", &cmd, None);
+            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("PDFVIEWER,{cmd}")]).status();
+        }
+        "videoPlayer" => {
+            let _ = update_key_value_file(&uwsm_env, "VIDEOPLAYER", &cmd);
+            let _ = update_key_value_file(&env_d_apps, "VIDEOPLAYER", &cmd);
+            let _ = update_kdeglobals_file("General", "VideoPlayer", &cmd, None);
+            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("VIDEOPLAYER,{cmd}")]).status();
+        }
+        "musicPlayer" => {
+            let _ = update_key_value_file(&uwsm_env, "MUSICPLAYER", &cmd);
+            let _ = update_key_value_file(&env_d_apps, "MUSICPLAYER", &cmd);
+            let _ = update_kdeglobals_file("General", "MusicPlayer", &cmd, None);
+            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("MUSICPLAYER,{cmd}")]).status();
         }
         _ => {}
     }
@@ -1002,16 +1185,23 @@ mod tests {
     fn test_portal_file_chooser_update() {
         let tmp_dir = tempfile();
 
-        // 1. yazi selection -> termfilechooser;gtk
+        // 1. yazi selection -> termfilechooser;gtk across portals.conf, hyprland-portals.conf, kde-portals.conf, gnome-portals.conf
         update_portal_file_chooser("yazi", "xiu-yazi.desktop", Some(&tmp_dir)).unwrap();
         let pconf = fs::read_to_string(tmp_dir.join("portals.conf")).unwrap();
         assert!(pconf.contains("org.freedesktop.impl.portal.FileChooser=termfilechooser;gtk"), "pconf: {pconf}");
         let hconf = fs::read_to_string(tmp_dir.join("hyprland-portals.conf")).unwrap();
         assert!(hconf.contains("org.freedesktop.impl.portal.FileChooser=termfilechooser;gtk"), "hconf: {hconf}");
+        let kconf = fs::read_to_string(tmp_dir.join("kde-portals.conf")).unwrap();
+        assert!(kconf.contains("org.freedesktop.impl.portal.FileChooser=termfilechooser;gtk"), "kconf: {kconf}");
+        let gconf = fs::read_to_string(tmp_dir.join("gnome-portals.conf")).unwrap();
+        assert!(gconf.contains("org.freedesktop.impl.portal.FileChooser=termfilechooser;gtk"), "gconf: {gconf}");
 
         let tf_cfg = fs::read_to_string(tmp_dir.join("xdg-desktop-portal-termfilechooser").join("config.toml")).unwrap();
         assert!(tf_cfg.contains("cmd=xiu yazi-chooser"), "tf_cfg: {tf_cfg}");
         assert!(tf_cfg.contains("env=TERMCMD="), "tf_cfg: {tf_cfg}");
+
+        let yazi_desktop = fs::read_to_string(tmp_dir.join("applications").join("xiu-yazi.desktop")).unwrap();
+        assert!(yazi_desktop.contains("Exec="), "yazi_desktop: {yazi_desktop}");
 
         // 2. dolphin selection -> kde;gtk
         update_portal_file_chooser("dolphin", "org.kde.dolphin.desktop", Some(&tmp_dir)).unwrap();
@@ -1038,7 +1228,26 @@ mod tests {
         assert!(content.contains("set -gx VISUAL nvim"));
         assert!(content.contains("alias editor nvim"));
 
+        update_fish_default_apps(Some("ghostty"), Some("firefox"), Some(&tmp_dir)).unwrap();
+        let fish_apps = tmp_dir.join("fish").join("conf.d").join("00-default-apps.fish");
+        assert!(fish_apps.is_file());
+        let content_apps = fs::read_to_string(fish_apps).unwrap();
+        assert!(content_apps.contains("set -gx TERMINAL ghostty"));
+        assert!(content_apps.contains("set -gx BROWSER firefox"));
+
         let _ = fs::remove_dir_all(&tmp_dir);
+    }
+
+    #[test]
+    fn test_resolve_desktop_id_and_cmd() {
+        assert_eq!(resolve_desktop_id("firefox"), "firefox.desktop");
+        assert_eq!(resolve_desktop_id("brave"), "brave-browser.desktop");
+        assert_eq!(resolve_desktop_id("yazi"), "xiu-yazi.desktop");
+        assert_eq!(resolve_desktop_id("dolphin"), "org.kde.dolphin.desktop");
+        assert_eq!(resolve_desktop_id("helix"), "helix.desktop");
+        assert_eq!(resolve_desktop_id("nvim"), "nvim.desktop");
+        assert_eq!(resolve_desktop_id("ghostty"), "com.mitchellh.ghostty.desktop");
+        assert_eq!(resolve_desktop_id("firefox.desktop"), "firefox.desktop");
     }
 
     #[test]

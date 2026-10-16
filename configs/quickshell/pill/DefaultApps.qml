@@ -146,20 +146,32 @@ SettingsSurface {
         return short.charAt(0).toUpperCase() + short.slice(1);
     }
 
-    /** Applies one category's pick through xdg-mime, then re-reads. */
+    /** Applies one category's pick through xdg-mime and xiu default-app, then re-reads. */
     function apply(cat, desktopId) {
         for (var i = 0; i < cat.mimes.length; i++)
             xdgProc.run(cat.mimes[i], desktopId);
-        syncVarsProc.catKey = cat.key;
-        syncVarsProc.desktopId = desktopId;
-        syncVarsProc.running = true;
+        syncVarsProc.run(cat.key, desktopId);
     }
 
     Process {
         id: syncVarsProc
-        property string catKey: ""
-        property string desktopId: ""
-        command: ["xiu", "default-app", catKey, desktopId]
+        property var queue: []
+        function run(catKey, desktopId) {
+            queue.push([catKey, desktopId]);
+            pump();
+        }
+        function pump() {
+            if (running || queue.length === 0)
+                return;
+            var next = queue.shift();
+            command = ["xiu", "default-app", next[0], next[1]];
+            running = true;
+        }
+        onExited: {
+            mimeFile.reload();
+            if (queue.length > 0)
+                pump();
+        }
     }
 
     FileView {

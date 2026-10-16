@@ -25,6 +25,18 @@ end
 if vars.browser then
     hl.env("BROWSER", vars.browser)
 end
+if vars.imageViewer then
+    hl.env("IMAGEVIEWER", vars.imageViewer)
+end
+if vars.videoPlayer then
+    hl.env("VIDEOPLAYER", vars.videoPlayer)
+end
+if vars.documentViewer then
+    hl.env("PDFVIEWER", vars.documentViewer)
+end
+if vars.musicPlayer then
+    hl.env("MUSICPLAYER", vars.musicPlayer)
+end
 
 -- Hardware video acceleration and graphics environment.
 -- Only apply Nvidia-specific variables when the proprietary nvidia driver is loaded.

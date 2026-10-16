@@ -16,19 +16,7 @@ pub fn resolve_yazi() -> String {
 }
 
 pub fn resolve_terminal() -> String {
-    if let Ok(term) = std::env::var("TERMCMD") {
-        if !term.trim().is_empty() {
-            return term;
-        }
-    }
-
-    for t in ["foot", "ghostty", "kitty", "alacritty"] {
-        if on_path(t) {
-            return t.to_string();
-        }
-    }
-
-    "foot".to_string()
+    crate::commands::default_app::resolve_active_terminal()
 }
 
 fn run_term(term: &str, yazi_args: &[&str]) -> i32 {
