@@ -311,7 +311,7 @@ def _wizard(args, info, manifest):
 
     fidx = tui.select_one("Default file manager", [
         ("dolphin", "KDE file manager with native dialogs for the rice (Recommended)", True),
-        ("yazi", "TUI file manager, keyboard-driven with image previews", False),
+        ("yazi", "TUI file manager with termfilechooser & full preview suite", False),
         ("thunar", "Xfce file manager themed through palette", False),
         ("none", "Keep whatever is currently installed", False),
     ], default=0)
@@ -419,7 +419,7 @@ def _wizard(args, info, manifest):
         ("zathura", "Keyboard-driven document viewer", True),
         ("zathura-pdf-mupdf", "PDF backend for zathura", True),
         ("imv", "Lightweight image viewer", True),
-        ("simple-mtpfs", "Android phone MTP filesystem mount", False),
+        ("simple-mtpfs", "Android phone MTP filesystem mount", True if file_manager == "yazi" else False),
         ("bottom", "Graphical terminal system monitor (btm)", True),
         ("surge", "TUI download manager", True),
         ("mangofetch", "Terminal media and stream downloader", False),
@@ -438,7 +438,7 @@ def _wizard(args, info, manifest):
         ("neovim", "Neovim modal terminal editor", True if editor == "nvim" else False),
         ("htop", "Interactive process viewer", False),
         ("nvtop", "GPU process monitor", False),
-        ("trash-cli", "Command-line trash management", False),
+        ("trash-cli", "Command-line trash management", True if file_manager == "yazi" else False),
         ("keepassxc", "Offline password manager", False),
         ("rnote", "Handwritten notes and sketch app", False),
         ("mpvpaper", "Animated video wallpaper utility", False),
@@ -452,6 +452,8 @@ def _wizard(args, info, manifest):
         optional_ids.add("dolphin")
     elif file_manager == "thunar":
         optional_ids.add("thunar")
+    elif file_manager == "yazi":
+        optional_ids.update(YAZI_SUITE_IDS)
     if browser in ("zen-browser-bin", "firefox"):
         optional_ids.add(browser)
 
@@ -466,7 +468,7 @@ def _wizard(args, info, manifest):
         f"Legacy cleanup: {'Clean swap (retire ghostty/cliphist)' if legacy_swap == 'clean' else 'Keep both'}",
         f"Default terminal: {terminal}" + (f" (+ {', '.join(extra_terminals)})" if extra_terminals else ""),
         f"Default editor: {editor}",
-        f"Default file manager: {file_manager}",
+        f"Default file manager: {file_manager}" + (" (with termfilechooser, previews & tools)" if file_manager == "yazi" else ""),
         f"Default web browser: {browser}",
         f"Default media player: {media_player}",
         f"Login screen: {greeter.upper() if greeter != 'none' else 'TTY (no greeter)'}" + (f" ({sddm_theme})" if greeter == "sddm" else ""),
@@ -496,6 +498,26 @@ def _wizard(args, info, manifest):
     }
 
 
+# The full suite of companion tools, portals, previewers and thumbnailers
+# required for yazi to operate as a full-featured file manager.
+YAZI_SUITE_IDS = {
+    "yazi",
+    "termfilechooser",
+    "ripdrag",
+    "simple-mtpfs",
+    "trash-cli",
+    "lazygit",
+    "7zip",
+    "ffmpegthumbnailer",
+    "poppler",
+    "resvg",
+    "chafa",
+    "imv",
+    "zathura",
+    "zathura-pdf-mupdf",
+}
+
+
 def _choice_ids(choices):
     """The full-group package ids an explicit wizard/quickstart choice pulls in,
     so a Quick install still gets the chosen file manager or greeter."""
@@ -509,7 +531,7 @@ def _choice_ids(choices):
     if fm and fm != "none":
         ids.add(fm)
         if fm == "yazi":
-            ids.add("termfilechooser")
+            ids.update(YAZI_SUITE_IDS)
     if choices.get("greeter") == "sddm":
         ids.add("sddm")
     elif choices.get("greeter") == "greetd":
@@ -746,7 +768,10 @@ def _summary_lines(info, choices, plan, args, do_pkgs):
                              + " ".join(plan["manual"]) + ".")
             lines.append("emerge compiles from source; this is the long part.")
     if choices.get("file_manager") and choices["file_manager"] != "none":
-        lines.append(f"Install the {choices['file_manager']} file manager.")
+        fm_label = f"Install the {choices['file_manager']} file manager"
+        if choices["file_manager"] == "yazi":
+            fm_label += " (with termfilechooser, previews & tools)"
+        lines.append(fm_label + ".")
     if cli_local(args.source):
         lines.append("Build the xiu CLI from this checkout.")
     if choices.get("editor"):
@@ -1162,7 +1187,7 @@ YAZI_PLUGINS = [
 ]
 
 
-def wire_portal_chooser(dry):
+def wire_portal_chooser(dry, choices=None):
     """
     Point the termfilechooser portal at the rice's yazi wrapper, so every
     app's file dialog opens yazi in foot. The backend reads
@@ -1170,10 +1195,11 @@ def wire_portal_chooser(dry):
     wrapper ships in configs/hypr/scripts and the deployed portals.conf
     routes FileChooser to the backend.
 
-    When the backend is not installed (e.g. on a box without the AUR package),
-    the FileChooser routing is removed from the deployed portals.conf so that
-    file dialogs fall back cleanly to GTK. If termfilechooser is present, we
-    wire config.toml, ensure portals.conf routes FileChooser to termfilechooser,
+    When the backend is not installed (e.g. on a box without the AUR package)
+    or yazi is not the active default file manager, the FileChooser routing is
+    removed from the deployed portals.conf so that file dialogs fall back cleanly
+    to GTK/KDE. If termfilechooser is present and yazi is default, we wire
+    config.toml, ensure portals.conf routes FileChooser to termfilechooser,
     and restart xdg-desktop-portal.
     """
     home = Path.home()
@@ -1185,14 +1211,16 @@ def wire_portal_chooser(dry):
         home / ".config" / "xdg-desktop-portal" / "portals.conf",
     ]
 
+    is_yazi = (choices.get("file_manager") == "yazi") if choices else True
     backend_present = (
         Path("/usr/share/xdg-desktop-portal/portals/termfilechooser.portal").is_file()
         or shutil.which("xdg-desktop-portal-termfilechooser") is not None
         or Path("/usr/lib/xdg-desktop-portal-termfilechooser").is_file()
         or Path("/usr/libexec/xdg-desktop-portal-termfilechooser").is_file()
+        or (dry and is_yazi)
     )
 
-    if not backend_present:
+    if not backend_present or not is_yazi:
         if not dry:
             for pconf in portal_confs:
                 if pconf.is_file():
@@ -1204,7 +1232,10 @@ def wire_portal_chooser(dry):
                             pconf.write_text("".join(lines))
                     except OSError:
                         pass
-        print("  xdg-desktop-portal-termfilechooser not installed; file chooser remains GTK")
+        if not backend_present:
+            print("  xdg-desktop-portal-termfilechooser not installed; file chooser remains GTK")
+        else:
+            print("  yazi is not default file manager; file chooser remains GTK/KDE")
         return True, ""
 
     if dry:
@@ -2027,10 +2058,10 @@ def run(args):
                "Run: ya pkg add <plugins> (see installer/xiu_install.py YAZI_PLUGINS).")
 
         # l4. the portal FileChooser backend, pointed at the yazi wrapper.
-        ok, detail = wire_portal_chooser(dry)
+        ok, detail = wire_portal_chooser(dry, choices)
         record(ok, detail, "Wire portal file chooser",
                "Write ~/.config/xdg-desktop-portal-termfilechooser/config.toml "
-               "pointing cmd= at ~/.config/hypr/scripts/yazi-chooser.sh.")
+               "pointing cmd= at xiu yazi-chooser.")
 
         # l5. gnome-keyring and secret service setup.
         ok, detail = wire_gnome_keyring(dry)

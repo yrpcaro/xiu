@@ -290,6 +290,24 @@
     { "id": "ripdrag", "group": "full", "required": false, "desc": "Drag and drop utility for Yazi", "aur": true,
       "names": { "arch": "ripdrag", "debian": null, "fedora": null, "suse": null, "gentoo": null }, "fallback": "cargo" },
 
+    { "id": "ffmpegthumbnailer", "group": "full", "required": false, "desc": "Video thumbnail generator for file managers", "aur": false,
+      "names": { "arch": "ffmpegthumbnailer", "debian": "ffmpegthumbnailer", "fedora": "ffmpegthumbnailer", "suse": "ffmpegthumbnailer", "gentoo": "media-video/ffmpegthumbnailer" }, "fallback": null },
+
+    { "id": "7zip", "group": "full", "required": false, "desc": "Archive extraction and compression for file managers", "aur": false,
+      "names": { "arch": "7zip", "debian": "7zip", "fedora": "p7zip", "suse": "7zip", "gentoo": "app-arch/7zip" }, "fallback": null },
+
+    { "id": "poppler", "group": "full", "required": false, "desc": "PDF rendering utilities (pdftoppm) for document previews", "aur": false,
+      "names": { "arch": "poppler", "debian": "poppler-utils", "fedora": "poppler-utils", "suse": "poppler-tools", "gentoo": "app-text/poppler" }, "fallback": null },
+
+    { "id": "resvg", "group": "full", "required": false, "desc": "SVG rendering library and CLI for image previews", "aur": false,
+      "names": { "arch": "resvg", "debian": "resvg", "fedora": "resvg", "suse": "resvg", "gentoo": "media-gfx/resvg" }, "fallback": "cargo" },
+
+    { "id": "chafa", "group": "full", "required": false, "desc": "Terminal image converter and rich character art previewer", "aur": false,
+      "names": { "arch": "chafa", "debian": "chafa", "fedora": "chafa", "suse": "chafa", "gentoo": "media-gfx/chafa" }, "fallback": null },
+
+    { "id": "lazygit", "group": "full", "required": false, "desc": "Simple terminal UI for git commands, wired into yazi", "aur": false,
+      "names": { "arch": "lazygit", "debian": "lazygit", "fedora": "lazygit", "suse": "lazygit", "gentoo": "dev-vcs/lazygit" }, "fallback": null },
+
     { "id": "sddm", "group": "full", "required": false, "desc": "Display manager option (torii theme ships in the repo)", "aur": false,
       "names": { "arch": "sddm", "debian": "sddm", "fedora": "sddm", "suse": "sddm" }, "fallback": null },
 

@@ -8,7 +8,10 @@ from unittest.mock import patch, MagicMock
 # Add installer dir to path
 sys.path.insert(0, str(Path(__file__).parent))
 import deploy
-from xiu_install import _wizard, _default_choices, _summary_lines, apply_input_preferences, apply_idle_preferences
+from xiu_install import (
+    _wizard, _default_choices, _choice_ids, _summary_lines,
+    YAZI_SUITE_IDS, apply_input_preferences, apply_idle_preferences,
+)
 
 
 class TestWizard(unittest.TestCase):
@@ -213,6 +216,76 @@ class TestWizard(unittest.TestCase):
         self.assertIn("Idle lock screen timeout: 5m", text)
         self.assertIn("Spotify launcher themed", text)
         self.assertIn("Chat clients", text)
+
+    def test_yazi_selection_pulls_full_suite(self):
+        # 1. Verify _choice_ids pulls in the entire YAZI_SUITE_IDS when file_manager == "yazi"
+        choices = {"file_manager": "yazi"}
+        ids = _choice_ids(choices)
+        for expected_id in YAZI_SUITE_IDS:
+            self.assertIn(expected_id, ids)
+        self.assertIn("termfilechooser", ids)
+        self.assertIn("ripdrag", ids)
+        self.assertIn("simple-mtpfs", ids)
+        self.assertIn("trash-cli", ids)
+        self.assertIn("7zip", ids)
+        self.assertIn("ffmpegthumbnailer", ids)
+        self.assertIn("poppler", ids)
+        self.assertIn("resvg", ids)
+        self.assertIn("chafa", ids)
+        self.assertIn("lazygit", ids)
+
+        # 2. Verify _wizard with yazi selected automatically includes the full suite
+        args = MagicMock()
+        args.full = False
+        args.sddm = False
+        args.brave = False
+
+        info = {
+            "family": "arch",
+            "aur_helper": "yay",
+            "bootloader": "systemd-boot",
+            "root_cmd": "sudo",
+            "init": "systemd",
+        }
+
+        manifest = {
+            "packages": [
+                {"id": "yazi", "desc": "yazi file manager", "group": "full"},
+                {"id": "termfilechooser", "desc": "portal file chooser", "group": "full"},
+                {"id": "ripdrag", "desc": "ripdrag", "group": "full"},
+            ]
+        }
+
+        # Select yazi as default file manager (index 1)
+        # 1: profile -> 1 ("custom")
+        # 2: aur -> 0
+        # 3: fish -> 0
+        # 4: config strategy -> 0
+        # 5: legacy tools -> 0
+        # 6: terminal -> 0
+        # 7: editor -> 0
+        # 8: file_manager -> 1 ("yazi")
+        # 9: browser -> 0
+        # 10: media_player -> 0
+        # 11: greeter -> 0
+        # 12: kb_layout -> 0
+        # 13: touchpad scroll -> 0
+        # 14: tap-to-click -> 0
+        # 15: idle -> 0
+        # 16: spotify -> 0
+        # 17: browser theme -> 0
+        # 18: chat theme -> 0
+        select_one_answers = [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        with patch("tui.select_one", side_effect=select_one_answers), \
+             patch("tui.select_many", side_effect=[[], [], []]), \
+             patch("tui.confirm", return_value=True):
+            wizard_choices = _wizard(args, info, manifest)
+
+        self.assertEqual(wizard_choices["file_manager"], "yazi")
+        # Full YAZI_SUITE_IDS must be present in optional_ids even if deselecting in select_many
+        for pkg_id in YAZI_SUITE_IDS:
+            self.assertIn(pkg_id, wizard_choices["optional_ids"])
 
 
 if __name__ == "__main__":
