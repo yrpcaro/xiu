@@ -85,31 +85,23 @@ if type -q difft
     alias diff difft
 end
 
-# Default editor: helix is xiu's core editor, exposed via $EDITOR and $VISUAL
-if type -q helix
-    set -gx EDITOR helix
-    set -gx VISUAL helix
-    if not type -q editor
-        alias editor helix
+# Default editor: exposed via $EDITOR and $VISUAL
+if not set -q EDITOR
+    if type -q helix
+        set -gx EDITOR helix
+    else if type -q nvim
+        set -gx EDITOR nvim
+    else if type -q micro
+        set -gx EDITOR micro
+    else if type -q nano
+        set -gx EDITOR nano
     end
-else if type -q nvim
-    set -gx EDITOR nvim
-    set -gx VISUAL nvim
-    if not type -q editor
-        alias editor nvim
-    end
-else if type -q micro
-    set -gx EDITOR micro
-    set -gx VISUAL micro
-    if not type -q editor
-        alias editor micro
-    end
-else if type -q nano
-    set -gx EDITOR nano
-    set -gx VISUAL nano
-    if not type -q editor
-        alias editor nano
-    end
+end
+if not set -q VISUAL
+    set -gx VISUAL $EDITOR
+end
+if not type -q editor; and set -q EDITOR; and type -q $EDITOR
+    alias editor $EDITOR
 end
 
 # nvim owns the vi/vim names when it is around

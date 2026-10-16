@@ -11,6 +11,7 @@ import deploy
 from xiu_install import (
     _wizard, _default_choices, _choice_ids, _summary_lines,
     YAZI_SUITE_IDS, apply_input_preferences, apply_idle_preferences,
+    set_xdg_defaults, wire_portal_chooser,
 )
 
 
@@ -286,6 +287,88 @@ class TestWizard(unittest.TestCase):
         # Full YAZI_SUITE_IDS must be present in optional_ids even if deselecting in select_many
         for pkg_id in YAZI_SUITE_IDS:
             self.assertIn(pkg_id, wizard_choices["optional_ids"])
+
+    def test_set_xdg_defaults_and_env_propagation(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            with patch("pathlib.Path.home", return_value=home):
+                choices = {
+                    "file_manager": "dolphin",
+                    "editor": "helix",
+                    "browser": "brave",
+                    "terminal": "foot",
+                    "media_player": "mpv",
+                }
+                ok, detail = set_xdg_defaults(choices, dry=False)
+                self.assertTrue(ok)
+
+                # 1. mimeapps.list
+                mimeapps = home / ".config" / "mimeapps.list"
+                self.assertTrue(mimeapps.is_file())
+                mime_txt = mimeapps.read_text()
+                self.assertIn("inode/directory=org.kde.dolphin.desktop", mime_txt)
+                self.assertIn("text/plain=Helix.desktop", mime_txt)
+                self.assertIn("x-scheme-handler/http=brave-browser.desktop", mime_txt)
+                self.assertIn("x-scheme-handler/terminal=foot.desktop", mime_txt)
+
+                # 2. uwsm/env
+                uwsm_env = home / ".config" / "uwsm" / "env"
+                self.assertTrue(uwsm_env.is_file())
+                uwsm_txt = uwsm_env.read_text()
+                self.assertIn("EDITOR=helix", uwsm_txt)
+                self.assertIn("VISUAL=helix", uwsm_txt)
+                self.assertIn("TERMINAL=foot", uwsm_txt)
+                self.assertIn("BROWSER=brave", uwsm_txt)
+
+                # 3. environment.d
+                env_ed = home / ".config" / "environment.d" / "10-editor.conf"
+                self.assertTrue(env_ed.is_file())
+                self.assertIn("EDITOR=helix", env_ed.read_text())
+
+                # 4. fish conf.d
+                fish_ed = home / ".config" / "fish" / "conf.d" / "00-editor.fish"
+                self.assertTrue(fish_ed.is_file())
+                self.assertIn("set -gx EDITOR helix", fish_ed.read_text())
+
+                # 5. kdeglobals
+                kde_file = home / ".config" / "kdeglobals"
+                self.assertTrue(kde_file.is_file())
+                kde_txt = kde_file.read_text()
+                self.assertIn("BrowserApplication=brave-browser.desktop", kde_txt)
+                self.assertIn("TerminalApplication=foot", kde_txt)
+                self.assertIn("Editor=helix", kde_txt)
+                self.assertIn("FileManager=dolphin", kde_txt)
+
+    def test_wire_portal_chooser(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            with patch("pathlib.Path.home", return_value=home):
+                # 1. Yazi choice
+                choices_yazi = {"file_manager": "yazi", "terminal": "ghostty"}
+                ok, detail = wire_portal_chooser(dry=False, choices=choices_yazi)
+                self.assertTrue(ok)
+                portals_conf = home / ".config" / "xdg-desktop-portal" / "portals.conf"
+                hypr_portals_conf = home / ".config" / "xdg-desktop-portal" / "hyprland-portals.conf"
+                self.assertTrue(portals_conf.is_file())
+                self.assertIn("org.freedesktop.impl.portal.FileChooser=termfilechooser;gtk", portals_conf.read_text())
+                self.assertIn("org.freedesktop.impl.portal.FileChooser=termfilechooser;gtk", hypr_portals_conf.read_text())
+
+                tf_cfg = home / ".config" / "xdg-desktop-portal-termfilechooser" / "config.toml"
+                self.assertTrue(tf_cfg.is_file())
+                self.assertIn("cmd=xiu yazi-chooser", tf_cfg.read_text())
+                self.assertIn("env=TERMCMD=ghostty", tf_cfg.read_text())
+
+                # 2. Dolphin choice
+                choices_dolphin = {"file_manager": "dolphin"}
+                ok, detail = wire_portal_chooser(dry=False, choices=choices_dolphin)
+                self.assertTrue(ok)
+                self.assertIn("org.freedesktop.impl.portal.FileChooser=kde;gtk", portals_conf.read_text())
+
+                # 3. Thunar choice
+                choices_thunar = {"file_manager": "thunar"}
+                ok, detail = wire_portal_chooser(dry=False, choices=choices_thunar)
+                self.assertTrue(ok)
+                self.assertIn("org.freedesktop.impl.portal.FileChooser=gtk", portals_conf.read_text())
 
 
 if __name__ == "__main__":

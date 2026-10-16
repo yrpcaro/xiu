@@ -13,9 +13,18 @@ hl.env("PATH", os.getenv("HOME") .. "/.local/bin:" .. (os.getenv("PATH") or ""))
 -- apps always resolve user-installed icon themes, fonts, and desktop entries.
 hl.env("XDG_DATA_DIRS", os.getenv("HOME") .. "/.local/share:" .. (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"))
 
--- Default editor across compositor and spawned apps
-hl.env("EDITOR", "helix")
-hl.env("VISUAL", "helix")
+-- Default applications across compositor and spawned apps
+local vars = require("modules.vars")
+local ed = vars.editor or "helix"
+local ed_clean = ed:match("%-e%s+([^%s]+)") or ed:match("([^%s]+)$") or ed
+hl.env("EDITOR", ed_clean)
+hl.env("VISUAL", ed_clean)
+if vars.terminal then
+    hl.env("TERMINAL", vars.terminal)
+end
+if vars.browser then
+    hl.env("BROWSER", vars.browser)
+end
 
 -- Hardware video acceleration and graphics environment.
 -- Only apply Nvidia-specific variables when the proprietary nvidia driver is loaded.

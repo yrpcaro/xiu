@@ -27,23 +27,23 @@ SettingsSurface {
     readonly property string mimeappsPath: Quickshell.env("HOME") + "/.config/mimeapps.list"
     /** One representative mime per category — the one xdg-mime asks about. */
     readonly property var categories: [
-        { label: "Browser", key: "x-scheme-handler/http", mimes: ["x-scheme-handler/http", "x-scheme-handler/https", "text/html"], icon: "ethernet", discover: "x-scheme-handler/http" },
+        { label: "Browser", key: "x-scheme-handler/http", mimes: ["x-scheme-handler/http", "x-scheme-handler/https", "text/html", "application/xhtml+xml", "x-scheme-handler/about", "x-scheme-handler/unknown"], icon: "ethernet", discover: "x-scheme-handler/http" },
         { label: "Terminal", key: "x-scheme-handler/terminal", mimes: ["x-scheme-handler/terminal"], icon: "keyboard", discover: "terminal" },
         { label: "Editor", key: "text/plain", mimes: ["text/plain", "text/markdown", "text/x-c", "text/x-c++", "text/x-python", "text/x-rust", "application/json"], icon: "type", discover: "text/plain" },
         { label: "Files", key: "inode/directory", mimes: ["inode/directory"], icon: "app-window", discover: "inode/directory" },
-        { label: "Images", key: "image/png", mimes: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"], icon: "palette", discover: "image/" },
-        { label: "Documents", key: "application/pdf", mimes: ["application/pdf", "application/epub+zip"], icon: "layers", discover: "application/pdf" },
+        { label: "Images", key: "image/png", mimes: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif", "image/bmp", "image/tiff", "image/svg+xml"], icon: "palette", discover: "image/" },
+        { label: "Documents", key: "application/pdf", mimes: ["application/pdf", "application/epub+zip", "application/oxps", "application/x-fictionbook", "application/x-mobipocket-ebook"], icon: "layers", discover: "application/pdf" },
         { label: "Music player", key: "audio/mpeg", mimes: ["audio/mpeg", "audio/flac", "audio/ogg", "audio/mp4", "audio/x-wav", "audio/wav", "audio/aac"], icon: "music", discover: "audio/" },
-        { label: "Video player", key: "video/mp4", mimes: ["video/mp4", "video/x-matroska", "video/webm", "video/quicktime", "video/x-msvideo"], icon: "video", discover: "video/" }
+        { label: "Video player", key: "video/mp4", mimes: ["video/mp4", "video/x-matroska", "video/webm", "video/quicktime", "video/x-msvideo", "video/mkv"], icon: "video", discover: "video/" }
     ]
 
     /** The rice's curated picks per category, offered first when installed. */
     readonly property var preferred: {
         var p = {
-            "inode/directory": ["xiu-yazi.desktop", "org.kde.dolphin.desktop", "thunar.desktop", "nautilus.desktop"],
+            "inode/directory": ["xiu-yazi.desktop", "org.kde.dolphin.desktop", "thunar.desktop", "nautilus.desktop", "org.gnome.Nautilus.desktop"],
             "image/png": ["imv.desktop", "imv-dir.desktop", "org.gnome.Loupe.desktop", "feh.desktop", "org.kde.gwenview.desktop", "viewnior.desktop"],
             "application/pdf": ["org.pwmt.zathura.desktop", "org.pwmt.zathura-pdf-mupdf.desktop", "org.gnome.Papers.desktop", "org.kde.okular.desktop", "evince.desktop"],
-            "x-scheme-handler/http": ["brave-browser.desktop", "firefox.desktop", "chromium.desktop", "google-chrome.desktop", "zen.desktop"],
+            "x-scheme-handler/http": ["brave-browser.desktop", "firefox.desktop", "chromium.desktop", "google-chrome.desktop", "zen.desktop", "zen-browser.desktop", "zen-browser-bin.desktop"],
             "x-scheme-handler/terminal": [
                 "com.mitchellh.ghostty.desktop", "ghostty.desktop",
                 "foot.desktop", "footclient.desktop",
@@ -57,7 +57,7 @@ SettingsSurface {
                 "code.desktop", "visual-studio-code.desktop", "code-oss.desktop",
                 "dev.zed.Zed.desktop", "zed.desktop",
                 "nvim.desktop", "neovim.desktop",
-                "micro.desktop", "org.gnome.TextEditor.desktop", "gedit.desktop", "kate.desktop"
+                "micro.desktop", "nano.desktop", "org.gnome.TextEditor.desktop", "gedit.desktop", "kate.desktop", "org.kde.kate.desktop"
             ],
             "audio/mpeg": ["spotify.desktop", "spotify-launcher.desktop", "amberol.desktop", "io.bassi.Amberol.desktop", "org.gnome.Lollypop.desktop", "rhythmbox.desktop", "clementine.desktop"],
             "video/mp4": ["mpv.desktop", "vlc.desktop", "org.gnome.Totem.desktop", "io.github.celluloid_player.Celluloid.desktop"]

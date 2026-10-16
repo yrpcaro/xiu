@@ -905,6 +905,39 @@ DESKTOP_IDS = {
     "dolphin": "org.kde.dolphin.desktop",
     "thunar": "thunar.desktop",
     "yazi": "xiu-yazi.desktop",
+    "nautilus": "nautilus.desktop",
+}
+
+EDITOR_DESKTOP_CANDIDATES = {
+    "helix": ["Helix.desktop", "helix.desktop"],
+    "nvim": ["nvim.desktop", "neovim.desktop"],
+    "micro": ["micro.desktop"],
+    "nano": ["nano.desktop"],
+    "code": ["code.desktop", "visual-studio-code.desktop", "code-oss.desktop"],
+    "zed": ["dev.zed.Zed.desktop", "zed.desktop"],
+    "zeditor": ["dev.zed.Zed.desktop", "zed.desktop"],
+}
+
+BROWSER_DESKTOP_CANDIDATES = {
+    "brave": ["brave-browser.desktop", "brave.desktop"],
+    "zen": ["zen.desktop", "zen-browser.desktop", "zen-browser-bin.desktop"],
+    "zen-browser-bin": ["zen.desktop", "zen-browser.desktop", "zen-browser-bin.desktop"],
+    "firefox": ["firefox.desktop"],
+    "chromium": ["chromium.desktop"],
+    "google-chrome": ["google-chrome.desktop", "google-chrome-stable.desktop"],
+}
+
+TERMINAL_DESKTOP_CANDIDATES = {
+    "foot": ["foot.desktop", "footclient.desktop"],
+    "ghostty": ["com.mitchellh.ghostty.desktop", "ghostty.desktop"],
+    "alacritty": ["Alacritty.desktop", "alacritty.desktop"],
+    "kitty": ["kitty.desktop"],
+    "wezterm": ["org.wezfurlong.wezterm.desktop", "wezterm.desktop"],
+}
+
+MEDIA_DESKTOP_CANDIDATES = {
+    "mpv": ["mpv.desktop"],
+    "vlc": ["vlc.desktop"],
 }
 
 # The xdg defaults xiu claims. inode/directory routes every folder open
@@ -923,24 +956,75 @@ DEFAULT_MIMES = {
     ],
     "mpv.desktop": [
         "video/mp4", "video/mkv", "video/webm", "video/x-matroska", "video/quicktime",
-        "audio/mpeg", "audio/flac", "audio/ogg", "audio/wav",
+        "audio/mpeg", "audio/flac", "audio/ogg", "audio/wav", "audio/mp4", "audio/aac",
     ],
 }
 
 
+def _update_env_file(path, updates):
+    """Update or append KEY=VALUE lines in an env file."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = path.read_text().splitlines() if path.is_file() else []
+    remaining = dict(updates)
+    new_lines = []
+    for line in lines:
+        trimmed = line.strip()
+        if "=" in trimmed and not trimmed.startswith("#"):
+            k = trimmed.split("=", 1)[0].strip()
+            if k in remaining:
+                new_lines.append(f"{k}={remaining.pop(k)}")
+                continue
+        new_lines.append(line)
+    for k, v in remaining.items():
+        new_lines.append(f"{k}={v}")
+    path.write_text("\n".join(new_lines) + "\n")
+
+
+def _update_kdeglobals(path, group, updates):
+    """Update or append keys in a section of kdeglobals."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = path.read_text() if path.is_file() else ""
+    sections = {}
+    order = []
+    current = None
+    for raw in text.splitlines():
+        trimmed = raw.strip()
+        if trimmed.startswith("[") and trimmed.endswith("]"):
+            current = trimmed[1:-1]
+            if current not in sections:
+                sections[current] = []
+                order.append(current)
+        elif current is not None:
+            sections[current].append(raw)
+    if group not in sections:
+        sections[group] = []
+        order.append(group)
+    remaining = dict(updates)
+    new_lines = []
+    for line in sections[group]:
+        trimmed = line.strip()
+        if "=" in trimmed and not trimmed.startswith("#"):
+            k = trimmed.split("=", 1)[0].strip()
+            if k in remaining:
+                new_lines.append(f"{k}={remaining.pop(k)}")
+                continue
+        new_lines.append(line)
+    for k, v in remaining.items():
+        new_lines.append(f"{k}={v}")
+    sections[group] = new_lines
+    out = []
+    for name in order:
+        out.append(f"[{name}]")
+        out.extend(sections[name])
+    path.write_text("\n".join(out) + "\n")
+
+
 def set_xdg_defaults(choices, dry):
     """
-    Make the shipped apps the xdg defaults: the wizard's file manager owns
-    inode/directory (folder opens — and the file dialogs that delegate to the
-    default handler — land in it), imv owns the images and zathura the
-    documents. Merges into ~/.config/mimeapps.list under
-    [Default Applications] without touching any other key, so a browser or
-    user-set default survives; re-runs only rewrite our own keys. A yazi
-    choice first installs xiu-yazi.desktop (the foot wrapper from the repo's
-    configs/yazi/applications) into the user's local applications dir, since
-    a TUI cannot be launched without a terminal; imv/zathura skip their keys
-    when their desktop files are absent (not installed yet — the defaults
-    then wait for the next re-run).
+    Make the selected apps the system-wide defaults across MIME handlers,
+    environment variables (uwsm, fish $EDITOR and $VISUAL), KDE, and GNOME.
     """
     home = Path.home()
     mimeapps = home / ".config" / "mimeapps.list"
@@ -952,9 +1036,6 @@ def set_xdg_defaults(choices, dry):
     # from, and a missing source (source tree without it) just skips the
     # yazi default rather than failing the step.
     if choices.get("file_manager") == "yazi":
-        # The wrapper ships in the repo at configs/yazi/applications; this
-        # module lives in installer/, so walk up to the checkout root first
-        # and fall back to a sibling-of-installer layout for safety.
         root = Path(__file__).resolve().parent.parent
         src = next((
             p for p in (
@@ -973,38 +1054,60 @@ def set_xdg_defaults(choices, dry):
                 pass
 
     def desktop_exists(desktop_id):
-        # The yazi wrapper lives in the user's local dir, not /usr/share.
         return (
             (Path("/usr/share/applications") / desktop_id).is_file()
             or (home / ".local" / "share" / "applications" / desktop_id).is_file()
         )
 
+    def pick_desktop(candidates_dict, choice_key, fallback):
+        candidates = candidates_dict.get(choice_key, [fallback])
+        return next((d for d in candidates if desktop_exists(d)), candidates[0])
+
     want = {}
-    fm = DESKTOP_IDS.get(choices.get("file_manager"))
-    if fm and desktop_exists(fm):
-        want[fm] = ["inode/directory"]
+    fm_choice = choices.get("file_manager")
+    if fm_choice and fm_choice != "none":
+        fm_id = DESKTOP_IDS.get(fm_choice, f"{fm_choice}.desktop")
+        want[fm_id] = ["inode/directory"]
+
     for desktop, mimes in DEFAULT_MIMES.items():
         if desktop_exists(desktop):
             want.setdefault(desktop, []).extend(mimes)
-    editor_desktop = next((d for d in ("Helix.desktop", "helix.desktop") if desktop_exists(d)), None)
+
+    editor_choice = choices.get("editor", "helix")
+    editor_desktop = pick_desktop(EDITOR_DESKTOP_CANDIDATES, editor_choice, "helix.desktop")
     if editor_desktop:
         want.setdefault(editor_desktop, []).extend([
             "text/plain", "text/markdown", "text/x-c", "text/x-c++",
             "text/x-python", "text/x-rust", "application/json",
         ])
-    browser_desktop = next((d for d in ("brave-browser.desktop", "brave.desktop") if desktop_exists(d)), None)
-    if choices.get("browser") == "brave" and browser_desktop:
-        want.setdefault(browser_desktop, []).extend([
-            "text/html", "application/xhtml+xml", "x-scheme-handler/http",
-            "x-scheme-handler/https", "x-scheme-handler/about", "x-scheme-handler/unknown",
-        ])
+
+    browser_choice = choices.get("browser", "brave")
+    if browser_choice != "none":
+        browser_desktop = pick_desktop(BROWSER_DESKTOP_CANDIDATES, browser_choice, "brave-browser.desktop")
+        if browser_desktop:
+            want.setdefault(browser_desktop, []).extend([
+                "text/html", "application/xhtml+xml", "x-scheme-handler/http",
+                "x-scheme-handler/https", "x-scheme-handler/about", "x-scheme-handler/unknown",
+            ])
+
+    terminal_choice = choices.get("terminal", "foot")
+    terminal_desktop = pick_desktop(TERMINAL_DESKTOP_CANDIDATES, terminal_choice, "foot.desktop")
+    if terminal_desktop:
+        want.setdefault(terminal_desktop, []).extend(["x-scheme-handler/terminal"])
+
+    media_choice = choices.get("media_player", "mpv")
+    if media_choice != "none":
+        media_desktop = pick_desktop(MEDIA_DESKTOP_CANDIDATES, media_choice, "mpv.desktop")
+        if media_desktop and media_desktop != "mpv.desktop":
+            want.setdefault(media_desktop, []).extend([
+                "video/mp4", "video/mkv", "video/webm", "video/x-matroska", "video/quicktime",
+                "audio/mpeg", "audio/flac", "audio/ogg", "audio/wav", "audio/mp4", "audio/aac",
+            ])
+
     if not want:
         print("  no xdg defaults to set (none of the desktop files present)")
         return True, ""
     try:
-        # Parse the existing file into sections, preserving everything we
-        # do not own. configparser would mangle ordering and case; a hand
-        # walk keeps the file byte-stable apart from our keys.
         sections = {}
         order = []
         if mimeapps.is_file():
@@ -1037,6 +1140,97 @@ def set_xdg_defaults(choices, dry):
         tmp.write_text("\n".join(lines) + "\n")
         tmp.replace(mimeapps)
         print("  set xdg defaults -> %s (%d keys)" % (mimeapps, sum(len(v) for v in want.values())))
+
+        # 1. Update environment variables across uwsm and systemd environment.d
+        ed_clean = editor_choice
+        br_cmd = "brave" if browser_choice == "brave" else ("zen-browser" if "zen" in browser_choice else browser_choice)
+        uwsm_env = home / ".config" / "uwsm" / "env"
+        _update_env_file(uwsm_env, {
+            "EDITOR": ed_clean,
+            "VISUAL": ed_clean,
+            "TERMINAL": terminal_choice,
+            "BROWSER": br_cmd,
+        })
+
+        env_d_dir = home / ".config" / "environment.d"
+        _update_env_file(env_d_dir / "10-editor.conf", {
+            "EDITOR": ed_clean,
+            "VISUAL": ed_clean,
+        })
+        _update_env_file(env_d_dir / "10-default-apps.conf", {
+            "TERMINAL": terminal_choice,
+            "BROWSER": br_cmd,
+        })
+
+        # 2. Update fish shell environment & universal variables
+        fish_conf_d = home / ".config" / "fish" / "conf.d"
+        fish_conf_d.mkdir(parents=True, exist_ok=True)
+        fish_editor = fish_conf_d / "00-editor.fish"
+        fish_editor.write_text(
+            f"# Configured by xiu install\nset -gx EDITOR {ed_clean}\nset -gx VISUAL {ed_clean}\n"
+            f"if not type -q editor; and type -q {ed_clean}\n    alias editor {ed_clean}\nend\n"
+        )
+        if shutil.which("fish"):
+            try:
+                subprocess.run(
+                    ["fish", "-c", f"set -Ux EDITOR {ed_clean}; set -Ux VISUAL {ed_clean}"],
+                    capture_output=True, timeout=5
+                )
+            except Exception:
+                pass
+
+        # 3. Update KDE settings (kdeglobals & kwriteconfig)
+        kdeglobals = home / ".config" / "kdeglobals"
+        kde_updates = {
+            "BrowserApplication": browser_desktop,
+            "TerminalApplication": terminal_choice,
+            "TerminalService": terminal_desktop,
+            "Editor": ed_clean,
+        }
+        if fm_choice and fm_choice != "none":
+            kde_updates["FileManager"] = fm_choice
+        _update_kdeglobals(kdeglobals, "General", kde_updates)
+
+        kwrite_bin = shutil.which("kwriteconfig6") or shutil.which("kwriteconfig5")
+        if kwrite_bin:
+            for k, v in kde_updates.items():
+                try:
+                    subprocess.run(
+                        [kwrite_bin, "--file", "kdeglobals", "--group", "General", "--key", k, v],
+                        capture_output=True, timeout=3
+                    )
+                except Exception:
+                    pass
+
+        # 4. Update GNOME settings via gsettings & gio
+        if shutil.which("gsettings"):
+            try:
+                subprocess.run(
+                    ["gsettings", "set", "org.gnome.desktop.default-applications.terminal", "exec", terminal_choice],
+                    capture_output=True, timeout=3
+                )
+                subprocess.run(
+                    ["gsettings", "set", "org.gnome.desktop.default-applications.terminal", "exec-arg", "-e"],
+                    capture_output=True, timeout=3
+                )
+            except Exception:
+                pass
+
+        # 5. Run xdg-mime and gio mime
+        if shutil.which("xdg-mime") or shutil.which("gio"):
+            for dtop, mlist in want.items():
+                for m in mlist:
+                    if shutil.which("xdg-mime"):
+                        try:
+                            subprocess.run(["xdg-mime", "default", dtop, m], capture_output=True, timeout=2)
+                        except Exception:
+                            pass
+                    if shutil.which("gio"):
+                        try:
+                            subprocess.run(["gio", "mime", m, dtop], capture_output=True, timeout=2)
+                        except Exception:
+                            pass
+
         return True, ""
     except OSError as exc:
         return False, f"{exc}: set xdg defaults"
@@ -1189,18 +1383,11 @@ YAZI_PLUGINS = [
 
 def wire_portal_chooser(dry, choices=None):
     """
-    Point the termfilechooser portal at the rice's yazi wrapper, so every
-    app's file dialog opens yazi in foot. The backend reads
-    ~/.config/xdg-desktop-portal-termfilechooser/config.toml for its cmd; our
-    wrapper ships in configs/hypr/scripts and the deployed portals.conf
-    routes FileChooser to the backend.
-
-    When the backend is not installed (e.g. on a box without the AUR package)
-    or yazi is not the active default file manager, the FileChooser routing is
-    removed from the deployed portals.conf so that file dialogs fall back cleanly
-    to GTK/KDE. If termfilechooser is present and yazi is default, we wire
-    config.toml, ensure portals.conf routes FileChooser to termfilechooser,
-    and restart xdg-desktop-portal.
+    Point xdg-desktop-portal FileChooser at the backend matching the default
+    file manager:
+    - yazi: termfilechooser (yazi in foot/chosen terminal answers all file/dir picker dialogs)
+    - dolphin: kde (KFileDialog answers file/dir picker dialogs)
+    - thunar/nautilus/others: gtk (GTK file chooser dialogs)
     """
     home = Path.home()
     cfg_dir = home / ".config" / "xdg-desktop-portal-termfilechooser"
@@ -1211,7 +1398,23 @@ def wire_portal_chooser(dry, choices=None):
         home / ".config" / "xdg-desktop-portal" / "portals.conf",
     ]
 
-    is_yazi = (choices.get("file_manager") == "yazi") if choices else True
+    fm = choices.get("file_manager") if choices else None
+    if not fm or fm == "none":
+        vars_lua = home / ".config" / "xiu" / "vars.lua"
+        if vars_lua.is_file():
+            text = vars_lua.read_text()
+            if 'fileManager = "dolphin"' in text:
+                fm = "dolphin"
+            elif 'fileManager = "thunar"' in text:
+                fm = "thunar"
+            elif 'fileManager = "nautilus"' in text:
+                fm = "nautilus"
+            elif "yazi" in text:
+                fm = "yazi"
+        if not fm:
+            fm = "dolphin"
+
+    is_yazi = (fm == "yazi")
     backend_present = (
         Path("/usr/share/xdg-desktop-portal/portals/termfilechooser.portal").is_file()
         or shutil.which("xdg-desktop-portal-termfilechooser") is not None
@@ -1220,61 +1423,64 @@ def wire_portal_chooser(dry, choices=None):
         or (dry and is_yazi)
     )
 
-    if not backend_present or not is_yazi:
-        if not dry:
-            for pconf in portal_confs:
-                if pconf.is_file():
-                    try:
-                        text = pconf.read_text()
-                        lines = [l for l in text.splitlines(keepends=True)
-                                 if not l.strip().startswith("org.freedesktop.impl.portal.FileChooser=termfilechooser")]
-                        if len(lines) != len(text.splitlines(keepends=True)):
-                            pconf.write_text("".join(lines))
-                    except OSError:
-                        pass
-        if not backend_present:
-            print("  xdg-desktop-portal-termfilechooser not installed; file chooser remains GTK")
-        else:
-            print("  yazi is not default file manager; file chooser remains GTK/KDE")
-        return True, ""
+    if is_yazi and backend_present:
+        target_backend = "termfilechooser;gtk"
+    elif fm == "dolphin":
+        target_backend = "kde;gtk"
+    else:
+        target_backend = "gtk"
 
     if dry:
-        print(f"  would wire the portal chooser -> {cfg} and route FileChooser in portals.conf")
-        return True, ""
-
-    xiu_bin = shutil.which("xiu") or (home / ".local" / "bin" / "xiu")
-    if isinstance(xiu_bin, Path) and not xiu_bin.is_file() and shutil.which("xiu") is None:
-        print("  xiu binary not installed yet; portal chooser waits for the next re-run")
+        print(f"  would wire portal FileChooser -> {fm} ({target_backend}) in portals.conf")
         return True, ""
 
     try:
-        cfg_dir.mkdir(parents=True, exist_ok=True)
-        content = (
-            "[filechooser]\n"
-            "cmd=xiu yazi-chooser\n"
-            f"default_dir={home}\n"
-            "env=TERMCMD=foot\n"
-        )
-        cfg.write_text(content)
-        cfg_toml.write_text(content)
+        terminal = choices.get("terminal", "foot") if choices else "foot"
+        if is_yazi:
+            cfg_dir.mkdir(parents=True, exist_ok=True)
+            content = (
+                "[filechooser]\n"
+                "cmd=xiu yazi-chooser\n"
+                f"default_dir={home}\n"
+                f"env=TERMCMD={terminal}\n"
+            )
+            cfg.write_text(content)
+            cfg_toml.write_text(content)
+
+            root = Path(__file__).resolve().parent.parent
+            src = root / "configs" / "yazi" / "applications" / "xiu-yazi.desktop"
+            dest = home / ".local" / "share" / "applications" / "xiu-yazi.desktop"
+            if src.is_file() and not dest.is_file():
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_text(src.read_text())
 
         for pconf in portal_confs:
             pconf.parent.mkdir(parents=True, exist_ok=True)
-            if pconf.is_file():
-                text = pconf.read_text()
-                if "org.freedesktop.impl.portal.FileChooser=termfilechooser" not in text:
-                    if "[preferred]" in text:
-                        text = text.replace(
-                            "[preferred]",
-                            "[preferred]\norg.freedesktop.impl.portal.FileChooser=termfilechooser;gtk\n"
-                        )
-                    else:
-                        text += "\n[preferred]\norg.freedesktop.impl.portal.FileChooser=termfilechooser;gtk\n"
-                    pconf.write_text(text)
-            else:
-                pconf.write_text(
-                    "[preferred]\ndefault=gtk\norg.freedesktop.impl.portal.FileChooser=termfilechooser;gtk\n"
-                )
+            text = pconf.read_text() if pconf.is_file() else "[preferred]\ndefault=gtk\n"
+            lines = text.splitlines()
+            new_lines = []
+            replaced = False
+            in_pref = False
+            for l in lines:
+                trimmed = l.strip()
+                if trimmed == "[preferred]":
+                    in_pref = True
+                    new_lines.append(l)
+                    continue
+                elif trimmed.startswith("[") and trimmed.endswith("]"):
+                    in_pref = False
+                if in_pref and trimmed.startswith("org.freedesktop.impl.portal.FileChooser="):
+                    new_lines.append(f"org.freedesktop.impl.portal.FileChooser={target_backend}")
+                    replaced = True
+                    continue
+                new_lines.append(l)
+            if not replaced:
+                if "[preferred]" in text:
+                    idx = next(i for i, l in enumerate(new_lines) if l.strip() == "[preferred]")
+                    new_lines.insert(idx + 1, f"org.freedesktop.impl.portal.FileChooser={target_backend}")
+                else:
+                    new_lines.extend(["[preferred]", f"org.freedesktop.impl.portal.FileChooser={target_backend}"])
+            pconf.write_text("\n".join(new_lines) + "\n")
 
         try:
             subprocess.run(["systemctl", "--user", "restart", "xdg-desktop-portal"],
@@ -1282,7 +1488,7 @@ def wire_portal_chooser(dry, choices=None):
         except Exception:
             pass
 
-        print(f"  wired portal FileChooser -> yazi ({cfg})")
+        print(f"  wired portal FileChooser -> {fm} ({target_backend}) in portals.conf")
         return True, ""
     except OSError as exc:
         return False, f"{exc}: wire portal chooser"

@@ -244,11 +244,21 @@ hl.bind(mod .. " + SHIFT + code:38", hl.dsp.exec_cmd("xiu special communication"
 hl.bind(mod .. " + code:27", toggles.toggle("todo")) -- todo workspace [R]
 
 -- Apps
+local function wrap_app(cmd)
+    if not cmd or cmd == "" then return "" end
+    if cmd == "yazi" then
+        return vars.terminal .. " -e yazi"
+    elseif cmd == "helix" or cmd == "nvim" or cmd == "micro" or cmd == "nano" or cmd == "vim" or cmd == "vi" then
+        return vars.terminal .. " -e " .. cmd
+    end
+    return cmd
+end
+
 hl.bind(mod .. " + code:36", hl.dsp.exec_cmd(vars.terminal)) -- terminal
 hl.bind(mod .. " + code:9", hl.dsp.exec_cmd(vars.terminal .. " -e btop")) -- btop [Esc]
 hl.bind(mod .. " + code:25", hl.dsp.exec_cmd(vars.browser)) -- browser [W]
-hl.bind(mod .. " + code:54", hl.dsp.exec_cmd(vars.editor)) -- editor [C]
-hl.bind(mod .. " + code:26", hl.dsp.exec_cmd(vars.fileManager)) -- file manager [E]
+hl.bind(mod .. " + code:54", hl.dsp.exec_cmd(wrap_app(vars.editor))) -- editor [C]
+hl.bind(mod .. " + code:26", hl.dsp.exec_cmd(wrap_app(vars.fileManager))) -- file manager [E]
 hl.bind(mod .. " + code:28", hl.dsp.exec_cmd(vars.telegram)) -- telegram [T]
 hl.bind(mod .. " + code:32", hl.dsp.exec_cmd(vars.musicPlayer)) -- spotify [O]
 hl.bind("CTRL + ALT + code:55", hl.dsp.exec_cmd("xiu open mixer")) -- mixer [V]
