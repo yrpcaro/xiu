@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 # Add installer dir to path
 sys.path.insert(0, str(Path(__file__).parent))
 import deploy
-from xiu_install import _wizard, _default_choices, apply_input_preferences, apply_idle_preferences
+from xiu_install import _wizard, _default_choices, _summary_lines, apply_input_preferences, apply_idle_preferences
 
 
 class TestWizard(unittest.TestCase):
@@ -118,6 +118,103 @@ class TestWizard(unittest.TestCase):
                 self.assertIn("timeout = 600", idle_conf)
                 self.assertIn("timeout = 660", idle_conf)
 
+    def test_custom_wizard_flow(self):
+        args = MagicMock()
+        args.full = False
+        args.sddm = False
+        args.brave = False
+
+        info = {
+            "family": "arch",
+            "aur_helper": "yay",
+            "bootloader": "systemd-boot",
+            "root_cmd": "sudo",
+            "init": "systemd",
+        }
+
+        manifest = {
+            "packages": [
+                {"id": "yazi", "desc": "yazi file manager", "group": "full"},
+                {"id": "brave", "desc": "brave browser", "group": "full"},
+                {"id": "spotify", "desc": "spotify launcher", "group": "full"},
+                {"id": "dolphin", "desc": "dolphin", "group": "full"},
+            ]
+        }
+
+        # Select answers for Custom wizard flow:
+        # profile (custom=1), aur (paru=0), fish (0), config strategy (0), legacy tools (0),
+        # terminal (0), editor (0), file_manager (0), browser (0), media_player (0),
+        # greeter (0), kb_layout (0), touchpad scroll (0), tap-to-click (0), idle (0),
+        # spotify (0), browser live theme (0), chat theme (0)
+        select_one_answers = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        with patch("tui.select_one", side_effect=select_one_answers), \
+             patch("tui.select_many", side_effect=[[], [0], [0]]), \
+             patch("tui.confirm", return_value=True):
+            choices = _wizard(args, info, manifest)
+
+        self.assertEqual(choices["profile"], "custom")
+        self.assertEqual(choices["aur_choice"], "paru")
+        self.assertEqual(choices["terminal"], "foot")
+        self.assertEqual(choices["editor"], "helix")
+        self.assertEqual(choices["file_manager"], "dolphin")
+        self.assertEqual(choices["browser"], "brave")
+        self.assertEqual(choices["media_player"], "mpv")
+        self.assertEqual(choices["greeter"], "none")
+        self.assertEqual(choices["kb_layout"], "us,ir")
+        self.assertTrue(choices["natural_scroll"])
+        self.assertTrue(choices["tap_to_click"])
+        self.assertEqual(choices["idle_timeout"], "5m")
+        self.assertTrue(choices["spicetify"])
+        self.assertFalse(choices["browser_theme"])
+        self.assertTrue(choices["chat_theme"])
+
+    def test_summary_lines(self):
+        info = {
+            "family": "arch",
+            "existing": {},
+        }
+        choices = {
+            "profile": "custom",
+            "file_manager": "dolphin",
+            "editor": "helix",
+            "browser": "brave",
+            "media_player": "mpv",
+            "greeter": "sddm",
+            "sddm_theme": "washi",
+            "kb_layout": "us,ir",
+            "idle_timeout": "5m",
+            "browser_theme": False,
+            "spicetify": True,
+            "chat_theme": True,
+            "legacy_swap": "clean",
+            "fresh_configs": True,
+            "grub": False,
+            "brave": True,
+            "fish": True,
+        }
+        plan = {
+            "native": ["foot", "helix"],
+            "aur": ["spicetify-cli"],
+            "fallbacks": [],
+            "skipped": [],
+            "repos": [],
+        }
+        args = MagicMock()
+        args.source = "/tmp/dummy"
+
+        lines = _summary_lines(info, choices, plan, args, do_pkgs=True)
+        text = "\n".join(lines)
+        self.assertIn("Install 3 packages", text)
+        self.assertIn("Default text editor: helix", text)
+        self.assertIn("Default web browser: brave", text)
+        self.assertIn("Default media player: mpv", text)
+        self.assertIn("Keyboard layout: us,ir", text)
+        self.assertIn("Idle lock screen timeout: 5m", text)
+        self.assertIn("Spotify launcher themed", text)
+        self.assertIn("Chat clients", text)
+
 
 if __name__ == "__main__":
     unittest.main()
+

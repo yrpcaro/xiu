@@ -188,26 +188,30 @@ def _default_choices(args, info, manifest):
 
 def _wizard(args, info, manifest):
     """
-    Walk the streamlined 4-stage installer wizard:
-      Stage 1: Profile & AUR Preflight
-      Stage 2: Desktop Essentials (Terminal, File Manager, Greeter)
-      Stage 3: Theming & Extras (Palette sync, Spicetify, optional apps)
-      Stage 4: Review & Confirmation
+    Walk the structured installer wizard:
+      Stage 1: Setup Strategy & Core Environment (Profile, AUR helper, Shell, Strategy, Legacy cleanup)
+      Stage 2: Default Applications (Terminal, Additional terminals, Editor, File Manager, Browser, Media Player)
+      Stage 3: Desktop & Session (Greeter / Login Screen, SDDM Theme, GRUB Bootloader)
+      Stage 4: Input & Hardware (Keyboard Layout, Touchpad Scrolling, Tap-to-Click, Idle Timeout)
+      Stage 5: Theming & Integrations (Spotify / Spicetify, Browser Live Theming, Chat Themes)
+      Stage 6: Applications & Utilities (Utilities & Tools, Applications & Extras)
+      Stage 7: Review & Confirmation
     Raises RuntimeError when there is no controlling terminal, falling back to defaults.
     """
     family = info["family"]
 
-    # --- Stage 1: Profile & AUR Preflight ---
+    # --- Setup Strategy & Profile ---
+    tui.section("Setup Strategy", "Choose your installation mode")
     pidx = tui.select_one("Install profile", [
-        ("Quick", "Core rice, foot, dolphin, Spicetify, full theming (Recommended)", True),
-        ("Full", "Everything, plus all daily applications", False),
-        ("Custom", "Configure individual packages and settings", False),
+        ("Quick", "Recommended defaults: foot, dolphin, helix, brave, mpv, TTY, clean swap, fresh start", True),
+        ("Custom", "Interactive setup: customize applications, desktop, input, and theming", False),
+        ("Full", "Complete installation: everything in the repository with all daily applications", False),
     ], default=1 if args.full else 0)
-    profile = ("quick", "full", "custom")[pidx]
+    profile = ("quick", "custom", "full")[pidx]
 
     aur_choice = "paru"
     if family == "arch":
-        default_aur = 0 if info.get("aur_helper") == "paru" or not info.get("aur_helper") else 1
+        default_aur = 0 if info.get("aur_helper") == "paru" or not info.get("aur_helper") else (1 if info.get("aur_helper") == "yay" else 0)
         aidx = tui.select_one("AUR helper", [
             ("paru", "Build AUR packages with paru (Recommended)", True),
             ("yay", "Build AUR packages with yay", False),
@@ -219,102 +223,54 @@ def _wizard(args, info, manifest):
         choices = _default_choices(args, info, manifest)
         choices["profile"] = "quick"
         choices["aur_choice"] = aur_choice
+        tui.section("Quick Installation", "Deploying recommended xiu rice configuration")
         summary_lines = [
             "Profile: Quick (fast install, core essentials)",
-            "Terminal: foot",
-            "File manager: dolphin",
-            "Text editor: helix",
-            "Web browser: brave",
-            "Media player: mpv",
-            "Login shell: fish",
-            "Login screen: none (TTY login)",
-            "Theming: GTK 3/4, Qt, Quickshell YAMIS monochrome icons",
-            "Spotify: Spicetify configured for Spotify Launcher",
+            f"AUR helper: {aur_choice}" if family == "arch" else None,
+            "Login shell: fish ($EDITOR=helix)",
+            "Config strategy: Fresh start (clean repository defaults, backed up to .bak)",
+            "Legacy cleanup: Clean swap (retires ghostty and cliphist)",
+            "Default terminal: foot",
+            "Default editor: helix",
+            "Default file manager: dolphin",
+            "Default web browser: brave",
+            "Default media player: mpv",
+            "Login screen: none (direct TTY login)",
+            "Keyboard layout: us,ir (dual English + Persian)",
+            "Touchpad: Natural scrolling and tap-to-click enabled",
+            "Idle timeout: 5m lock screen",
+            "Theming: GTK 3/4, Qt Darkly, Quickshell YAMIS monochrome icons",
+            "Spotify: Spicetify and Marketplace enabled for Spotify launcher",
+            "Chat themes: Telegram xiu palette enabled",
         ]
-        if family == "arch":
-            summary_lines.append(f"AUR helper: {aur_choice}")
-        ready = tui.confirm("Ready to install?", summary_lines)
+        summary_lines = [l for l in summary_lines if l is not None]
+        ready = tui.confirm("Ready to install with these settings?", summary_lines)
         if not ready:
             raise KeyboardInterrupt
         return choices
 
-    # --- Stage 2: Desktop Essentials ---
-    tidx = tui.select_one("Default terminal", [
-        ("foot", "Fast, lightweight Wayland terminal (Recommended)", True),
-        ("ghostty", "Modern GPU-accelerated terminal with native styling", False),
-        ("alacritty", "Fast GPU-accelerated terminal with smooth cursor", False),
+    # --- Stage 1: System & Packages ---
+    tui.section("System & Packages", "Login shell, setup strategy, and tool migrations")
+
+    sidx = tui.select_one("Login shell", [
+        ("fish", "Set fish as default login shell with xiu environment & $EDITOR (Recommended)", True),
+        ("keep", "Keep your current login shell", False),
     ], default=0)
-    terminal = ("foot", "ghostty", "alacritty")[tidx]
+    fish = (sidx == 0)
 
-    other_terms = [t for t in ("foot", "ghostty", "alacritty") if t != terminal]
-    term_opts = [(t, f"Install {t} as an alternative terminal", False) for t in other_terms]
-    chosen_terms = tui.select_many("Additional terminals", term_opts, preselect=())
-    extra_terminals = [other_terms[i] for i in chosen_terms]
-
-    fidx = tui.select_one("File manager", [
-        ("yazi", "TUI file manager, keyboard-driven with image previews (Recommended)", True),
-        ("dolphin", "KDE file manager, native dialogs for the rice", False),
-        ("thunar", "Xfce file manager, themed through the palette", False),
-        ("none", "Keep whatever I use today", False),
+    csidx = tui.select_one("Configuration strategy", [
+        ("Fresh start", "Deploy clean repository defaults (backs up existing to .bak) (Recommended)", True),
+        ("Preserve existing", "Preserve existing user configs and merge on updates", False),
     ], default=0)
-    file_manager = ("yazi", "dolphin", "thunar", "none")[fidx]
+    fresh_configs = (csidx == 0)
 
-    gidx = tui.select_one("Login screen", [
-        ("TTY", "No greeter; start Hyprland from terminal login (Recommended)", True),
-        ("SDDM", "Graphical login with a xiu theme", False),
-        ("greetd", "Minimal greeter with tuigreet", False),
-    ], default=0)
-    greeter = ("none", "sddm", "greetd")[gidx]
-
-    sddm_theme = "torii"
-    if greeter == "sddm":
-        tidx = tui.select_one("SDDM theme", [
-            ("washi", "Mirrors the lock screen: frosted wallpaper, Zen Kaku clock", True),
-            ("torii", "The cinematic torii video wallpaper", False),
-        ], default=0)
-        sddm_theme = ("washi", "torii")[tidx]
-
-    # --- Stage 3: Theming & Extras ---
     lidx = tui.select_one("Legacy tools", [
-        ("Clean swap", "remove ghostty and cliphist once foot and clipvault are in (Recommended)", True),
-        ("Fallback", "ghostty and cliphist stay available as optional backends", False),
+        ("Clean swap", "Retire ghostty and cliphist once foot and clipvault are in (Recommended)", True),
+        ("Keep both", "Leave ghostty and cliphist installed alongside replacements", False),
     ], default=0)
     legacy_swap = ("clean", "fallback")[lidx]
 
-    keep = tui.confirm("Keep your existing configs", [
-        "Your fish config, keybinds and Settings changes are carried across",
-        "and three-way merged on updates. (Recommended)",
-        "Answer No to start from the repo's defaults instead.",
-    ])
-    fresh_configs = not keep
-
-    full_pkgs = [p for p in manifest["packages"] if p.get("group") == "full"]
-    options = [(p["id"], p["desc"], False) for p in full_pkgs]
-    preselect = range(len(full_pkgs)) if profile == "full" else ()
-    chosen = tui.select_many("Optional apps", options, preselect=preselect)
-    optional_ids = {full_pkgs[i]["id"] for i in chosen}
-
-    browser_theme = tui.confirm("Browser live theme", [
-        "Register the xiu native theme host and copy Firefox/Zen userChrome into profiles.",
-    ])
-
-    grub = False
-    if info["bootloader"] == "grub":
-        grub = tui.confirm("GRUB theme", [
-            "Install the xiu GRUB theme (does not touch boot entries).",
-        ])
-
-    brave = True if args.brave else False
-    if not args.brave:
-        bidx = tui.select_one("Brave browser", [
-            ("Skip", "Leave Brave out for now (Recommended)", True),
-            ("Install Brave", "Brave browser with the matching xiu theme", False),
-        ], default=0)
-        brave = bidx == 1
-
-    fish = tui.confirm("Login shell", ["Set fish as your login shell. (Recommended)"])
-
-    root_cmd, overlays = info["root_cmd"], True
+    root_cmd, overlays = info.get("root_cmd", "sudo"), True
     if family == "gentoo":
         ridx = tui.select_one("Root command", [
             ("sudo", "Run the privileged steps through sudo", True),
@@ -326,36 +282,217 @@ def _wizard(args, info, manifest):
         ])
 
     services = True
-    if info["init"] == "openrc":
+    if info.get("init") == "openrc":
         services = tui.confirm("OpenRC services", [
             "Add NetworkManager and bluetooth to default runlevel and start them now.",
         ])
 
-    # --- Stage 4: Review & Confirmation ---
+    # --- Stage 2: Default Applications ---
+    tui.section("Default Applications", "Core applications for your desktop workflow")
+
+    tidx = tui.select_one("Default terminal", [
+        ("foot", "Fast, lightweight Wayland-native terminal with xiu theme (Recommended)", True),
+        ("ghostty", "Modern GPU-accelerated terminal with native styling", False),
+        ("alacritty", "Fast minimalist GPU-accelerated terminal", False),
+    ], default=0)
+    terminal = ("foot", "ghostty", "alacritty")[tidx]
+
+    other_terms = [t for t in ("foot", "ghostty", "alacritty") if t != terminal]
+    term_opts = [(t, f"Install {t} as an alternative terminal", False) for t in other_terms]
+    chosen_terms = tui.select_many("Additional terminals", term_opts, preselect=())
+    extra_terminals = [other_terms[i] for i in chosen_terms]
+
+    eidx = tui.select_one("Default text editor", [
+        ("helix", "Modern modal terminal editor with LSP, exposed via $EDITOR (Recommended)", True),
+        ("nvim", "Neovim modal editor with xiu palette", False),
+        ("micro", "Intuitive terminal text editor", False),
+    ], default=0)
+    editor = ("helix", "nvim", "micro")[eidx]
+
+    fidx = tui.select_one("Default file manager", [
+        ("dolphin", "KDE file manager with native dialogs for the rice (Recommended)", True),
+        ("yazi", "TUI file manager, keyboard-driven with image previews", False),
+        ("thunar", "Xfce file manager themed through palette", False),
+        ("none", "Keep whatever is currently installed", False),
+    ], default=0)
+    file_manager = ("dolphin", "yazi", "thunar", "none")[fidx]
+
+    bidx = tui.select_one("Default web browser", [
+        ("brave", "Brave browser with matching xiu appearance theme (Recommended)", True),
+        ("zen-browser-bin", "Zen browser with userChrome integration", False),
+        ("firefox", "Firefox browser with userChrome integration", False),
+        ("none", "Keep system default browser", False),
+    ], default=0 if not args.brave else 0)
+    browser = ("brave", "zen-browser-bin", "firefox", "none")[bidx]
+    brave = (browser == "brave")
+
+    midx = tui.select_one("Default media player", [
+        ("mpv", "mpv media player with uosc UI and xiu palette (Recommended)", True),
+        ("none", "Keep system default media player", False),
+    ], default=0)
+    media_player = ("mpv", "none")[midx]
+
+    # --- Stage 3: Desktop & Session ---
+    tui.section("Desktop & Session", "Display manager, login themes, and bootloader")
+
+    gidx = tui.select_one("Login screen", [
+        ("TTY", "No greeter; start Hyprland from terminal login (Recommended)", True),
+        ("SDDM", "Graphical login with a xiu theme", False),
+        ("greetd", "Minimal greeter with tuigreet", False),
+    ], default=0 if not args.sddm else 1)
+    greeter = ("none", "sddm", "greetd")[gidx]
+
+    sddm_theme = "washi"
+    if greeter == "sddm":
+        tidx = tui.select_one("SDDM theme", [
+            ("washi", "Clean frosted wallpaper and Zen Kaku clock (Recommended)", True),
+            ("torii", "The cinematic torii video wallpaper", False),
+        ], default=0)
+        sddm_theme = ("washi", "torii")[tidx]
+
+    grub = False
+    if info.get("bootloader") == "grub":
+        grub_idx = tui.select_one("GRUB bootloader theme", [
+            ("Skip", "Keep system bootloader untouched (Recommended)", True),
+            ("Install theme", "Install matching xiu GRUB theme", False),
+        ], default=0)
+        grub = (grub_idx == 1)
+
+    # --- Stage 4: Input & Hardware ---
+    tui.section("Input & Hardware", "Keyboard layout, touchpad gestures, and idle lock behavior")
+
+    kidx = tui.select_one("Keyboard layout", [
+        ("us,ir", "US English + Persian (winkeys) dual layout (Recommended)", True),
+        ("us", "US English layout only", False),
+        ("keep", "Keep existing Hyprland input layout untouched", False),
+    ], default=0)
+    kb_layout = ("us,ir", "us", "keep")[kidx]
+
+    nidx = tui.select_one("Touchpad scrolling", [
+        ("Natural", "Content follows finger direction: natural_scroll = true (Recommended)", True),
+        ("Traditional", "Scroll bar direction: natural_scroll = false", False),
+    ], default=0)
+    natural_scroll = (nidx == 0)
+
+    tcidx = tui.select_one("Touchpad tap-to-click", [
+        ("Enabled", "Tap touchpad to click: tap_to_click = true (Recommended)", True),
+        ("Disabled", "Physical click only: tap_to_click = false", False),
+    ], default=0)
+    tap_to_click = (tcidx == 0)
+
+    itidx = tui.select_one("Idle lock timeout", [
+        ("5m", "Lock screen after 5m, turn off displays after 6m (Recommended)", True),
+        ("10m", "Lock screen after 10m, turn off displays after 11m", False),
+        ("15m", "Lock screen after 15m, turn off displays after 16m", False),
+        ("Disabled", "Do not automatically lock screen on idle", False),
+    ], default=0)
+    idle_timeout = ("5m", "10m", "15m", "disabled")[itidx]
+
+    # --- Stage 5: Theming & Integrations ---
+    tui.section("Theming & Integrations", "Application customization, Spicetify, and chat styling")
+
+    spidx = tui.select_one("Spotify skinning (Spicetify)", [
+        ("Enable", "Install Spicetify CLI and Marketplace for Spotify launcher (Recommended)", True),
+        ("Disable", "Leave Spotify unskinned without Spicetify", False),
+    ], default=0)
+    spicetify = (spidx == 0)
+
+    btidx = tui.select_one("Browser live theming", [
+        ("Disable", "Leave browsers unskinned (Recommended)", True),
+        ("Enable", "Register live theme host and userChrome for Firefox/Zen", False),
+    ], default=0)
+    browser_theme = (btidx == 1)
+
+    ctidx = tui.select_one("Chat client themes", [
+        ("Enable", "Deploy xiu themes for Vesktop Discord and Telegram (Recommended)", True),
+        ("Disable", "Leave chat apps unskinned", False),
+    ], default=0)
+    chat_theme = (ctidx == 0)
+
+    # --- Stage 6: Applications & Utilities ---
+    tui.section("Applications & Utilities", "Select optional utilities and daily applications")
+
+    util_defs = [
+        ("yazi", "TUI file manager with image previews", True),
+        ("termfilechooser", "Portal FileChooser backend opening yazi", True if file_manager == "yazi" else False),
+        ("ripdrag", "Drag and drop utility for file managers", True),
+        ("zathura", "Keyboard-driven document viewer", True),
+        ("zathura-pdf-mupdf", "PDF backend for zathura", True),
+        ("imv", "Lightweight image viewer", True),
+        ("simple-mtpfs", "Android phone MTP filesystem mount", False),
+        ("bottom", "Graphical terminal system monitor (btm)", True),
+        ("surge", "TUI download manager", True),
+        ("mangofetch", "Terminal media and stream downloader", False),
+        ("uwsm", "Universal Wayland Session Manager wrapper", True),
+    ]
+    util_preselect = range(len(util_defs)) if profile == "full" else [i for i, (_, _, rec) in enumerate(util_defs) if rec]
+    chosen_utils = tui.select_many("Utilities & Tools", [(i, d, r) for i, d, r in util_defs], preselect=util_preselect)
+
+    app_defs = [
+        ("zed", "High-performance modern GUI code editor", True),
+        ("spotify", "Spotify client via spotify-launcher", True),
+        ("spicetify-cli", "Spicetify CLI and Marketplace", True if spicetify else False),
+        ("telegram-desktop", "Telegram messaging client", True if chat_theme else False),
+        ("vesktop", "Vencord Discord client", False),
+        ("micro", "Intuitive terminal text editor", True if editor == "micro" else False),
+        ("neovim", "Neovim modal terminal editor", True if editor == "nvim" else False),
+        ("htop", "Interactive process viewer", False),
+        ("nvtop", "GPU process monitor", False),
+        ("trash-cli", "Command-line trash management", False),
+        ("keepassxc", "Offline password manager", False),
+        ("rnote", "Handwritten notes and sketch app", False),
+        ("mpvpaper", "Animated video wallpaper utility", False),
+        ("nvibrant", "Screen color vibrance control", False),
+    ]
+    app_preselect = range(len(app_defs)) if profile == "full" else [i for i, (_, _, rec) in enumerate(app_defs) if rec]
+    chosen_apps = tui.select_many("Applications & Extras", [(i, d, r) for i, d, r in app_defs], preselect=app_preselect)
+
+    optional_ids = {util_defs[i][0] for i in chosen_utils} | {app_defs[i][0] for i in chosen_apps}
+    if file_manager == "dolphin":
+        optional_ids.add("dolphin")
+    elif file_manager == "thunar":
+        optional_ids.add("thunar")
+    if browser in ("zen-browser-bin", "firefox"):
+        optional_ids.add(browser)
+
+    # --- Stage 7: Review & Confirmation ---
+    tui.section("Installation Review", "Review your configuration before installing")
+
     summary_lines = [
         f"Profile: {profile.capitalize()}",
-        f"Terminal: {terminal}" + (f" (+ {', '.join(extra_terminals)})" if extra_terminals else ""),
-        f"File manager: {file_manager}",
-        f"Login screen: {greeter if greeter != 'none' else 'TTY (no greeter)'}",
-        f"Theming: GTK 3/4, Qt, Quickshell YAMIS monochrome icons",
-        f"Legacy swap: {legacy_swap}",
+        f"AUR helper: {aur_choice}" if family == "arch" else None,
+        f"Login shell: {'fish ($EDITOR=' + editor + ')' if fish else 'Current shell'}",
+        f"Config strategy: {'Fresh start (clean defaults)' if fresh_configs else 'Preserve existing'}",
+        f"Legacy cleanup: {'Clean swap (retire ghostty/cliphist)' if legacy_swap == 'clean' else 'Keep both'}",
+        f"Default terminal: {terminal}" + (f" (+ {', '.join(extra_terminals)})" if extra_terminals else ""),
+        f"Default editor: {editor}",
+        f"Default file manager: {file_manager}",
+        f"Default web browser: {browser}",
+        f"Default media player: {media_player}",
+        f"Login screen: {greeter.upper() if greeter != 'none' else 'TTY (no greeter)'}" + (f" ({sddm_theme})" if greeter == "sddm" else ""),
+        f"Keyboard layout: {kb_layout}",
+        f"Touchpad: {'Natural' if natural_scroll else 'Traditional'} scrolling, tap-to-click {'enabled' if tap_to_click else 'disabled'}",
+        f"Idle timeout: {idle_timeout}",
+        f"Theming: Spicetify ({'enabled' if spicetify else 'disabled'}), Browser live ({'enabled' if browser_theme else 'disabled'}), Chat ({'enabled' if chat_theme else 'disabled'})",
+        f"Optional packages: {len(optional_ids)} selected",
     ]
-    if family == "arch":
-        summary_lines.append(f"AUR helper: {aur_choice}")
-    if optional_ids:
-        summary_lines.append(f"Optional apps: {len(optional_ids)} selected")
-    ready = tui.confirm("Ready to install?", summary_lines)
+    summary_lines = [line for line in summary_lines if line is not None]
+    ready = tui.confirm("Ready to install with these settings?", summary_lines)
     if not ready:
         raise KeyboardInterrupt
 
     return {
         "profile": profile, "aur_choice": aur_choice, "optional_ids": optional_ids,
         "terminal": terminal, "extra_terminals": extra_terminals,
-        "file_manager": file_manager, "greeter": greeter,
-        "sddm_theme": sddm_theme,
-        "browser_theme": browser_theme, "fresh_configs": fresh_configs,
-        "legacy_swap": legacy_swap, "grub": grub, "fish": fish, "brave": brave,
+        "file_manager": file_manager, "editor": editor, "browser": browser,
+        "media_player": media_player, "greeter": greeter,
+        "sddm_theme": sddm_theme, "browser_theme": browser_theme,
+        "fresh_configs": fresh_configs, "legacy_swap": legacy_swap,
+        "grub": grub, "fish": fish, "brave": brave,
         "root_cmd": root_cmd, "overlays": overlays, "services": services,
+        "spicetify": spicetify, "chat_theme": chat_theme,
+        "kb_layout": kb_layout, "natural_scroll": natural_scroll,
+        "tap_to_click": tap_to_click, "idle_timeout": idle_timeout,
     }
 
 
@@ -377,6 +514,16 @@ def _choice_ids(choices):
         ids.add("sddm")
     elif choices.get("greeter") == "greetd":
         ids.update(("greetd", "greetd-tuigreet"))
+    if choices.get("editor") == "nvim":
+        ids.add("neovim")
+    elif choices.get("editor") == "micro":
+        ids.add("micro")
+    if choices.get("browser") in ("zen-browser-bin", "firefox"):
+        ids.add(choices["browser"])
+    if choices.get("media_player") == "mpv":
+        ids.add("mpv")
+    if choices.get("spicetify"):
+        ids.add("spicetify-cli")
     return ids
 
 
@@ -598,25 +745,39 @@ def _summary_lines(info, choices, plan, args, do_pkgs):
                 lines.append("Overlays skipped, install yourself: emerge -av "
                              + " ".join(plan["manual"]) + ".")
             lines.append("emerge compiles from source; this is the long part.")
-    if choices["file_manager"] != "none":
+    if choices.get("file_manager") and choices["file_manager"] != "none":
         lines.append(f"Install the {choices['file_manager']} file manager.")
     if cli_local(args.source):
         lines.append("Build the xiu CLI from this checkout.")
-    if choices["greeter"] == "sddm":
-        lines.append(f"Install the {choices.get('sddm_theme', 'torii')} SDDM login theme.")
-    elif choices["greeter"] == "greetd":
+    if choices.get("editor"):
+        lines.append(f"Default text editor: {choices['editor']}.")
+    if choices.get("browser") and choices["browser"] != "none":
+        lines.append(f"Default web browser: {choices['browser']}.")
+    if choices.get("media_player") and choices["media_player"] != "none":
+        lines.append(f"Default media player: {choices['media_player']}.")
+    if choices.get("greeter") == "sddm":
+        lines.append(f"Install the {choices.get('sddm_theme', 'washi')} SDDM login theme.")
+    elif choices.get("greeter") == "greetd":
         lines.append("Set up greetd with the tuigreet login.")
-    if choices["browser_theme"]:
+    if choices.get("kb_layout"):
+        lines.append(f"Keyboard layout: {choices['kb_layout']}.")
+    if choices.get("idle_timeout"):
+        lines.append(f"Idle lock screen timeout: {choices['idle_timeout']}.")
+    if choices.get("browser_theme"):
         lines.append("Wire the browsers into the palette (userChrome + live theme host).")
-    if choices["legacy_swap"] == "clean":
+    if choices.get("spicetify"):
+        lines.append("Spotify launcher themed via Spicetify and Marketplace.")
+    if choices.get("chat_theme"):
+        lines.append("Chat clients (Telegram/Vesktop) themed with xiu palette.")
+    if choices.get("legacy_swap") == "clean":
         lines.append("Remove ghostty and cliphist once foot and clipvault are in.")
-    if choices["fresh_configs"]:
+    if choices.get("fresh_configs"):
         lines.append("Start from the repo's config defaults (your old files are still backed up).")
-    if choices["grub"]:
+    if choices.get("grub"):
         lines.append("Install the GRUB theme.")
-    if choices["brave"]:
+    if choices.get("brave") and choices.get("browser") != "brave":
         lines.append("Install Brave with the matching xiu theme.")
-    if choices["fish"]:
+    if choices.get("fish"):
         lines.append("Set fish as your login shell.")
     if _is_update(info):
         lines.append("Update the xiu config; your Settings are kept.")
@@ -1591,15 +1752,7 @@ def run(args):
     plan = _build_plan(manifest, info, choices, cli_local(args.source))
 
     summary = _summary_lines(info, choices, plan, args, do_pkgs)
-    if args.quickstart:
-        tui.info(summary)
-    else:
-        try:
-            if not tui.confirm("Ready", summary):
-                tui.outro("Cancelled")
-                return 0
-        except RuntimeError:
-            tui.info(summary)
+    tui.info(summary)
 
     failures, notes = [], []
 

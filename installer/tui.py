@@ -232,6 +232,8 @@ def _menu_block(title, options, idx, checked, multi, width):
             if recommended:
                 segments += [("", "   "), (GREEN, "(Recommended)")]
         lines.append(_gutter(segments, width))
+    if multi:
+        lines.append(_gutter([(FAINT, "Space toggles · Enter confirms")], width))
     lines.append(_bottom(width))
     return lines
 
@@ -287,6 +289,23 @@ def detected(rows):
     out = [_header(DONE, FAINT, "Detected", CREAM, width)]
     for label, value, _ in rows:
         out.append(_gutter([(DIM, label.ljust(pad) + "   "), (CREAM, value)], width))
+    out.append(_spacer(width))
+    _write("\n".join(out) + "\n")
+
+
+def section(title, subtitle=None):
+    """
+    Print an organized section header with an ember marker and quiet gutter,
+    visually organizing the installer steps into coherent categories.
+    """
+    width = _width()
+    out = [
+        _header("◈", FLAME, title.upper(), BRIGHT, width),
+    ]
+    if subtitle:
+        inner = max(8, width - 5)
+        for piece in _wrap(subtitle, inner):
+            out.append(_gutter([(DIM, piece)], width))
     out.append(_spacer(width))
     _write("\n".join(out) + "\n")
 
