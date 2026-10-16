@@ -1551,6 +1551,18 @@ def _selftest():
         check(PRESERVED == engine.PROTECTED,
               "PRESERVED matches the update engine's PROTECTED list")
 
+    # 12. drift guard: nix/deploy-set.nix mirrors DEPLOY_SET and PRESERVED so NixOS
+    # never falls behind deploy changes.
+    nix_deploy = REPO_ROOT / "nix" / "deploy-set.nix"
+    if nix_deploy.exists():
+        txt = nix_deploy.read_text()
+        for name, src, dest in DEPLOY_SET:
+            check(f'name = "{name}";' in txt and f'dest = "{dest}";' in txt,
+                  f"nix/deploy-set.nix carries DEPLOY_SET entry '{name}' -> '{dest}'")
+        for p in PRESERVED:
+            check(f'"{p}"' in txt,
+                  f"nix/deploy-set.nix neverLink carries PRESERVED entry '{p}'")
+
     print(f"\n:: all {passed} checks passed")
     return 0
 

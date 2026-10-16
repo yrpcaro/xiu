@@ -1753,6 +1753,9 @@ def run(args):
     if not args.no_deps and not do_pkgs:
         if info["immutable"]:
             why = "This system has a read-only root, so no packages can be installed."
+        elif "nixos" in info.get("pretty", "").lower() or (info.get("family") == "unknown" and Path("/etc/NIXOS").exists()):
+            why = ("NixOS is managed declaratively. To configure xiu on NixOS, "
+                   "use the NixOS system module (nix/nixos.nix) or home-manager module (nix/home-manager.nix).")
         else:
             why = (f"{info['pretty']} is not a supported distro family "
                    "(arch, debian, fedora, suse or gentoo), so no packages will be installed.")

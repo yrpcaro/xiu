@@ -171,8 +171,64 @@ curl -fsSL https://raw.githubusercontent.com/yrpcaro/xiu/main/install.sh | bash
 --uninstall     Cleanly remove deployed configurations and binaries
 ```
 
-### NixOS (Home-Manager)
-For NixOS users managing their configuration with `home-manager`:
+### NixOS (Declarative Configuration)
+
+xiu provides full declarative NixOS configuration compatibility matching the repository Quick Setup defaults:
+- **Terminal**: `foot`
+- **Login shell**: `fish` with `$EDITOR=helix`
+- **Editor**: `helix`
+- **File manager**: `dolphin` (with full `yazi` companion suite)
+- **Browser**: `brave`
+- **Media player**: `mpv`
+- **Greeter**: Direct TTY login (`none`) with Hyprland session (and optional SDDM with `washi` theme)
+- **Keyboard layout**: `us,ir` with option `grp:alt_shift_toggle` and variant `,winkeys`
+- **Touchpad**: `natural_scroll = true`, `tap_to_click = true`
+- **Idle timeout**: 5m screen lock, 6m display off
+- **Theming & Integrations**: Spicetify enabled, Telegram xiu theme enabled, GTK 3/4 & Qt Darkly styling
+
+#### Option 1: NixOS System Module
+
+Import `nix/nixos.nix` in your `/etc/nixos/configuration.nix`:
+
+```nix
+imports = [ /path/to/xiu/nix/nixos.nix ];
+
+programs.xiu = {
+  enable = true;
+  defaultApps = {
+    terminal = "foot";
+    editor = "helix";
+    fileManager = "dolphin";
+    browser = "brave";
+    mediaPlayer = "mpv";
+  };
+  greeter = "none"; # direct TTY login (none); or "sddm"
+  sddmTheme = "washi";
+  keyboardLayout = {
+    layout = "us,ir";
+    options = "grp:alt_shift_toggle";
+    variant = ",winkeys";
+  };
+  touchpad = {
+    naturalScroll = true;
+    tapToClick = true;
+  };
+  idle = {
+    lockTimeout = 300; # 5m lock screen
+    dpmsTimeout = 360; # 6m display off
+  };
+  yaziSuite.enable = true;
+  spicetify.enable = true;
+  telegram.enable = true;
+  theming.enable = true;
+};
+```
+
+Or use the standalone declarative template at [nix/configuration.nix](file:///home/xiu/xiu/nix/configuration.nix).
+
+#### Option 2: Home-Manager Module
+
+For Home-Manager users managing desktop configurations:
 
 ```nix
 imports = [ /path/to/xiu/nix/home-manager.nix ];
@@ -181,6 +237,28 @@ programs.xiu = {
   enable = true;
   repo = /path/to/xiu;
 };
+```
+
+#### Option 3: Nix Flake
+
+Import the flake modules directly:
+
+```nix
+{
+  inputs.xiu.url = "github:yrpcaro/xiu";
+
+  outputs = { self, nixpkgs, xiu, ... }: {
+    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        xiu.nixosModules.default
+        {
+          programs.xiu.enable = true;
+        }
+      ];
+    };
+  };
+}
 ```
 
 ---
@@ -204,6 +282,7 @@ xiu/
 │   ├── portals/                # XDG desktop portal configurations
 │   └── xdg-desktop-portal-termfilechooser/ # Terminal file picker configuration
 ├── installer/                  # Python installer, distro abstraction, and deployer
+├── nix/                        # Declarative NixOS system module, home-manager, and deploy-set
 └── tests/                      # Multi-suite automated test harnesses
 ```
 
@@ -214,7 +293,7 @@ xiu/
 xiu includes a comprehensive test suite across the Rust CLI, Python deployment scripts, and JavaScript/QML modules:
 
 ```sh
-# Run full 14-suite verification
+# Run full 15-suite verification
 (cd cli && cargo test --quiet) && \
 python3 configs/hypr/scripts/test_default_apps.py && \
 python3 configs/hypr/scripts/test_wallcolors.py && \
@@ -224,6 +303,8 @@ bash configs/hypr/scripts/test_launch_guard.sh && \
 python3 installer/fallbacks.py && \
 python3 installer/deploy.py && \
 python3 installer/distro.py && \
+python3 installer/test_wizard.py && \
+python3 nix/test_nix.py && \
 node configs/quickshell/launcher/lib/fuzzy.test.mjs && \
 node configs/quickshell/pill/lib/keychord.test.mjs && \
 node configs/quickshell/pill/lib/monitors.test.mjs && \

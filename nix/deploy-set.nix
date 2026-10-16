@@ -10,14 +10,16 @@
 
 let
   # The same entries deploy.py ships: most land as whole dirs, the KDE
-  # globals and the session target are single files that sit at a different
-  # path than their source, the portal config targets xdg-desktop-portal's
-  # dir, and the browser integration parks under xiu's own config dir.
+  # globals, the session target, and clipboard-cleanup service are single files
+  # that sit at a different path than their source, the portal configs target
+  # xdg-desktop-portal directories, and the browser integration parks under
+  # xiu's own config dir.
   deploySet = [
     { name = "hypr"; src = "hypr"; dest = "hypr"; }
     { name = "quickshell"; src = "quickshell"; dest = "quickshell"; }
     { name = "ghostty"; src = "ghostty"; dest = "ghostty"; }
     { name = "foot"; src = "foot"; dest = "foot"; }
+    { name = "alacritty"; src = "alacritty"; dest = "alacritty"; }
     { name = "fish"; src = "fish"; dest = "fish"; }
     { name = "fastfetch"; src = "fastfetch"; dest = "fastfetch"; }
     { name = "btop"; src = "btop"; dest = "btop"; }
@@ -29,12 +31,19 @@ let
     { name = "helix"; src = "helix"; dest = "helix"; }
     { name = "bottom"; src = "bottom"; dest = "bottom"; }
     { name = "yazi"; src = "yazi"; dest = "yazi"; }
+    { name = "zathura"; src = "zathura"; dest = "zathura"; }
+    { name = "tealdeer"; src = "tealdeer"; dest = "tealdeer"; }
+    { name = "navi"; src = "navi"; dest = "navi"; }
+    { name = "surge"; src = "surge"; dest = "surge"; }
+    { name = "mangofetch"; src = "mangofetch"; dest = "mangofetch"; }
     { name = "mpv"; src = "mpv"; dest = "mpv"; }
     { name = "portals"; src = "portals"; dest = "xdg-desktop-portal"; }
+    { name = "termfilechooser"; src = "xdg-desktop-portal-termfilechooser"; dest = "xdg-desktop-portal-termfilechooser"; }
     { name = "uwsm"; src = "uwsm"; dest = "uwsm"; }
     { name = "browser"; src = "browser-integration"; dest = "xiu/browser-integration"; }
     { name = "kdeglobals"; src = "kde/kdeglobals"; dest = "kdeglobals"; file = true; }
     { name = "session"; src = "systemd/user/hyprland-session.target"; dest = "systemd/user/hyprland-session.target"; file = true; }
+    { name = "clipboard-cleanup"; src = "systemd/user/xiu-clipboard-cleanup.service"; dest = "systemd/user/xiu-clipboard-cleanup.service"; file = true; }
   ];
 
   # Files the rice treats as user-owned (deploy.py's PRESERVED plus the
@@ -52,7 +61,6 @@ let
     "hypr/modules/stash-apps.lua"
     "hypr/modules/spaces.lua"
     "hypr/hypridle.conf"
-    "fish/config.fish"
   ];
 
   # Dev cruft that never deploys (the same ignores as deploy.py's _copy).
