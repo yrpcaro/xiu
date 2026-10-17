@@ -24,6 +24,7 @@ SettingsSurface {
     backSurface: "settings"
     implicitHeight: content.implicitHeight
 
+    property int mimeRevision: 0
     readonly property string mimeappsPath: Quickshell.env("HOME") + "/.config/mimeapps.list"
     /** One representative mime per category — the one xdg-mime asks about. */
     readonly property var categories: [
@@ -120,6 +121,7 @@ SettingsSurface {
 
     /** Reads the current handler for one category's representative mime. */
     function handlerFor(key) {
+        var _rev = root.mimeRevision;
         var lines = mimeFile.text().split("\n");
         var inDefaults = false;
         for (var i = 0; i < lines.length; i++) {
@@ -139,17 +141,80 @@ SettingsSurface {
         return "";
     }
 
-    /** A display name from a .desktop id — the basename, cleaned. */
+    /** A display name from a .desktop id — cleaned and formatted. */
     function desktopLabel(id) {
+        var map = {
+            "xiu-yazi.desktop": "Yazi",
+            "yazi.desktop": "Yazi",
+            "org.kde.dolphin.desktop": "Dolphin",
+            "thunar.desktop": "Thunar",
+            "nautilus.desktop": "Nautilus",
+            "org.gnome.Nautilus.desktop": "Nautilus",
+            "imv.desktop": "Imv",
+            "imv-dir.desktop": "Imv",
+            "org.gnome.Loupe.desktop": "Loupe",
+            "feh.desktop": "Feh",
+            "org.kde.gwenview.desktop": "Gwenview",
+            "viewnior.desktop": "Viewnior",
+            "org.pwmt.zathura.desktop": "Zathura",
+            "org.pwmt.zathura-pdf-mupdf.desktop": "Zathura",
+            "org.gnome.Papers.desktop": "Papers",
+            "org.kde.okular.desktop": "Okular",
+            "okularApplication_pdf.desktop": "Okular",
+            "evince.desktop": "Evince",
+            "brave-browser.desktop": "Brave",
+            "firefox.desktop": "Firefox",
+            "chromium.desktop": "Chromium",
+            "google-chrome.desktop": "Chrome",
+            "zen.desktop": "Zen",
+            "zen-browser.desktop": "Zen",
+            "zen-browser-bin.desktop": "Zen",
+            "foot.desktop": "Foot",
+            "footclient.desktop": "Foot Client",
+            "ghostty.desktop": "Ghostty",
+            "com.mitchellh.ghostty.desktop": "Ghostty",
+            "alacritty.desktop": "Alacritty",
+            "Alacritty.desktop": "Alacritty",
+            "kitty.desktop": "Kitty",
+            "org.wezfurlong.wezterm.desktop": "WezTerm",
+            "wezterm.desktop": "WezTerm",
+            "org.kde.konsole.desktop": "Konsole",
+            "helix.desktop": "Helix",
+            "Helix.desktop": "Helix",
+            "code.desktop": "VS Code",
+            "visual-studio-code.desktop": "VS Code",
+            "code-oss.desktop": "Code OSS",
+            "dev.zed.Zed.desktop": "Zed",
+            "zed.desktop": "Zed",
+            "neovim.desktop": "Neovim",
+            "nvim.desktop": "Neovim",
+            "micro.desktop": "Micro",
+            "nano.desktop": "Nano",
+            "gedit.desktop": "Gedit",
+            "kate.desktop": "Kate",
+            "org.kde.kate.desktop": "Kate",
+            "org.gnome.TextEditor.desktop": "Text Editor",
+            "spotify.desktop": "Spotify",
+            "spotify-launcher.desktop": "Spotify",
+            "amberol.desktop": "Amberol",
+            "io.bassi.Amberol.desktop": "Amberol",
+            "org.gnome.Lollypop.desktop": "Lollypop",
+            "rhythmbox.desktop": "Rhythmbox",
+            "clementine.desktop": "Clementine",
+            "mpv.desktop": "MPV",
+            "vlc.desktop": "VLC",
+            "org.gnome.Totem.desktop": "Videos",
+            "io.github.celluloid_player.Celluloid.desktop": "Celluloid"
+        };
+        if (map[id]) return map[id];
         var base = id.replace(/\.desktop$/, "");
         var short = base.split(".").pop();
+        if (short.indexOf("xiu-") === 0) short = short.slice(4);
         return short.charAt(0).toUpperCase() + short.slice(1);
     }
 
-    /** Applies one category's pick through xdg-mime and xiu default-app, then re-reads. */
+    /** Applies one category's pick through xiu default-app, then re-reads. */
     function apply(cat, desktopId) {
-        for (var i = 0; i < cat.mimes.length; i++)
-            xdgProc.run(cat.mimes[i], desktopId);
         syncVarsProc.run(cat.key, desktopId);
     }
 
@@ -169,6 +234,7 @@ SettingsSurface {
         }
         onExited: {
             mimeFile.reload();
+            root.mimeRevision++;
             if (queue.length > 0)
                 pump();
         }
@@ -179,7 +245,10 @@ SettingsSurface {
         path: root.mimeappsPath
         blockLoading: true
         printErrors: false
-        onFileChanged: reload()
+        onFileChanged: {
+            reload();
+            root.mimeRevision++;
+        }
     }
 
     /**
@@ -205,34 +274,10 @@ SettingsSurface {
                     out.push(l.slice(0, c));
             }
             desktopProc.exists = out;
+            mimeFile.reload();
+            root.mimeRevision++;
         }
         Component.onCompleted: running = true
-    }
-
-    /**
-     * xdg-mime default runner: queued so a multi-mime category applies in
-     * order, and a final mimeapps re-read lands after the last write.
-     */
-    Process {
-        id: xdgProc
-        property var queue: []
-        function run(mime, desktopId) {
-            queue.push([mime, desktopId]);
-            pump();
-        }
-        function pump() {
-            if (running || queue.length === 0)
-                return;
-            var next = queue.shift();
-            command = ["xdg-mime", "default", next[1], next[0]];
-            running = true;
-        }
-        onExited: {
-            if (queue.length === 0)
-                mimeFile.reload();
-            else
-                pump();
-        }
     }
 
     Column {

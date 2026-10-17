@@ -113,6 +113,27 @@ pub fn config_file(parts: &[&str]) -> std::path::PathBuf {
     path
 }
 
+pub fn atomic_write(path: &std::path::Path, content: &str) -> Result<(), std::io::Error> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let pid = std::process::id();
+    let rand: u64 = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0);
+    let tmp_file_name = format!(
+        ".{}.{}-{}.tmp",
+        path.file_name().and_then(|n| n.to_str()).unwrap_or("tmp"),
+        pid,
+        rand
+    );
+    let tmp_path = path.with_file_name(tmp_file_name);
+    std::fs::write(&tmp_path, content)?;
+    std::fs::rename(&tmp_path, path)?;
+    Ok(())
+}
+
 
 #[cfg(test)]
 mod tests {

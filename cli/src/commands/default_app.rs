@@ -8,8 +8,8 @@
 //! - KDE (kdeglobals and kwriteconfig6)
 //! - GNOME (gio and gsettings)
 
-use crate::helpers::{config_file, home_path, on_path};
-use std::collections::HashSet;
+use crate::helpers::{atomic_write, config_file, home_path, on_path};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -257,7 +257,9 @@ pub const WELL_KNOWN: &[(&str, &str)] = &[
     ("org.pwmt.zathura-pdf-mupdf.desktop", "zathura"),
     ("org.gnome.Papers.desktop", "papers"),
     ("org.kde.okular.desktop", "okular"),
+    ("okularApplication_pdf.desktop", "okular"),
     ("evince.desktop", "evince"),
+    ("yazi.desktop", "yazi"),
 ];
 
 pub fn resolve_cmd(desktop_id: &str) -> String {
@@ -366,7 +368,7 @@ pub fn update_vars_file(var_name: &str, cmd: &str, path: Option<&Path>) -> Resul
         let content = format!(
             "-- xiu personalization overrides\nreturn {{\n    {var_name} = \"{cmd}\",\n}}\n"
         );
-        return fs::write(&p, content);
+        return atomic_write(&p, &content);
     }
 
     let text = fs::read_to_string(&p)?;
@@ -403,7 +405,7 @@ pub fn update_vars_file(var_name: &str, cmd: &str, path: Option<&Path>) -> Resul
         }
     }
 
-    fs::write(&p, new_text)
+    atomic_write(&p, &new_text)
 }
 
 pub fn update_mimeapps_file(
@@ -421,7 +423,7 @@ pub fn update_mimeapps_file(
     }
 
     let text = if p.is_file() {
-        fs::read_to_string(&p)?
+        fs::read_to_string(&p).unwrap_or_default()
     } else {
         String::new()
     };
@@ -471,6 +473,31 @@ pub fn update_mimeapps_file(
         default_lines.push(format!("{mime}={desktop_id}"));
     }
 
+    // Also update [Added Associations] if present
+    let added_assoc_idx = sections.iter().position(|(s, _)| s == "Added Associations");
+    if let Some(idx) = added_assoc_idx {
+        let (_, added_lines) = &mut sections[idx];
+        let mut added_mimes: HashSet<&str> = mimes.iter().copied().collect();
+        for line in added_lines.iter_mut() {
+            let key_match = {
+                let trimmed = line.trim();
+                trimmed.split_once('=').map(|(k, _)| k.trim().to_string())
+            };
+            if let Some(key) = key_match {
+                if added_mimes.contains(key.as_str()) {
+                    let did_semi = format!("{desktop_id};");
+                    if !line.contains(&did_semi) {
+                        *line = format!("{key}={did_semi}");
+                    }
+                    added_mimes.remove(key.as_str());
+                }
+            }
+        }
+        for mime in added_mimes {
+            added_lines.push(format!("{mime}={desktop_id};"));
+        }
+    }
+
     let mut out = String::new();
     for (sec, lines) in &sections {
         out.push_str(&format!("[{sec}]\n"));
@@ -480,14 +507,7 @@ pub fn update_mimeapps_file(
         }
     }
 
-    fs::write(&p, out)?;
-
-    if path.is_none() {
-        for mime in mimes {
-            let _ = Command::new("xdg-mime").args(["default", desktop_id, mime]).status();
-            let _ = Command::new("gio").args(["mime", mime, desktop_id]).status();
-        }
-    }
+    atomic_write(&p, &out)?;
 
     Ok(())
 }
@@ -525,7 +545,7 @@ pub fn update_key_value_file(path: &Path, key: &str, value: &str) -> Result<(), 
 
     let mut out = lines.join("\n");
     out.push('\n');
-    fs::write(path, out)
+    atomic_write(path, &out)
 }
 
 pub fn update_kdeglobals_file(
@@ -544,7 +564,7 @@ pub fn update_kdeglobals_file(
     }
 
     let text = if p.is_file() {
-        fs::read_to_string(&p)?
+        fs::read_to_string(&p).unwrap_or_default()
     } else {
         String::new()
     };
@@ -602,7 +622,7 @@ pub fn update_kdeglobals_file(
         }
     }
 
-    fs::write(&p, out)?;
+    atomic_write(&p, &out)?;
 
     if path.is_none() {
         let _ = Command::new("kwriteconfig6")
@@ -672,7 +692,7 @@ pub fn update_portal_config_file(backend: &str, path: &Path) -> Result<(), std::
 
     let mut out = lines.join("\n");
     out.push('\n');
-    fs::write(path, out)
+    atomic_write(path, &out)
 }
 
 pub fn update_portal_file_chooser(
@@ -735,8 +755,8 @@ pub fn update_termfilechooser_configs(
         "[filechooser]\ncmd=xiu yazi-chooser\ndefault_dir={home}\nenv=TERMCMD={term}\n"
     );
 
-    fs::write(cfg_dir.join("config.toml"), &content)?;
-    fs::write(cfg_dir.join("config"), &content)?;
+    atomic_write(&cfg_dir.join("config.toml"), &content)?;
+    atomic_write(&cfg_dir.join("config"), &content)?;
     Ok(())
 }
 
@@ -753,7 +773,7 @@ pub fn ensure_xiu_yazi_desktop(term: &str, custom_dir: Option<&Path>) -> Result<
     let content = format!(
         "[Desktop Entry]\nType=Application\nName=Yazi (xiu)\nIcon=yazi\nComment=The file manager in {term}, xiu's terminal\nTryExec={term}\nExec={term} -e yazi %f\nMimeType=inode/directory;\nCategories=System;FileManager;FileTools;\nKeywords=File;Manager;Explorer;\n"
     );
-    fs::write(dest, content)?;
+    atomic_write(&dest, &content)?;
     Ok(())
 }
 
@@ -801,7 +821,7 @@ pub fn update_fish_editor(cmd: &str, custom_fish_dir: Option<&Path>) -> Result<(
     let content = format!(
         "# Configured by xiu default-app\nset -gx EDITOR {cmd}\nset -gx VISUAL {cmd}\nif not type -q editor; and type -q {cmd}\n    alias editor {cmd}\nend\n"
     );
-    fs::write(p, content)?;
+    atomic_write(&p, &content)?;
 
     if custom_fish_dir.is_none() {
         let _ = Command::new("fish")
@@ -825,15 +845,55 @@ pub fn update_fish_default_apps(
     fs::create_dir_all(&conf_d)?;
     let p = conf_d.join("00-default-apps.fish");
 
-    let mut lines = vec!["# Configured by xiu default-app".to_string()];
+    let text = if p.is_file() {
+        fs::read_to_string(&p).unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let mut lines = Vec::new();
+    let mut term_set = false;
+    let mut browser_set = false;
+
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("set -gx TERMINAL ") {
+            if let Some(t) = terminal {
+                lines.push(format!("set -gx TERMINAL {t}"));
+            } else {
+                lines.push(line.to_string());
+            }
+            term_set = true;
+        } else if trimmed.starts_with("set -gx BROWSER ") {
+            if let Some(b) = browser {
+                lines.push(format!("set -gx BROWSER {b}"));
+            } else {
+                lines.push(line.to_string());
+            }
+            browser_set = true;
+        } else if !trimmed.is_empty() {
+            lines.push(line.to_string());
+        }
+    }
+
+    if lines.is_empty() {
+        lines.push("# Configured by xiu default-app".to_string());
+    }
+
     if let Some(t) = terminal {
-        lines.push(format!("set -gx TERMINAL {t}"));
+        if !term_set {
+            lines.push(format!("set -gx TERMINAL {t}"));
+        }
     }
     if let Some(b) = browser {
-        lines.push(format!("set -gx BROWSER {b}"));
+        if !browser_set {
+            lines.push(format!("set -gx BROWSER {b}"));
+        }
     }
-    lines.push(String::new());
-    fs::write(&p, lines.join("\n"))?;
+
+    let mut out = lines.join("\n");
+    out.push('\n');
+    atomic_write(&p, &out)?;
 
     if custom_fish_dir.is_none() {
         let mut cmds = Vec::new();
@@ -924,6 +984,93 @@ pub fn probe_desktop_entries(dirs: Option<&[PathBuf]>) -> Vec<String> {
     entries
 }
 
+pub fn read_vars_lua(custom_config_dir: Option<&Path>) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    let candidates = match custom_config_dir {
+        Some(dir) => vec![dir.join("xiu").join("vars.lua"), dir.join("hypr").join("modules").join("vars.lua")],
+        None => vec![
+            config_file(&["xiu", "vars.lua"]),
+            config_file(&["hypr", "modules", "vars.lua"]),
+        ],
+    };
+
+    for path in candidates {
+        if path.is_file() {
+            if let Ok(content) = fs::read_to_string(&path) {
+                for line in content.lines() {
+                    let trimmed = line.trim();
+                    if trimmed.starts_with("--") {
+                        continue;
+                    }
+                    if let Some((k, v)) = trimmed.split_once('=') {
+                        let key = k.trim().trim_matches(|c| c == '"' || c == '\'');
+                        let val = v.trim().trim_matches(|c| c == '"' || c == ',' || c == '\'');
+                        if !key.is_empty() && !val.is_empty() && !map.contains_key(key) {
+                            map.insert(key.to_string(), val.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    map
+}
+
+pub fn sync_mimeapps_from_vars(custom_config_dir: Option<&Path>) -> Result<(), std::io::Error> {
+    let vars = read_vars_lua(custom_config_dir);
+    let p = match custom_config_dir {
+        Some(dir) => dir.join("mimeapps.list"),
+        None => config_file(&["mimeapps.list"]),
+    };
+
+    let text = if p.is_file() {
+        fs::read_to_string(&p).unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let categories_to_check: &[(&str, &[&str], &str)] = &[
+        ("browser", MIMES_BROWSER, "brave"),
+        ("terminal", MIMES_TERMINAL, "foot"),
+        ("editor", MIMES_EDITOR, "helix"),
+        ("fileManager", MIMES_FILE_MANAGER, "dolphin"),
+        ("imageViewer", MIMES_IMAGE_VIEWER, "imv"),
+        ("documentViewer", MIMES_DOCUMENT_VIEWER, "zathura"),
+        ("musicPlayer", MIMES_MUSIC_PLAYER, "spotify-launcher"),
+        ("videoPlayer", MIMES_VIDEO_PLAYER, "mpv"),
+    ];
+
+    for (var_key, mimes, default_app) in categories_to_check {
+        let rep_mime = mimes[0];
+        let missing = !text.lines().any(|l| {
+            let t = l.trim();
+            t.starts_with(rep_mime) && t.split_once('=').map(|(k, _)| k.trim() == rep_mime).unwrap_or(false)
+        });
+
+        if missing {
+            let raw_val = vars.get(*var_key).map(|s| s.as_str()).unwrap_or(*default_app);
+            let clean_cmd = if raw_val.contains("-e ") {
+                raw_val.split_whitespace().last().unwrap_or(raw_val)
+            } else {
+                raw_val
+            };
+            let did = resolve_desktop_id(clean_cmd);
+            let _ = update_mimeapps_file(mimes, &did, Some(&p));
+        }
+    }
+
+    Ok(())
+}
+
+fn set_session_env(var: &str, val: &str) {
+    let _ = Command::new("systemctl")
+        .args(["--user", "set-environment", &format!("{var}={val}")])
+        .status();
+    let _ = Command::new("dbus-update-activation-environment")
+        .args(["--systemd", &format!("{var}={val}")])
+        .status();
+}
+
 pub fn default_app(probe: bool, category: Option<&str>, desktop_id: Option<&str>) -> i32 {
     let is_probe = probe
         || matches!(
@@ -932,14 +1079,22 @@ pub fn default_app(probe: bool, category: Option<&str>, desktop_id: Option<&str>
         );
 
     if is_probe {
+        let _ = sync_mimeapps_from_vars(None);
         for line in probe_desktop_entries(None) {
             println!("{line}");
         }
         return 0;
     }
 
+    let is_sync = matches!(category, Some("--sync") | Some("-s") | Some("sync"));
+    if is_sync {
+        let _ = sync_mimeapps_from_vars(None);
+        println!("Synchronized default applications from vars.lua to mimeapps.list and environment");
+        return 0;
+    }
+
     let (Some(cat), Some(did)) = (category, desktop_id) else {
-        eprintln!("xiu default-app: usage: xiu default-app [--probe] [category] [desktop_id]");
+        eprintln!("xiu default-app: usage: xiu default-app [--probe] [--sync] [category] [desktop_id]");
         return 1;
     };
 
@@ -974,8 +1129,8 @@ pub fn default_app(probe: bool, category: Option<&str>, desktop_id: Option<&str>
 
             let _ = update_fish_editor(&cmd, None);
             let _ = update_kdeglobals_file("General", "Editor", &cmd, None);
-            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("EDITOR,{cmd}")]).status();
-            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("VISUAL,{cmd}")]).status();
+            set_session_env("EDITOR", &cmd);
+            set_session_env("VISUAL", &cmd);
         }
         "fileManager" => {
             let _ = update_portal_file_chooser(&cmd, did, None);
@@ -998,7 +1153,7 @@ pub fn default_app(probe: bool, category: Option<&str>, desktop_id: Option<&str>
             let _ = Command::new("gsettings")
                 .args(["set", "org.gnome.desktop.default-applications.terminal", "exec-arg", "-e"])
                 .status();
-            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("TERMINAL,{cmd}")]).status();
+            set_session_env("TERMINAL", &cmd);
         }
         "browser" => {
             let _ = update_key_value_file(&uwsm_env, "BROWSER", &cmd);
@@ -1006,31 +1161,31 @@ pub fn default_app(probe: bool, category: Option<&str>, desktop_id: Option<&str>
 
             let _ = update_fish_default_apps(None, Some(&cmd), None);
             let _ = update_kdeglobals_file("General", "BrowserApplication", did, None);
-            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("BROWSER,{cmd}")]).status();
+            set_session_env("BROWSER", &cmd);
         }
         "imageViewer" => {
             let _ = update_key_value_file(&uwsm_env, "IMAGEVIEWER", &cmd);
             let _ = update_key_value_file(&env_d_apps, "IMAGEVIEWER", &cmd);
             let _ = update_kdeglobals_file("General", "ImageViewer", &cmd, None);
-            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("IMAGEVIEWER,{cmd}")]).status();
+            set_session_env("IMAGEVIEWER", &cmd);
         }
         "documentViewer" => {
             let _ = update_key_value_file(&uwsm_env, "PDFVIEWER", &cmd);
             let _ = update_key_value_file(&env_d_apps, "PDFVIEWER", &cmd);
             let _ = update_kdeglobals_file("General", "DocumentViewer", &cmd, None);
-            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("PDFVIEWER,{cmd}")]).status();
+            set_session_env("PDFVIEWER", &cmd);
         }
         "videoPlayer" => {
             let _ = update_key_value_file(&uwsm_env, "VIDEOPLAYER", &cmd);
             let _ = update_key_value_file(&env_d_apps, "VIDEOPLAYER", &cmd);
             let _ = update_kdeglobals_file("General", "VideoPlayer", &cmd, None);
-            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("VIDEOPLAYER,{cmd}")]).status();
+            set_session_env("VIDEOPLAYER", &cmd);
         }
         "musicPlayer" => {
             let _ = update_key_value_file(&uwsm_env, "MUSICPLAYER", &cmd);
             let _ = update_key_value_file(&env_d_apps, "MUSICPLAYER", &cmd);
             let _ = update_kdeglobals_file("General", "MusicPlayer", &cmd, None);
-            let _ = Command::new("hyprctl").args(["keyword", "env", &format!("MUSICPLAYER,{cmd}")]).status();
+            set_session_env("MUSICPLAYER", &cmd);
         }
         _ => {}
     }
