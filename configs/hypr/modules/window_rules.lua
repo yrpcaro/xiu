@@ -64,6 +64,39 @@ hl.window_rule({
 })
 
 hl.window_rule({
+    name   = "float-dolphin-properties",
+    match  = { class = "org.kde.dolphin", title = "^Properties.*" },
+    float  = true,
+    size   = { 500, 640 },
+    center = true,
+})
+
+hl.window_rule({
+    name   = "float-dolphin-progress",
+    match  = { class = "org.kde.dolphin", title = "^(Copying|Moving|Deleting|Delete|File Operations|Progress).*" },
+    float  = true,
+    size   = { 520, 260 },
+    center = true,
+})
+
+hl.window_rule({
+    name   = "float-dolphin-configure",
+    match  = { class = "org.kde.dolphin", title = "^Configure.*" },
+    float  = true,
+    size   = { 896, 684 },
+    center = true,
+})
+
+hl.window_rule({
+    name   = "float-dolphin-dialogs",
+    match  = { class = "org.kde.dolphin", title = "^(Create New|New Folder|Rename|Confirm|Overwrite|Information|Warning|Error|Open With|Choose Application|Add Bookmark).*" },
+    float  = true,
+    size   = { 600, 245 },
+    center = true,
+})
+
+
+hl.window_rule({
     name   = "float-ripdrag",
     match  = { class = "(ripdrag|.*ripdrag.*)" },
     float  = true,
