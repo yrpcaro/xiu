@@ -18,15 +18,25 @@ hl.window_rule({
 })
 
 hl.window_rule({
-    name  = "float-system-dialogs",
-    match = { class = "(pavucontrol|nm-connection-editor|blueman-manager|org.kde.polkit-kde-authentication-agent-1|xdg-desktop-portal-gtk)" },
-    float = true,
+    name   = "float-system-dialogs",
+    match  = { class = "(pavucontrol|nm-connection-editor|blueman-manager|org.kde.polkit-kde-authentication-agent-1|xdg-desktop-portal-.*|org\\.freedesktop\\.impl\\.portal\\.desktop\\..*|kdialog|org\\.kde\\.kdialog|[Zz]enity|[Yy]ad)" },
+    float  = true,
+    center = true,
 })
 
 hl.window_rule({
-    name  = "float-file-pickers",
-    match = { title = "(Open File|Save File|Save As|Choose Files|Open Folder|File Chooser)" },
-    float = true,
+    name   = "float-portal-kde",
+    match  = { class = "org.freedesktop.impl.portal.desktop.kde" },
+    float  = true,
+    size   = { 1200, 750 },
+    center = true,
+})
+
+hl.window_rule({
+    name   = "float-file-pickers",
+    match  = { title = "(Open File|Save File|Save As|Choose Files|Choose File|Open Folder|Open Directory|Select File|Select Files|Select Folder|Select Directory|Select a File|Select a Folder|File Chooser|File Upload|Upload File|Choose Files to Upload|Select Files to Upload|Select File to Upload|Browse.*|Choose Directory|Import File|Export File|All Files)" },
+    float  = true,
+    center = true,
 })
 
 hl.window_rule({
@@ -55,25 +65,26 @@ hl.window_rule({
     float = true,
 })
 
+-- GUI File Managers (Dolphin, Thunar, Nautilus, Nemo, PCManFM, Caja, Krusader)
 hl.window_rule({
-    name   = "float-dolphin",
-    match  = { class = "org.kde.dolphin" },
+    name   = "float-file-managers",
+    match  = { class = "(org.kde.dolphin|[Tt]hunar|org.gnome.Nautilus|[Nn]autilus|[Nn]emo|[Pp]cmanfm|[Pp]cmanfm-qt|[Cc]aja|krusader|org.kde.krusader)" },
     float  = true,
     size   = { 1500, 850 },
     center = true,
 })
 
 hl.window_rule({
-    name   = "float-dolphin-properties",
-    match  = { class = "org.kde.dolphin", title = "^Properties.*" },
+    name   = "float-file-managers-properties",
+    match  = { class = "(org.kde.dolphin|[Tt]hunar|org.gnome.Nautilus|[Nn]autilus|[Nn]emo|[Pp]cmanfm|[Pp]cmanfm-qt|[Cc]aja|krusader|org.kde.krusader)", title = "(^Properties.*|.* - Properties$)" },
     float  = true,
     size   = { 500, 640 },
     center = true,
 })
 
 hl.window_rule({
-    name   = "float-dolphin-progress",
-    match  = { class = "org.kde.dolphin", title = "^(Copying|Moving|Deleting|Delete|File Operations|Progress).*" },
+    name   = "float-file-managers-progress",
+    match  = { class = "(org.kde.dolphin|[Tt]hunar|org.gnome.Nautilus|[Nn]autilus|[Nn]emo|[Pp]cmanfm|[Pp]cmanfm-qt|[Cc]aja|krusader|org.kde.krusader)", title = "^(Copying|Moving|Deleting|Delete|File Operations|File Operation Progress|Progress).*" },
     float  = true,
     size   = { 520, 260 },
     center = true,
@@ -88,8 +99,24 @@ hl.window_rule({
 })
 
 hl.window_rule({
-    name   = "float-dolphin-dialogs",
-    match  = { class = "org.kde.dolphin", title = "^(Create New|New Folder|Rename|Confirm|Overwrite|Information|Warning|Error|Open With|Choose Application|Add Bookmark).*" },
+    name   = "float-thunar-preferences",
+    match  = { class = "[Tt]hunar", title = "^(Thunar Preferences|Preferences)$" },
+    float  = true,
+    size   = { 600, 720 },
+    center = true,
+})
+
+hl.window_rule({
+    name   = "float-thunar-bulk-rename",
+    match  = { class = "[Tt]hunar", title = "^Bulk Rename.*" },
+    float  = true,
+    size   = { 960, 640 },
+    center = true,
+})
+
+hl.window_rule({
+    name   = "float-file-managers-dialogs",
+    match  = { class = "(org.kde.dolphin|[Tt]hunar|org.gnome.Nautilus|[Nn]autilus|[Nn]emo|[Pp]cmanfm|[Pp]cmanfm-qt|[Cc]aja|krusader|org.kde.krusader)", title = "^(Create New|New Folder|Rename|Confirm|Overwrite|Attention|Information|Warning|Question|Error|Set Default Application|Open With|Choose Application|Add Bookmark).*" },
     float  = true,
     size   = { 600, 245 },
     center = true,
