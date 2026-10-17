@@ -90,28 +90,24 @@ SettingsSurface {
         if (Flags.paletteMode === "manual") {
             applyManual();
         } else {
-            themeModeProc.command = ["sh", "-c", "xiu scheme mode \"$1\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true", "sh", v];
-            themeModeProc.running = true;
+            themeModeProc.run(v);
         }
     }
 
     function applyVariant(v) {
         Flags.schemeVariant = v;
-        variantProc.command = ["sh", "-c", "xiu scheme variant \"$1\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true", "sh", v];
-        variantProc.running = true;
+        variantProc.run(v);
     }
 
     function toggleSmart() {
         Flags.smartScheme = !Flags.smartScheme;
         var arg = Flags.smartScheme ? "on" : "off";
-        smartProc.command = ["sh", "-c", "xiu scheme smart \"$1\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true", "sh", arg];
-        smartProc.running = true;
+        smartProc.run(arg);
     }
 
     function applyPreset(p) {
         Flags.schemePreset = p;
-        presetProc.command = ["sh", "-c", "xiu scheme set \"$1\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true", "sh", p];
-        presetProc.running = true;
+        presetProc.run(p);
     }
 
     function applyMode(v) {
@@ -154,18 +150,78 @@ SettingsSurface {
 
     Process {
         id: themeModeProc
+        property var queue: []
+        function run(v) {
+            queue.push(v);
+            pump();
+        }
+        function pump() {
+            if (running || queue.length === 0) return;
+            var next = queue[queue.length - 1];
+            queue = [];
+            command = ["xiu", "scheme", "mode", next];
+            running = true;
+        }
+        onExited: {
+            if (queue.length > 0) pump();
+        }
     }
 
     Process {
         id: variantProc
+        property var queue: []
+        function run(v) {
+            queue.push(v);
+            pump();
+        }
+        function pump() {
+            if (running || queue.length === 0) return;
+            var next = queue[queue.length - 1];
+            queue = [];
+            command = ["xiu", "scheme", "variant", next];
+            running = true;
+        }
+        onExited: {
+            if (queue.length > 0) pump();
+        }
     }
 
     Process {
         id: smartProc
+        property var queue: []
+        function run(v) {
+            queue.push(v);
+            pump();
+        }
+        function pump() {
+            if (running || queue.length === 0) return;
+            var next = queue[queue.length - 1];
+            queue = [];
+            command = ["xiu", "scheme", "smart", next];
+            running = true;
+        }
+        onExited: {
+            if (queue.length > 0) pump();
+        }
     }
 
     Process {
         id: presetProc
+        property var queue: []
+        function run(v) {
+            queue.push(v);
+            pump();
+        }
+        function pump() {
+            if (running || queue.length === 0) return;
+            var next = queue[queue.length - 1];
+            queue = [];
+            command = ["xiu", "scheme", "set", next];
+            running = true;
+        }
+        onExited: {
+            if (queue.length > 0) pump();
+        }
     }
 
     FileView {

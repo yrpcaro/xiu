@@ -758,29 +758,111 @@ pub fn broadcast_terminal(
     }
 }
 
+pub fn apply_matugen_to_pill(
+    pill: &mut HashMap<String, String>,
+    seed: &str,
+    variant: &str,
+    mode: &str,
+) -> Result<HashMap<String, String>, String> {
+    let m_mode = if mode == "light" || rel_luminance(pill.get("surface").map(String::as_str).unwrap_or("#000000")) >= 0.40 {
+        "light"
+    } else {
+        "dark"
+    };
+
+    let mat_res = matugen(seed, variant, m_mode)?;
+
+    let mut b: HashMap<String, String> = HashMap::new();
+    if let Some(b16) = mat_res.get("base16") {
+        if let Json::Obj(entries) = b16 {
+            for (k, val) in entries {
+                let mut col = "#000000".to_string();
+                if let Some(mode_obj) = val.get(m_mode).or_else(|| val.get("dark")) {
+                    if let Some(c) = mode_obj.get("color").and_then(Json::as_str) {
+                        col = c.to_string();
+                    }
+                }
+                b.insert(k.to_string(), col);
+            }
+        }
+    }
+
+    if let Some(colors) = mat_res.get("colors") {
+        if let Json::Obj(ref entries) = colors {
+            let get_col = |k: &str| -> Option<String> {
+                entries.iter().find(|(name, _)| name == k).and_then(|(_, val)| {
+                    val.get(m_mode).or_else(|| val.get("default")).and_then(|m| m.get("color")).and_then(Json::as_str).map(|s| s.to_string())
+                })
+            };
+
+            if let Some(p) = get_col("primary") {
+                pill.insert("primary".into(), p);
+            }
+            if let Some(pc) = get_col("primary_container") {
+                pill.insert("primary_container".into(), pc);
+            }
+            if let Some(opc) = get_col("on_primary_container") {
+                pill.insert("on_primary_container".into(), opc);
+            }
+            if let Some(s) = get_col("surface") {
+                pill.insert("surface".into(), s);
+            }
+            if let Some(sc) = get_col("surface_container") {
+                pill.insert("surface_container".into(), sc);
+            }
+            if let Some(scl) = get_col("surface_container_low") {
+                pill.insert("surface_container_low".into(), scl);
+            }
+            if let Some(sch) = get_col("surface_container_high") {
+                pill.insert("surface_container_high".into(), sch);
+            }
+            if let Some(schh) = get_col("surface_container_highest") {
+                pill.insert("surface_container_highest".into(), schh);
+            }
+            if let Some(o) = get_col("outline") {
+                pill.insert("outline".into(), o);
+            }
+            if let Some(ov) = get_col("outline_variant") {
+                pill.insert("outline_variant".into(), ov);
+            }
+            if let Some(os) = get_col("on_surface") {
+                pill.insert("cream".into(), os);
+            }
+            if let Some(osv) = get_col("on_surface_variant") {
+                pill.insert("subtle".into(), osv.clone());
+                pill.insert("icon_dim".into(), osv);
+            }
+            if let Some(o) = get_col("outline") {
+                pill.insert("dim".into(), o);
+            }
+            if let Some(ov) = get_col("outline_variant") {
+                pill.insert("faint".into(), ov.clone());
+                pill.insert("tick_rest".into(), ov);
+            }
+            if let Some(sb) = get_col("surface_bright").or_else(|| get_col("surface_container_highest")) {
+                pill.insert("bright".into(), sb);
+            }
+        }
+    }
+
+    Ok(b)
+}
+
 pub fn fan_out(
-    pill: &HashMap<String, String>,
+    initial_pill: &HashMap<String, String>,
     seed: &str,
     variant: &str,
     share: Option<f64>,
     mode: &str,
 ) -> i32 {
-    let mut pill_json_obj = Vec::new();
-    let mut pill_keys: Vec<String> = pill.keys().cloned().collect();
-    pill_keys.sort();
-    for k in pill_keys {
-        pill_json_obj.push((k.clone(), Json::Str(pill.get(&k).unwrap().clone())));
-    }
-    let c_json = json::stringify_pretty(&Json::Obj(pill_json_obj), 2) + "\n";
+    let mut pill = initial_pill.clone();
 
-    for sub in &["ricelin", "xiu"] {
-        let d = cache_file(sub);
-        let _ = fs::create_dir_all(&d);
-        let _ = fs::write(d.join("colors.json"), &c_json);
-    }
-
-    render::render_fastfetch(pill);
-    render::render_starship(pill);
+    let is_curated_preset = variant == "auto" && pill.contains_key("seed");
+    let mut b = if !is_curated_preset {
+        apply_matugen_to_pill(&mut pill, seed, variant, mode).unwrap_or_default()
+    } else {
+        HashMap::new()
+    };
 
     let m_mode = if mode == "light" || rel_luminance(pill.get("surface").map(String::as_str).unwrap_or("#000000")) >= 0.40 {
         "light"
@@ -788,18 +870,19 @@ pub fn fan_out(
         "dark"
     };
 
-    let mut b: HashMap<String, String> = HashMap::new();
-    if let Ok(mat_res) = matugen(seed, variant, m_mode) {
-        if let Some(b16) = mat_res.get("base16") {
-            if let Json::Obj(entries) = b16 {
-                for (k, val) in entries {
-                    let mut col = "#000000".to_string();
-                    if let Some(mode_obj) = val.get(m_mode).or_else(|| val.get("dark")) {
-                        if let Some(c) = mode_obj.get("color").and_then(Json::as_str) {
-                            col = c.to_string();
+    if b.is_empty() {
+        if let Ok(mat_res) = matugen(seed, variant, m_mode) {
+            if let Some(b16) = mat_res.get("base16") {
+                if let Json::Obj(entries) = b16 {
+                    for (k, val) in entries {
+                        let mut col = "#000000".to_string();
+                        if let Some(mode_obj) = val.get(m_mode).or_else(|| val.get("dark")) {
+                            if let Some(c) = mode_obj.get("color").and_then(Json::as_str) {
+                                col = c.to_string();
+                            }
                         }
+                        b.insert(k.to_string(), col);
                     }
-                    b.insert(k.to_string(), col);
                 }
             }
         }
@@ -825,6 +908,23 @@ pub fn fan_out(
         b.insert("base0f".into(), "#6f767e".into());
     }
 
+    let mut pill_json_obj = Vec::new();
+    let mut pill_keys: Vec<String> = pill.keys().cloned().collect();
+    pill_keys.sort();
+    for k in pill_keys {
+        pill_json_obj.push((k.clone(), Json::Str(pill.get(&k).unwrap().clone())));
+    }
+    let c_json = json::stringify_pretty(&Json::Obj(pill_json_obj), 2) + "\n";
+
+    for sub in &["ricelin", "xiu"] {
+        let d = cache_file(sub);
+        let _ = fs::create_dir_all(&d);
+        let _ = fs::write(d.join("colors.json"), &c_json);
+    }
+
+    render::render_fastfetch(&pill);
+    render::render_starship(&pill);
+
     let mut b_json_obj = Vec::new();
     let mut b_keys: Vec<String> = b.keys().cloned().collect();
     b_keys.sort();
@@ -839,9 +939,9 @@ pub fn fan_out(
         let _ = fs::write(d.join("base16.json"), &b_json);
     }
 
-    let ansi = semantic_terminal(pill, &mut b, seed, share);
-    render::render_fish(pill, &ansi);
-    broadcast_terminal(pill, &b, &ansi);
+    let ansi = semantic_terminal(&pill, &mut b, seed, share);
+    render::render_fish(&pill, &ansi);
+    broadcast_terminal(&pill, &b, &ansi);
 
     let g = |m: &HashMap<String, String>, k: &str| m.get(k).cloned().unwrap_or_default();
     let hypr_colors = format!(
@@ -857,11 +957,11 @@ pub fn fan_out(
     text_color = "{text_color}",
 }}
 "#,
-        active = g(pill, "primary"),
+        active = g(&pill, "primary"),
         inactive = g(&b, "base01"),
         locked_active = pill.get("on_primary_container").cloned().unwrap_or_else(|| g(&b, "base09")),
         locked_inactive = g(&b, "base02"),
-        group_active = g(pill, "primary"),
+        group_active = g(&pill, "primary"),
         group_inactive = pill.get("surface_container").cloned().unwrap_or_else(|| g(&b, "base01")),
         group_locked_active = pill.get("on_primary_container").cloned().unwrap_or_else(|| g(&b, "base09")),
         group_locked_inactive = g(&b, "base02"),
@@ -877,7 +977,7 @@ pub fn fan_out(
     let mut ghostty_lines = vec![
         format!("background = {}", g(&b, "base00")),
         format!("foreground = {}", g(&b, "base07")),
-        format!("cursor-color = {}", g(pill, "primary")),
+        format!("cursor-color = {}", g(&pill, "primary")),
         format!("selection-background = {}", g(&b, "base02")),
         format!("selection-foreground = {}", g(&b, "base07")),
     ];
@@ -891,30 +991,30 @@ pub fn fan_out(
         let _ = fs::write(d.join("ghostty-colors"), &ghostty_content);
     }
 
-    render::render_foot(pill, &b, &ansi);
-    render::render_alacritty(pill, &b, &ansi);
-    render::render_btop(pill, &b);
-    render::render_htop(pill, &b);
-    render::render_nvtop(pill, &b);
-    render::render_cava(pill, &b);
-    render::render_micro(pill, &b, None);
-    render::render_helix(pill, &b, None);
-    render::render_bottom(pill, &b);
-    render::render_yazi(pill, &b);
-    render::render_zathura(pill, &b, None);
-    render::render_mpv(pill, &b, None);
-    render::render_discord(pill);
-    render::render_userchrome(pill);
-    render::render_vscode(pill);
-    render::render_zed(pill, Some(&b), None);
-    render::render_tealdeer(pill, None);
-    render::render_navi(pill, None);
-    render::render_surge(pill, &b, None);
-    render::render_mangofetch(pill, &b, None);
-    render::render_browser(pill);
-    render::render_qt(pill);
-    render::render_gtk(pill);
-    render::render_user_templates(pill, &b);
+    render::render_foot(&pill, &b, &ansi);
+    render::render_alacritty(&pill, &b, &ansi);
+    render::render_btop(&pill, &b);
+    render::render_htop(&pill, &b);
+    render::render_nvtop(&pill, &b);
+    render::render_cava(&pill, &b);
+    render::render_micro(&pill, &b, None);
+    render::render_helix(&pill, &b, None);
+    render::render_bottom(&pill, &b);
+    render::render_yazi(&pill, &b);
+    render::render_zathura(&pill, &b, None);
+    render::render_mpv(&pill, &b, None);
+    render::render_discord(&pill);
+    render::render_userchrome(&pill);
+    render::render_vscode(&pill);
+    render::render_zed(&pill, Some(&b), None);
+    render::render_tealdeer(&pill, None);
+    render::render_navi(&pill, None);
+    render::render_surge(&pill, &b, None);
+    render::render_mangofetch(&pill, &b, None);
+    render::render_browser(&pill);
+    render::render_qt(&pill);
+    render::render_gtk(&pill);
+    render::render_user_templates(&pill, &b);
 
     // Broadcast reload notifications to compositor and running apps
     if crate::helpers::on_path("hyprctl") {
@@ -991,6 +1091,7 @@ pub fn wallcolors(args: &[String]) -> i32 {
             return 1;
         }
         let (mut pill, seed, variant, _share) = generate_dynamic(&args[1], "auto", true, "dark");
+        let _ = apply_matugen_to_pill(&mut pill, &seed, &variant, "dark");
         pill.insert("_variant".to_string(), variant);
         pill.insert("_seed".to_string(), seed);
         let mut obj = Vec::new();
