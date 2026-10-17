@@ -107,8 +107,17 @@ Singleton {
             label: "Weather town", caption: "The calendar's weather, by city name",
             control: "text", type: "string", backend: "flags", key: "weatherCity", def: ""
         },
-        paletteMode: {
+        colorMode: {
             page: "appearance", group: "palette", order: 0,
+            label: "Theme mode", caption: "Dark or light color scheme across the desktop",
+            control: "seg", type: "string", backend: "flags", key: "colorMode", def: "dark",
+            options: [
+                { label: "Dark", value: "dark" },
+                { label: "Light", value: "light" }
+            ]
+        },
+        paletteMode: {
+            page: "appearance", group: "palette", order: 1,
             label: "Palette", caption: "Wallpaper-driven, a fixed scheme, or a manual hue",
             control: "seg", type: "string", backend: "flags", key: "paletteMode", def: "static",
             options: [
@@ -117,13 +126,28 @@ Singleton {
                 { label: "Manual", value: "manual" }
             ]
         },
+        schemeVariant: {
+            page: "appearance", group: "palette", order: 2,
+            label: "Scheme variant", caption: "Color harmony and chroma curve (e.g. vibrant, tonal, expressive)",
+            control: "seg", type: "string", backend: "flags", key: "schemeVariant", def: "auto"
+        },
+        smartScheme: {
+            page: "appearance", group: "palette", order: 3,
+            label: "Smart colors", caption: "Analyze wallpaper colourfulness to select matching scheme variant",
+            control: "toggle", type: "bool", backend: "flags", key: "smartScheme", def: true
+        },
+        schemePreset: {
+            page: "appearance", group: "palette", order: 4,
+            label: "Scheme preset", caption: "Static curated palette preset (e.g. warm, nord, dracula)",
+            control: "seg", type: "string", backend: "flags", key: "schemePreset", def: "dynamic"
+        },
         manualHue: {
-            page: "appearance", group: "palette", order: 1,
+            page: "appearance", group: "palette", order: 5,
             label: "Manual hue", caption: "The strip picks the tone; this is its number",
             control: "custom", type: "int", backend: "flags", key: "manualHue", def: 30
         },
         manualSat: {
-            page: "appearance", group: "palette", order: 2,
+            page: "appearance", group: "palette", order: 6,
             label: "Manual saturation", caption: "How much color the manual tone carries",
             control: "custom", type: "real", backend: "flags", key: "manualSat", def: 0.5
         },

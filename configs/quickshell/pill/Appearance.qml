@@ -41,14 +41,89 @@ SettingsSurface {
         applyTimer.restart();
     }
 
+    property bool variantOpen: false
+    property bool presetOpen: false
+
+    readonly property var variantOptions: [
+        { label: "Auto", value: "auto" },
+        { label: "Tonal Spot", value: "tonal-spot" },
+        { label: "Vibrant", value: "vibrant" },
+        { label: "Expressive", value: "expressive" },
+        { label: "Rainbow", value: "rainbow" },
+        { label: "Fruit Salad", value: "fruit-salad" },
+        { label: "Fidelity", value: "fidelity" },
+        { label: "Neutral", value: "neutral" },
+        { label: "Content", value: "content" },
+        { label: "Monochrome", value: "monochrome" }
+    ]
+
+    readonly property var presetOptions: [
+        { label: "Warm", value: "warm" },
+        { label: "Nord", value: "nord" },
+        { label: "Dracula", value: "dracula" },
+        { label: "Catppuccin", value: "catppuccin-mocha" },
+        { label: "Everforest", value: "everforest" },
+        { label: "Gruvbox", value: "gruvbox" },
+        { label: "Rosé Pine", value: "rose-pine" },
+        { label: "Tokyo Night", value: "tokyonight" }
+    ]
+
+    function variantLabel(v) {
+        for (var i = 0; i < variantOptions.length; i++) {
+            if (variantOptions[i].value === v)
+                return variantOptions[i].label;
+        }
+        return v && v.length > 0 ? v : "Auto";
+    }
+
+    function presetLabel(p) {
+        for (var i = 0; i < presetOptions.length; i++) {
+            if (presetOptions[i].value === p)
+                return presetOptions[i].label;
+        }
+        return p && p.length > 0 ? p : "Warm";
+    }
+
+    function applyThemeMode(v) {
+        Flags.colorMode = v;
+        Flags.manualDark = (v === "dark");
+        if (Flags.paletteMode === "manual") {
+            applyManual();
+        } else {
+            themeModeProc.command = ["sh", "-c", "xiu scheme mode \"$1\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true", "sh", v];
+            themeModeProc.running = true;
+        }
+    }
+
+    function applyVariant(v) {
+        Flags.schemeVariant = v;
+        variantProc.command = ["sh", "-c", "xiu scheme variant \"$1\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true", "sh", v];
+        variantProc.running = true;
+    }
+
+    function toggleSmart() {
+        Flags.smartScheme = !Flags.smartScheme;
+        var arg = Flags.smartScheme ? "on" : "off";
+        smartProc.command = ["sh", "-c", "xiu scheme smart \"$1\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true", "sh", arg];
+        smartProc.running = true;
+    }
+
+    function applyPreset(p) {
+        Flags.schemePreset = p;
+        presetProc.command = ["sh", "-c", "xiu scheme set \"$1\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true", "sh", p];
+        presetProc.running = true;
+    }
+
     function applyMode(v) {
         Flags.paletteMode = v;
-        if (v === "manual")
+        if (v === "manual") {
             applyManual();
-        else if (v === "dynamic")
+        } else if (v === "dynamic") {
             dynamicProc.running = true;
-        else if (v === "static")
-            staticProc.running = true;
+        } else if (v === "static") {
+            var p = (Flags.schemePreset && Flags.schemePreset !== "dynamic") ? Flags.schemePreset : "warm";
+            applyPreset(p);
+        }
     }
 
     Timer {
@@ -77,6 +152,61 @@ SettingsSurface {
             "f=\"${XDG_STATE_HOME:-$HOME/.local/state}/xiu/wallpaper\"; [ -f \"$f\" ] || f=\"${XDG_STATE_HOME:-$HOME/.local/state}/ricelin-wallpaper\"; pic=$(cat \"$f\" 2>/dev/null); case \"$pic\" in *.[Mm][Pp]4|*.[Ww][Ee][Bb][Mm]|*.[Mm][Kk][Vv]|*.[Mm][Oo][Vv]) pic=\"${XDG_STATE_HOME:-$HOME/.local/state}/ricelin-wallpaper-still.png\";; esac; if [ -f \"$pic\" ]; then xiu wallcolors --dynamic \"$pic\" >/dev/null 2>&1; else xiu wallcolors --dynamic >/dev/null 2>&1; fi; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true"]
     }
 
+    Process {
+        id: themeModeProc
+    }
+
+    Process {
+        id: variantProc
+    }
+
+    Process {
+        id: smartProc
+    }
+
+    Process {
+        id: presetProc
+    }
+
+    FileView {
+        id: schemeFile
+        path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/xiu/scheme.json"
+        blockLoading: true
+        watchChanges: true
+        printErrors: false
+
+        onFileChanged: reload()
+        onLoaded: {
+            if (schemeAdapter.variant && schemeAdapter.variant.length > 0)
+                Flags.schemeVariant = schemeAdapter.variant;
+            if (schemeAdapter.preset && schemeAdapter.preset.length > 0)
+                Flags.schemePreset = schemeAdapter.preset;
+            if (schemeAdapter.mode && schemeAdapter.mode.length > 0) {
+                Flags.colorMode = schemeAdapter.mode;
+                Flags.manualDark = (schemeAdapter.mode === "dark");
+            }
+            if (schemeAdapter.smart !== undefined)
+                Flags.smartScheme = schemeAdapter.smart;
+        }
+
+        JsonAdapter {
+            id: schemeAdapter
+            property string preset: "dynamic"
+            property string variant: "auto"
+            property bool smart: true
+            property string mode: "dark"
+        }
+    }
+
+    onActiveChanged: {
+        if (active) {
+            schemeFile.reload();
+        } else {
+            variantOpen = false;
+            presetOpen = false;
+        }
+    }
+
     Connections {
         target: Flags
         function onManualHueChanged() {
@@ -89,18 +219,29 @@ SettingsSurface {
         }
     }
 
-    rows: [
-        { item: timeRow, kind: "seg", vals: [false, true], get: function () { return Flags.time12h; }, set: function (v) { Flags.time12h = v; } },
-        { item: secRow, kind: "toggle", get: function () { return Flags.clockSeconds; }, set: function (v) { Flags.clockSeconds = v; } },
-        { item: glyphRow, kind: "toggle", get: function () { return Flags.showGlyphs; }, set: function (v) { Flags.showGlyphs = v; } },
-        { item: vizRow, kind: "toggle", get: function () { return Flags.musicViz; }, set: function (v) { Flags.musicViz = v; } },
-        { item: weatherRow, kind: "toggle", get: function () { return Flags.weatherEnabled; }, set: function (v) { Flags.weatherEnabled = v; } },
-        { item: paletteRow, kind: "seg", vals: ["static", "dynamic", "manual"], get: function () { return Flags.paletteMode; }, set: function (v) { root.applyMode(v); } },
-        { item: randomRow, kind: "seg", vals: ["all", "cursor"], get: function () { return Flags.randomScope; }, set: function (v) { Flags.randomScope = v; } },
-        { item: scaleRow, kind: "seg", vals: [0.9, 1.0, 1.1, 1.25], get: function () { return Flags.uiScale; }, set: function (v) { Flags.uiScale = v; } },
-        { item: motionRow, kind: "toggle", get: function () { return Flags.reduceMotion; }, set: function (v) { Flags.reduceMotion = v; } },
-        { item: fontRow, kind: "nav", surface: "fontpicker" }
-    ]
+    rows: {
+        var r = [
+            { item: timeRow, kind: "seg", vals: [false, true], get: function () { return Flags.time12h; }, set: function (v) { Flags.time12h = v; } },
+            { item: secRow, kind: "toggle", get: function () { return Flags.clockSeconds; }, set: function (v) { Flags.clockSeconds = v; } },
+            { item: glyphRow, kind: "toggle", get: function () { return Flags.showGlyphs; }, set: function (v) { Flags.showGlyphs = v; } },
+            { item: vizRow, kind: "toggle", get: function () { return Flags.musicViz; }, set: function (v) { Flags.musicViz = v; } },
+            { item: weatherRow, kind: "toggle", get: function () { return Flags.weatherEnabled; }, set: function (v) { Flags.weatherEnabled = v; } },
+            { item: modeRow, kind: "seg", vals: ["dark", "light"], get: function () { return Flags.colorMode; }, set: function (v) { root.applyThemeMode(v); } },
+            { item: paletteRow, kind: "seg", vals: ["static", "dynamic", "manual"], get: function () { return Flags.paletteMode; }, set: function (v) { root.applyMode(v); } }
+        ];
+        if (Flags.paletteMode === "dynamic") {
+            r.push({ item: smartRow, kind: "toggle", get: function () { return Flags.smartScheme; }, set: function (v) { root.toggleSmart(); } });
+            r.push({ item: variantRow, kind: "toggle", get: function () { return root.variantOpen; }, set: function (v) { root.variantOpen = !root.variantOpen; } });
+        } else if (Flags.paletteMode === "static") {
+            r.push({ item: presetRow, kind: "toggle", get: function () { return root.presetOpen; }, set: function (v) { root.presetOpen = !root.presetOpen; } });
+            r.push({ item: variantRow, kind: "toggle", get: function () { return root.variantOpen; }, set: function (v) { root.variantOpen = !root.variantOpen; } });
+        }
+        r.push({ item: randomRow, kind: "seg", vals: ["all", "cursor"], get: function () { return Flags.randomScope; }, set: function (v) { Flags.randomScope = v; } });
+        r.push({ item: scaleRow, kind: "seg", vals: [0.9, 1.0, 1.1, 1.25], get: function () { return Flags.uiScale; }, set: function (v) { Flags.uiScale = v; } });
+        r.push({ item: motionRow, kind: "toggle", get: function () { return Flags.reduceMotion; }, set: function (v) { Flags.reduceMotion = v; } });
+        r.push({ item: fontRow, kind: "nav", surface: "fontpicker" });
+        return r;
+    }
 
     Column {
         id: content
@@ -185,6 +326,20 @@ SettingsSurface {
         }
 
         SettingsRow {
+            id: modeRow
+            surface: root
+            name: "Theme mode"
+            icon: Flags.colorMode === "dark" ? "moon" : "sun"
+
+            SettingsSeg {
+                s: root.s
+                options: [{ label: "Dark", value: "dark" }, { label: "Light", value: "light" }]
+                value: Flags.colorMode
+                onPicked: (v) => root.applyThemeMode(v)
+            }
+        }
+
+        SettingsRow {
             id: paletteRow
             surface: root
             name: "Palette"
@@ -195,6 +350,127 @@ SettingsSurface {
                 options: [{ label: "Static", value: "static" }, { label: "Dynamic", value: "dynamic" }, { label: "Manual", value: "manual" }]
                 value: Flags.paletteMode
                 onPicked: (v) => root.applyMode(v)
+            }
+        }
+
+        SettingsRow {
+            id: smartRow
+            surface: root
+            visible: Flags.paletteMode === "dynamic"
+            name: "Smart colors"
+            icon: "sparkles"
+            sub: Flags.smartScheme ? "Adaptive" : "Fixed"
+
+            LinkToggle {
+                s: root.s
+                on: Flags.smartScheme
+                onToggled: root.toggleSmart()
+            }
+        }
+
+        SettingsRow {
+            id: variantRow
+            surface: root
+            visible: Flags.paletteMode !== "manual"
+            name: "Scheme variant"
+            icon: "sparkles"
+            sub: root.variantLabel(Flags.schemeVariant)
+
+            GlyphIcon {
+                width: 16 * root.s
+                height: 16 * root.s
+                name: root.variantOpen ? "chevron-up" : "chevron-down"
+                color: root.focusRowItem === variantRow ? Theme.cream : Theme.iconDim
+                stroke: 1.9
+            }
+        }
+
+        Item {
+            id: variantSection
+            width: parent.width
+            height: (Flags.paletteMode !== "manual" && root.variantOpen) ? variantCol.implicitHeight : 0
+            clip: true
+            visible: height > 0
+            Behavior on height { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+
+            Column {
+                id: variantCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 12 * root.s
+                anchors.rightMargin: 12 * root.s
+                topPadding: 4 * root.s
+                bottomPadding: 10 * root.s
+
+                Flow {
+                    width: parent.width
+                    spacing: 4 * root.s
+
+                    Repeater {
+                        model: root.variantOptions
+
+                        delegate: SegPill {
+                            required property var modelData
+                            s: root.s
+                            option: modelData
+                            current: Flags.schemeVariant === modelData.value
+                            onPicked: v => root.applyVariant(v)
+                        }
+                    }
+                }
+            }
+        }
+
+        SettingsRow {
+            id: presetRow
+            surface: root
+            visible: Flags.paletteMode === "static"
+            name: "Scheme preset"
+            icon: "layers"
+            sub: root.presetLabel(Flags.schemePreset)
+
+            GlyphIcon {
+                width: 16 * root.s
+                height: 16 * root.s
+                name: root.presetOpen ? "chevron-up" : "chevron-down"
+                color: root.focusRowItem === presetRow ? Theme.cream : Theme.iconDim
+                stroke: 1.9
+            }
+        }
+
+        Item {
+            id: presetSection
+            width: parent.width
+            height: (Flags.paletteMode === "static" && root.presetOpen) ? presetCol.implicitHeight : 0
+            clip: true
+            visible: height > 0
+            Behavior on height { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+
+            Column {
+                id: presetCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 12 * root.s
+                anchors.rightMargin: 12 * root.s
+                topPadding: 4 * root.s
+                bottomPadding: 10 * root.s
+
+                Flow {
+                    width: parent.width
+                    spacing: 4 * root.s
+
+                    Repeater {
+                        model: root.presetOptions
+
+                        delegate: SegPill {
+                            required property var modelData
+                            s: root.s
+                            option: modelData
+                            current: Flags.schemePreset === modelData.value
+                            onPicked: p => root.applyPreset(p)
+                        }
+                    }
+                }
             }
         }
 
@@ -316,8 +592,8 @@ SettingsSurface {
                         anchors.verticalCenter: parent.verticalCenter
                         s: root.s
                         options: [{ label: "Dark", value: true }, { label: "Light", value: false }]
-                        value: Flags.manualDark
-                        onPicked: (v) => { Flags.manualDark = v; root.applyManual(); }
+                        value: Flags.colorMode === "dark"
+                        onPicked: (v) => { root.applyThemeMode(v ? "dark" : "light"); }
                     }
                 }
 

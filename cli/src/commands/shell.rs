@@ -332,9 +332,183 @@ pub fn scheme(action: &str, value: Option<&str>, variant: Option<&str>) -> i32 {
         crate::commands::wallcolors::wallcolors(&args)
     };
 
+    let post_reload = || {
+        let _ = crate::commands::theme::live_reload();
+        let _ = Command::new("hyprctl").arg("reload").status();
+        let _ = Command::new("busctl")
+            .args([
+                "--user",
+                "call",
+                "com.mitchellh.ghostty",
+                "/com/mitchellh/ghostty",
+                "org.gtk.Actions",
+                "Activate",
+                "sava{sv}",
+                "reload-config",
+                "0",
+                "0",
+            ])
+            .status();
+    };
+
     match action {
-        "list" => run(&["--list-presets"]),
-        "get" => run(&["--state"]),
+        "list" => {
+            if let Some("variants") = value {
+                println!("{}", crate::commands::wallcolors::color::VARIANTS.join("\n"));
+                0
+            } else {
+                run(&["--list-presets"])
+            }
+        }
+        "get" => {
+            if let Some(field) = value {
+                let (preset, var, smart, mode) = crate::commands::wallcolors::load_scheme();
+                match field {
+                    "preset" => {
+                        println!("{preset}");
+                        0
+                    }
+                    "variant" => {
+                        println!("{var}");
+                        0
+                    }
+                    "smart" => {
+                        println!("{}", if smart { "on" } else { "off" });
+                        0
+                    }
+                    "mode" => {
+                        println!("{mode}");
+                        0
+                    }
+                    other => {
+                        eprintln!("xiu scheme get: unknown field '{other}' (preset, variant, smart, mode)");
+                        2
+                    }
+                }
+            } else {
+                run(&["--state"])
+            }
+        }
+        "variant" => {
+            match value {
+                None => {
+                    let (_, var, _, _) = crate::commands::wallcolors::load_scheme();
+                    println!("{var}");
+                    0
+                }
+                Some("list") => {
+                    println!("{}", crate::commands::wallcolors::color::VARIANTS.join("\n"));
+                    0
+                }
+                Some(v) => {
+                    if !crate::commands::wallcolors::color::VARIANTS.contains(&v) {
+                        eprintln!(
+                            "xiu scheme variant: unknown variant '{v}' (one of: {})",
+                            crate::commands::wallcolors::color::VARIANTS.join(", ")
+                        );
+                        return 2;
+                    }
+                    let res = run(&["--variant", v]);
+                    if res == 0 {
+                        post_reload();
+                    }
+                    res
+                }
+            }
+        }
+        "mode" => {
+            match value {
+                None | Some("status") => {
+                    let (_, _, _, mode) = crate::commands::wallcolors::load_scheme();
+                    println!("{mode}");
+                    0
+                }
+                Some("dark") => {
+                    let res = run(&["--mode", "dark"]);
+                    if res == 0 {
+                        post_reload();
+                    }
+                    res
+                }
+                Some("light") => {
+                    let res = run(&["--mode", "light"]);
+                    if res == 0 {
+                        post_reload();
+                    }
+                    res
+                }
+                Some("toggle") => {
+                    let res = run(&["--toggle"]);
+                    if res == 0 {
+                        post_reload();
+                    }
+                    res
+                }
+                Some(other) => {
+                    eprintln!("xiu scheme mode: unknown mode '{other}' (dark, light, toggle, status)");
+                    2
+                }
+            }
+        }
+        "smart" => {
+            match value {
+                None | Some("status") => {
+                    let (_, _, smart, _) = crate::commands::wallcolors::load_scheme();
+                    println!("{}", if smart { "on" } else { "off" });
+                    0
+                }
+                Some("on") | Some("true") | Some("1") | Some("enable") => {
+                    let res = run(&["--smart"]);
+                    if res == 0 {
+                        post_reload();
+                    }
+                    res
+                }
+                Some("off") | Some("false") | Some("0") | Some("disable") => {
+                    let res = run(&["--no-smart"]);
+                    if res == 0 {
+                        post_reload();
+                    }
+                    res
+                }
+                Some("toggle") => {
+                    let (_, _, smart, _) = crate::commands::wallcolors::load_scheme();
+                    let flag = if smart { "--no-smart" } else { "--smart" };
+                    let res = run(&[flag]);
+                    if res == 0 {
+                        post_reload();
+                    }
+                    res
+                }
+                Some(other) => {
+                    eprintln!("xiu scheme smart: unknown option '{other}' (on, off, toggle, status)");
+                    2
+                }
+            }
+        }
+        "preset" => {
+            match value {
+                None | Some("status") => {
+                    let (preset, _, _, _) = crate::commands::wallcolors::load_scheme();
+                    println!("{preset}");
+                    0
+                }
+                Some("list") => run(&["--list-presets"]),
+                Some(p) => {
+                    let mut flags: Vec<String> = vec!["--preset".into(), p.to_string()];
+                    if let Some(v) = variant {
+                        flags.push("--variant".into());
+                        flags.push(v.to_string());
+                    }
+                    let refs: Vec<&str> = flags.iter().map(String::as_str).collect();
+                    let res = run(&refs);
+                    if res == 0 {
+                        post_reload();
+                    }
+                    res
+                }
+            }
+        }
         "preview" => {
             let Some(wallpaper) = value else {
                 eprintln!("xiu scheme preview: needs a wallpaper path");
@@ -343,45 +517,58 @@ pub fn scheme(action: &str, value: Option<&str>, variant: Option<&str>) -> i32 {
             run(&["--preview", wallpaper])
         }
         "set" => {
-            let Some(preset) = value else {
-                eprintln!("xiu scheme set: needs a preset name, `dynamic` or -v VARIANT");
-                return 2;
-            };
-            let mut flags: Vec<String> = vec!["--preset".into(), preset.to_string()];
+            let mut flags: Vec<String> = Vec::new();
+            if let Some(val) = value {
+                if crate::commands::wallcolors::color::VARIANTS.contains(&val) {
+                    flags.push("--variant".into());
+                    flags.push(val.to_string());
+                } else {
+                    flags.push("--preset".into());
+                    flags.push(val.to_string());
+                }
+            }
             if let Some(v) = variant {
-                flags.push("--variant".into());
-                flags.push(v.to_string());
+                if !flags.iter().any(|f| f == "--variant") {
+                    flags.push("--variant".into());
+                    flags.push(v.to_string());
+                }
+            }
+            if flags.is_empty() {
+                eprintln!("xiu scheme set: needs a preset name, 'dynamic', or -v VARIANT");
+                return 2;
             }
             let refs: Vec<&str> = flags.iter().map(String::as_str).collect();
             let res = run(&refs);
             if res == 0 {
-                let _ = crate::commands::theme::live_reload();
+                post_reload();
             }
             res
         }
         "dark" => {
             let res = run(&["--mode", "dark"]);
             if res == 0 {
-                let _ = crate::commands::theme::live_reload();
+                post_reload();
             }
             res
         }
         "light" => {
             let res = run(&["--mode", "light"]);
             if res == 0 {
-                let _ = crate::commands::theme::live_reload();
+                post_reload();
             }
             res
         }
         "toggle" => {
             let res = run(&["--toggle"]);
             if res == 0 {
-                let _ = crate::commands::theme::live_reload();
+                post_reload();
             }
             res
         }
         other => {
-            eprintln!("xiu scheme: unknown action '{other}' (list, get, set, preview, dark, light, toggle)");
+            eprintln!(
+                "xiu scheme: unknown action '{other}' (list, get, set, variant, mode, smart, preset, preview, dark, light, toggle)"
+            );
             2
         }
     }

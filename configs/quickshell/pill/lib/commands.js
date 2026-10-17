@@ -1,7 +1,7 @@
 /**
  * Launcher action commands.
- * Provides Caelestia/Xiu command parity (>wallpaper, >random, >theme, >variant,
- * >light, >dark, >calc, >install, >clipboard, >settings, >gamemode, >record,
+ * Provides Caelestia/Xiu command parity (>wallpaper, >random, >theme,
+ * >calc, >install, >clipboard, >settings, >gamemode, >record,
  * >screenshot, >update, >lock, >sleep, >reboot, >poweroff, >logout).
  */
 
@@ -46,27 +46,6 @@ var ALL_COMMANDS = [
         desc: "Open appearance and theme switcher",
         icon: "palette",
         command: ["xiu", "open", "appearance"]
-    },
-    {
-        name: "Scheme Variant",
-        prefix: ">variant",
-        desc: "Change theme color scheme variant",
-        icon: "sparkles",
-        command: ["xiu", "open", "appearance"]
-    },
-    {
-        name: "Light Mode",
-        prefix: ">light",
-        desc: "Switch theme to light mode",
-        icon: "sun",
-        command: ["xiu", "theme", "light"]
-    },
-    {
-        name: "Dark Mode",
-        prefix: ">dark",
-        desc: "Switch theme to dark mode",
-        icon: "moon",
-        command: ["xiu", "theme", "dark"]
     },
     {
         name: "Clipboard History",

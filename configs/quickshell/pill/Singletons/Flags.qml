@@ -18,6 +18,10 @@ Singleton {
     property alias time12h: adapter.time12h
     property alias clockSeconds: adapter.clockSeconds
     property alias showGlyphs: adapter.showGlyphs
+    property alias colorMode: adapter.colorMode
+    property alias schemeVariant: adapter.schemeVariant
+    property alias schemePreset: adapter.schemePreset
+    property alias smartScheme: adapter.smartScheme
     property alias paletteMode: adapter.paletteMode
     property alias wallpaperDir: adapter.wallpaperDir
     property alias randomScope: adapter.randomScope
@@ -100,6 +104,10 @@ Singleton {
             property bool time12h: false
             property bool clockSeconds: false
             property bool showGlyphs: true
+            property string colorMode: "dark"
+            property string schemeVariant: "auto"
+            property string schemePreset: "dynamic"
+            property bool smartScheme: true
             property string paletteMode: "dynamic"
             /** Explicit wallpaper folder override. Empty means autodetect: the dir wallpaper.sh last resolved (ricelin-wallpaper-dir state file), then ~/Pictures/xiu/wallpapers. Lives in user state so an in-app update never clobbers a custom folder. */
             property string wallpaperDir: ""

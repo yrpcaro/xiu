@@ -20,9 +20,23 @@ pub fn theme(
         "dark" => set_mode("dark"),
         "light" => set_mode("light"),
         "toggle" => toggle_mode(),
+        "mode" => {
+            if let Some(m) = target {
+                set_mode(m)
+            } else {
+                let (_, _, _, mode) = crate::commands::wallcolors::load_scheme();
+                println!("{mode}");
+                0
+            }
+        }
+        "variant" => crate::commands::shell::scheme("variant", target, variant),
+        "preset" => crate::commands::shell::scheme("preset", target, variant),
+        "smart" => crate::commands::shell::scheme("smart", target, variant),
         "apply" => apply(target, preset, variant),
         other => {
-            eprintln!("xiu theme: unknown action '{other}' (generate, apply, live, dark, light, toggle)");
+            eprintln!(
+                "xiu theme: unknown action '{other}' (generate, apply, live, dark, light, toggle, mode, variant, preset, smart)"
+            );
             2
         }
     }

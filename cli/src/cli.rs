@@ -93,12 +93,12 @@ pub enum Commands {
         /// Optional target (e.g. on/off for strip)
         target: Option<String>,
     },
-    /// list, get, set <preset|dynamic> [-v VARIANT], preview <wallpaper>, dark, light, toggle (engine: wallcolors)
+    /// list, get [field], set [preset] [-v VARIANT], variant [name|list], mode [dark|light|toggle], smart [on|off|toggle], preset [name|list], preview <wallpaper>, dark, light, toggle (engine: wallcolors)
     Scheme {
-        /// The scheme action: list, get, set, preview, dark, light, toggle
+        /// The scheme action: list, get, set, variant, mode, smart, preset, preview, dark, light, toggle
         #[arg(default_value = "get")]
         action: String,
-        /// The preset to set, or the wallpaper to preview
+        /// The preset or variant to set, field to get, mode/smart option, or wallpaper to preview
         value: Option<String>,
         /// The matugen variant for `set`
         #[arg(short, long)]

@@ -59,17 +59,137 @@ fn check_reports_config_state() {
 
 #[test]
 fn scheme_defers_to_the_engine() {
-    // The engine script may be absent (clean box); the CLI defers to
-    // python3 and returns its exit code, printing the child's error on
-    // stderr. Both shapes are correct: present engine prints state,
-    // absent engine exits non-zero.
     let out = Command::cargo_bin("xiu")
         .unwrap()
         .args(["scheme", "get"])
         .assert()
-        .get_output()
-        .to_owned();
-    assert!(out.status.code().is_some());
+        .success()
+        .stdout(contains("preset").and(contains("variant")).and(contains("smart")).and(contains("mode")));
+    assert!(out.get_output().status.success());
+}
+
+#[test]
+fn scheme_get_field_queries() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "get", "variant"])
+        .assert()
+        .success();
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "get", "mode"])
+        .assert()
+        .success();
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "get", "smart"])
+        .assert()
+        .success();
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "get", "preset"])
+        .assert()
+        .success();
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "get", "bogus"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown field"));
+}
+
+#[test]
+fn scheme_variant_commands() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "variant"])
+        .assert()
+        .success();
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "variant", "list"])
+        .assert()
+        .success()
+        .stdout(contains("auto").and(contains("tonal-spot")).and(contains("vibrant")));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "variant", "nonexistent"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown variant"));
+}
+
+#[test]
+fn scheme_smart_and_mode_queries() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "smart", "status"])
+        .assert()
+        .success();
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "smart", "bogus"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown option"));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "mode", "status"])
+        .assert()
+        .success();
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "mode", "bogus"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown mode"));
+}
+
+#[test]
+fn scheme_preset_and_list() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "preset", "status"])
+        .assert()
+        .success();
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "preset", "list"])
+        .assert()
+        .success()
+        .stdout(contains("warm"));
+
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "list", "variants"])
+        .assert()
+        .success()
+        .stdout(contains("tonal-spot"));
+}
+
+#[test]
+fn scheme_unknown_action_is_rejected() {
+    Command::cargo_bin("xiu")
+        .unwrap()
+        .args(["scheme", "totally_bogus"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(contains("unknown action"));
 }
 
 #[test]

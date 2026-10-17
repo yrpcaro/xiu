@@ -22,11 +22,15 @@ eq(matchCommands(""), [], "empty query returns empty array");
 
 // 2. All commands on bare '>'
 const all = matchCommands(">");
-ok(all.length >= 18, "bare > returns all commands (count: " + all.length + ")");
+ok(all.length >= 15, "bare > returns all commands (count: " + all.length + ")");
 ok(all.some(c => c.prefix === ">calc"), "all commands includes >calc");
 ok(all.some(c => c.prefix === ">install"), "all commands includes >install");
 ok(all.some(c => c.prefix === ">wallpaper"), "all commands includes >wallpaper");
+ok(all.some(c => c.prefix === ">theme"), "all commands includes >theme");
 ok(all.some(c => c.prefix === ">lock"), "all commands includes >lock");
+ok(!all.some(c => c.prefix === ">variant"), "all commands excludes >variant");
+ok(!all.some(c => c.prefix === ">light"), "all commands excludes >light");
+ok(!all.some(c => c.prefix === ">dark"), "all commands excludes >dark");
 
 // 3. Prefix matching
 const wa = matchCommands(">wa");

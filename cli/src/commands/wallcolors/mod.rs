@@ -222,6 +222,38 @@ pub fn save_scheme(preset: &str, variant: &str, smart: bool, mode: &str) {
         let _ = fs::create_dir_all(&sd);
         let _ = fs::write(sd.join("scheme.json"), &scheme_json);
     }
+
+    for rel in &["ricelin/flags.json", "xiu/flags.json"] {
+        let f = state_file(rel);
+        let mut flags = if f.is_file() {
+            fs::read_to_string(&f)
+                .ok()
+                .and_then(|c| json::parse(&c).ok())
+                .unwrap_or(Json::Obj(Vec::new()))
+        } else {
+            Json::Obj(Vec::new())
+        };
+
+        if let Json::Obj(ref mut entries) = flags {
+            let updates = [
+                ("schemeVariant", Json::Str(variant.to_string())),
+                ("schemePreset", Json::Str(preset.to_string())),
+                ("smartScheme", Json::Bool(smart)),
+                ("colorMode", Json::Str(mode.to_string())),
+            ];
+            for (key, val) in updates {
+                if let Some(pos) = entries.iter().position(|(k, _)| k == key) {
+                    entries[pos] = (key.to_string(), val);
+                } else {
+                    entries.push((key.to_string(), val));
+                }
+            }
+            if let Some(parent) = f.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let _ = fs::write(&f, json::stringify_pretty(&flags, 2) + "\n");
+        }
+    }
 }
 
 pub fn set_palette_mode(mode: &str) {
@@ -929,9 +961,27 @@ pub fn wallcolors(args: &[String]) -> i32 {
         return 0;
     }
 
+    if !args.is_empty() && args[0] == "--list-variants" {
+        println!("{}", VARIANTS.join("\n"));
+        return 0;
+    }
+
     if !args.is_empty() && args[0] == "--state" {
         let (preset, variant, smart, mode) = load_scheme();
-        println!("preset {preset}\nvariant {variant}\nsmart {}\nmode {mode}", if smart { "on" } else { "off" });
+        if args.len() > 1 {
+            match args[1].as_str() {
+                "preset" => println!("{preset}"),
+                "variant" => println!("{variant}"),
+                "smart" => println!("{}", if smart { "on" } else { "off" }),
+                "mode" => println!("{mode}"),
+                other => {
+                    eprintln!("wallcolors: unknown state field '{other}' (preset, variant, smart, mode)");
+                    return 1;
+                }
+            }
+        } else {
+            println!("preset {preset}\nvariant {variant}\nsmart {}\nmode {mode}", if smart { "on" } else { "off" });
+        }
         return 0;
     }
 
