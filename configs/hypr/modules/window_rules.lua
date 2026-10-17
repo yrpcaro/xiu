@@ -45,6 +45,46 @@ hl.window_rule({
     float = true,
 })
 
+-- Browser pop-up tabs/windows (Firefox, Chromium, Brave, Zen)
+hl.window_rule({
+    name   = "float-browser-popups",
+    match  = {
+        class         = "([Ff]irefox|[Zz]en.*|[Cc]hromium|[Gg]oogle-chrome|[Bb]rave.*)",
+        initial_title = "^($|about:blank.*)",
+    },
+    float  = true,
+    center = true,
+})
+
+hl.window_rule({
+    name   = "float-browser-empty-title",
+    match  = {
+        class = "([Ff]irefox|[Zz]en.*|[Cc]hromium|[Gg]oogle-chrome|[Bb]rave.*)",
+        title = "^$",
+    },
+    float  = true,
+    center = true,
+})
+
+hl.window_rule({
+    name   = "float-browser-modals",
+    match  = {
+        class = "([Ff]irefox|[Zz]en.*|[Cc]hromium|[Gg]oogle-chrome|[Bb]rave.*)",
+        modal = true,
+    },
+    float  = true,
+    center = true,
+})
+
+hl.window_rule({
+    name   = "float-browser-app-popups",
+    match  = {
+        class = "^(chrome-.*|brave-.*)$",
+    },
+    float  = true,
+    center = true,
+})
+
 hl.window_rule({
     name   = "float-termfilechooser",
     match  = { class = "termfilechooser" },
