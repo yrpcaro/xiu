@@ -66,16 +66,6 @@ hl.window_rule({
 })
 
 hl.window_rule({
-    name   = "float-browser-untitled-popups",
-    match  = {
-        class         = "([Ff]irefox.*|[Zz]en.*|[Cc]hromium.*|[Gg]oogle-chrome.*|[Bb]rave-browser|[Bb]rave)",
-        initial_title = "^($|Untitled( - .*)?)$",
-    },
-    float  = true,
-    center = true,
-})
-
-hl.window_rule({
     name   = "float-browser-extension-popups",
     match  = {
         class = "([Ff]irefox.*|[Zz]en.*|[Cc]hromium.*|[Gg]oogle-chrome.*|[Bb]rave-browser|[Bb]rave)",
@@ -85,12 +75,13 @@ hl.window_rule({
     center = true,
 })
 
--- Dynamic title & open listener (adapted from Caelestia)
--- Ensures browser popups and extension prompts that map with generic titles (e.g. Mozilla Firefox / Zen Browser)
--- are automatically floated and centered upon title update or creation.
+-- Dynamic geometry-based & title listener (adapted from Caelestia)
+-- Floats browser popup windows whose dimensions are popup-sized (e.g. width <= 900 and height <= 850)
+-- while ensuring normal browser sessions remain tiled by default.
 local browser_classes = {
     ["firefox"] = true,
     ["zen"] = true,
+    ["zen-browser"] = true,
     ["chromium"] = true,
     ["chromium-browser"] = true,
     ["google-chrome"] = true,
@@ -109,18 +100,22 @@ local function is_browser_win(win)
     return false
 end
 
-local function is_browser_popup(win)
+local function count_browser_windows()
+    local count = 0
+    for _, w in ipairs(hl.get_windows()) do
+        if is_browser_win(w) then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function is_browser_popup(win, is_open_event)
     if not is_browser_win(win) then return false end
-    if win.floating then return false end
     if win.modal then return true end
 
     -- Standalone Chrome / Brave extension & app windows (exclude regular brave-browser)
     if win.class:match("^chrome%-") or (win.class:match("^brave%-") and not win.class:match("^brave%-browser")) then
-        return true
-    end
-
-    -- Initial creation title: empty string or Untitled popup window in Chromium/Brave
-    if win.initial_title and (win.initial_title == "" or win.initial_title:match("^Untitled")) then
         return true
     end
 
@@ -131,23 +126,71 @@ local function is_browser_popup(win)
             or t:match("^Bitwarden") or t:match("^1Password")
             or t == "Library" or t:match("^Page Info")
             or t:match("^About Mozilla Firefox") or t:match("^About Zen")
+            or t:match("^About Brave") or t:match("^About Chromium")
             or t:match("wants to open$") or t:match("wants to save$") then
             return true
+        end
+    end
+
+    -- Dynamic geometry & popup detection on window creation:
+    -- Only applies when an existing browser instance is already running (count > 1),
+    -- ensuring primary browsing sessions always remain tiled.
+    if is_open_event then
+        local browser_count = count_browser_windows()
+        if browser_count > 1 then
+            -- Popups initialized with blank / about:blank / untitled
+            if win.initial_title and (win.initial_title == "" or win.initial_title:match("^about:blank") or win.initial_title:match("^Untitled")) then
+                return true
+            end
+
+            -- Geometry-based heuristic: requested dimensions are popup-sized (e.g. width < 900 and height < 800)
+            if win.size and type(win.size.x) == "number" and type(win.size.y) == "number" then
+                local w = win.size.x
+                local h = win.size.y
+                if w > 0 and h > 0 then
+                    if w < 900 and h < 800 then
+                        return true
+                    end
+
+                    if win.monitor and type(win.monitor.width) == "number" and type(win.monitor.height) == "number" then
+                        local mw = win.monitor.width
+                        local mh = win.monitor.height
+                        if mw > 0 and mh > 0 then
+                            if w <= math.floor(mw * 0.45) and h <= math.floor(mh * 0.75) then
+                                return true
+                            end
+                        end
+                    end
+                end
+            end
         end
     end
 
     return false
 end
 
-local function apply_browser_popup_float(win)
-    if is_browser_popup(win) then
-        hl.dispatch(hl.dsp.window.float({ action = "on", window = win }))
-        hl.dispatch(hl.dsp.window.center({ window = win }))
+local function handle_browser_open(win)
+    if not is_browser_win(win) then return end
+    if is_browser_popup(win, true) then
+        if not win.floating then
+            hl.dispatch(hl.dsp.window.float({ action = "on", window = win }))
+            hl.dispatch(hl.dsp.window.center({ window = win }))
+        end
     end
 end
 
-hl.on("window.open", apply_browser_popup_float)
-hl.on("window.title", apply_browser_popup_float)
+local function handle_browser_title(win)
+    if not is_browser_win(win) then return end
+    if is_browser_popup(win, false) then
+        if not win.floating then
+            hl.dispatch(hl.dsp.window.float({ action = "on", window = win }))
+            hl.dispatch(hl.dsp.window.center({ window = win }))
+        end
+    end
+end
+
+hl.on("window.open", handle_browser_open)
+hl.on("window.title", handle_browser_title)
 
 hl.window_rule({
     name   = "float-termfilechooser",
