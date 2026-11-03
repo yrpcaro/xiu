@@ -152,7 +152,7 @@ hl.bind("SHIFT + ALT + code:23", hl.dsp.window.cycle_next({ next = false }), rep
 hl.bind("CTRL + ALT + code:23", hl.dsp.group.next(), repeating) -- cycle window group
 hl.bind("CTRL + SHIFT + ALT + code:23", hl.dsp.group.prev(), repeating) -- cycle window group back
 hl.bind(mod .. " + code:59", hl.dsp.group.toggle()) -- toggle window group
-hl.bind(mod .. " + SHIFT + code:59", hl.dsp.group.lock_active()) -- lock into window group
+hl.bind(mod .. " + SHIFT + code:59", hl.dsp.group.lock()) -- lock into window group
 hl.bind(mod .. " + code:30", hl.dsp.window.move({ out_of_group = true })) -- ungroup window [U]
 
 -- Workspaces 1-10, the slot in the current group
