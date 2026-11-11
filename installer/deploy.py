@@ -123,6 +123,7 @@ hl.env("QT_QPA_PLATFORMTHEME", "kde")
 hl.env("QT_STYLE_OVERRIDE", "Darkly")
 hl.env("QT_USE_PORTAL", "1")
 hl.env("GTK_USE_PORTAL", "1")
+hl.env("GDK_WAYLAND_DISABLE", "ext_background_effect_manager_v1")
 hl.env("QS_ICON_THEME", "yet-another-monochrome-icon-set")
 
 hl.env("RISHOT_SAVEDIR", os.getenv("HOME") .. "/Pictures/Screenshots")
