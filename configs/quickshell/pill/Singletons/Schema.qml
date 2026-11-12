@@ -42,6 +42,7 @@ Singleton {
         { id: "keybinds", title: "Keybinds", caption: "Rebind, add, set commands", icon: "keyboard" },
         { id: "workspaces", title: "Workspaces", caption: "Special spaces and their keys", icon: "layers" },
         { id: "idlelock", title: "Idle / Lock", caption: "Auto-lock, screen off, suspend", icon: "lock" },
+        { id: "notifications", title: "Notifications", caption: "Pop-ups, dwell timing and muted apps", icon: "inbox" },
         { id: "defaultapps", title: "Default apps", caption: "Which app opens folders, images and documents", icon: "app-window" },
         { id: "user", title: "User & Session", caption: "Profile, session details, user overrides", icon: "user" },
         { id: "updates", title: "Updates", caption: "Version and check for updates", icon: "download" }
@@ -51,6 +52,7 @@ Singleton {
     readonly property var groupOrder: ({
         appearance: ["clock", "palette", "shell"],
         idlelock: ["idle"],
+        notifications: ["media", "flashes", "appnotifs", "apps"],
         display: ["night"],
         input: ["cursor"],
         user: ["account"]
@@ -60,6 +62,7 @@ Singleton {
     readonly property var groupTitles: ({
         appearance: { clock: "Clock & widgets", palette: "Palette", shell: "Shell" },
         idlelock: { idle: "Idle" },
+        notifications: { media: "Media", flashes: "Pill flashes", appnotifs: "App notifications", apps: "Apps" },
         display: { night: "Night light" },
         input: { cursor: "Cursor" },
         user: { account: "User settings" }
@@ -166,6 +169,88 @@ Singleton {
             page: "appearance", group: "shell", order: 2,
             label: "Font", caption: "The shell's UI typeface",
             control: "custom", type: "string", backend: "flags", key: "uiFont", def: ""
+        },
+        iconWeight: {
+            page: "appearance", group: "shell", order: 3,
+            label: "Icon line weight", caption: "Multiplier on every icon's stroke width",
+            control: "seg", type: "real", backend: "flags", key: "iconWeight", def: 1.0,
+            options: [
+                { label: "0.8×", value: 0.8 },
+                { label: "1.0×", value: 1.0 },
+                { label: "1.2×", value: 1.2 },
+                { label: "1.4×", value: 1.4 }
+            ]
+        },
+
+        // ── notifications ────────────────────────────────────────────────
+        notifPlay: {
+            page: "notifications", group: "media", order: 0,
+            label: "Play and pause", caption: "When music starts or stops",
+            control: "toggle", type: "bool", backend: "flags", key: "notifPlay", def: true
+        },
+        notifSong: {
+            page: "notifications", group: "media", order: 1,
+            label: "New song", caption: "When the track changes",
+            control: "toggle", type: "bool", backend: "flags", key: "notifSong", def: true
+        },
+        notifVolume: {
+            page: "notifications", group: "flashes", order: 0,
+            label: "Volume", caption: "When you change the volume or mute",
+            control: "toggle", type: "bool", backend: "flags", key: "notifVolume", def: true
+        },
+        notifBrightness: {
+            page: "notifications", group: "flashes", order: 1,
+            label: "Brightness", caption: "When the screen gets brighter or darker",
+            control: "toggle", type: "bool", backend: "flags", key: "notifBrightness", def: true
+        },
+        notifWorkspace: {
+            page: "notifications", group: "flashes", order: 2,
+            label: "Workspace", caption: "The dots when you switch workspaces",
+            control: "toggle", type: "bool", backend: "flags", key: "notifWorkspace", def: true
+        },
+        notifBattery: {
+            page: "notifications", group: "flashes", order: 3,
+            label: "Charging", caption: "When you plug in the charger",
+            control: "toggle", type: "bool", backend: "flags", key: "notifBattery", def: true
+        },
+        notifRecord: {
+            page: "notifications", group: "flashes", order: 4,
+            label: "Screen recording", caption: "When a recording starts or stops",
+            control: "toggle", type: "bool", backend: "flags", key: "notifRecord", def: true
+        },
+        notifOsdTime: {
+            page: "notifications", group: "flashes", order: 5,
+            label: "How long they stay", caption: "Scales every flash, the song card included",
+            control: "seg", type: "real", backend: "flags", key: "osdTime", def: 1.0,
+            options: [
+                { label: "0.5×", value: 0.5 },
+                { label: "0.75×", value: 0.75 },
+                { label: "1×", value: 1.0 },
+                { label: "1.5×", value: 1.5 },
+                { label: "2×", value: 2.0 }
+            ]
+        },
+        notifDnd: {
+            page: "notifications", group: "flashes", order: 6,
+            label: "Do not disturb", caption: "Also hides media, workspace, charging and recording",
+            control: "toggle", type: "bool", backend: "flags", key: "dnd", def: false
+        },
+        notifSecs: {
+            page: "notifications", group: "appnotifs", order: 0,
+            label: "Show for", caption: "How long a new notification stays in the pill",
+            control: "seg", type: "real", backend: "flags", key: "notifSecs", def: 4,
+            options: [
+                { label: "3 s", value: 3 },
+                { label: "4 s", value: 4 },
+                { label: "6 s", value: 6 },
+                { label: "8 s", value: 8 },
+                { label: "12 s", value: 12 }
+            ]
+        },
+        notifApps: {
+            page: "notifications", group: "apps", order: 0,
+            label: "Apps", caption: "Choose which apps can show pill pop-ups",
+            control: "custom", type: "string", backend: "flags", key: "notifMuted", def: ""
         },
 
         // ── look ──────────────────────────────────────────────────────────

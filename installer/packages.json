@@ -220,6 +220,11 @@
     { "id": "yamis-icon-theme-git", "group": "core", "required": true, "desc": "Yet Another Monochrome Icon Set", "aur": false,
       "names": { "arch": null, "debian": null, "fedora": null, "suse": null, "gentoo": null }, "fallback": "yamis" },
 
+    { "id": "noise-suppression-for-voice", "group": "full", "required": false, "desc": "RNNoise plugin behind the mic noise filter in the sound surface", "aur": false,
+      "names": { "arch": "noise-suppression-for-voice", "debian": null, "fedora": null, "suse": "ladspa-rnnoise", "gentoo": null },
+      "note": "the sound surface hides the mic filter until librnnoise_ladspa.so is found, so a box without it just loses that one toggle",
+      "fallback": null },
+
     { "id": "bibata-cursor-theme", "group": "core", "required": true, "desc": "The cursor theme", "aur": true,
       "names": { "arch": "bibata-cursor-theme-bin", "debian": null, "fedora": null, "suse": null, "gentoo": null },
       "note": "debian has no reliable bibata package, so debian is left null and routes through the github fallback (the Bibata release tarball) like fedora and suse",

@@ -282,7 +282,7 @@ hl.bind("CTRL + SUPER + code:21", hl.dsp.global("quickshell:mediaNext"), locked)
 hl.bind("CTRL + SUPER + code:20", hl.dsp.global("quickshell:mediaPrev"), locked) -- previous track
 
 -- Hardware keys (layout-independent symbols)
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"), locked_repeating) -- volume up
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/volume.sh"), locked_repeating) -- volume up
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), locked_repeating) -- volume down
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), locked) -- mute audio
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), locked) -- mute microphone

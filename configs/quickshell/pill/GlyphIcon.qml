@@ -116,7 +116,8 @@ Item {
         ShapePath {
             strokeColor: root.g.fill ? "transparent" : root.color
             fillColor: root.g.fill ? root.color : "transparent"
-            strokeWidth: root.stroke
+            strokeWidth: root.stroke * Flags.iconWeight
+            fillRule: ShapePath.WindingFill
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin
             PathSvg { path: root.g.d }

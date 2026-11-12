@@ -61,6 +61,11 @@ Singleton {
     property alias nightLightTemp: adapter.nightLightTemp
     property alias nightLightOnMin: adapter.nightLightOnMin
     property alias nightLightOffMin: adapter.nightLightOffMin
+    property alias iconWeight: adapter.iconWeight
+    property alias osdOff: adapter.osdOff
+    property alias osdTime: adapter.osdTime
+    property alias notifSecs: adapter.notifSecs
+    property alias notifMuted: adapter.notifMuted
 
     /**
      * True once flags.json has been read (or written from defaults): windows
@@ -86,6 +91,9 @@ Singleton {
         blockLoading: true
         watchChanges: true
         printErrors: false
+
+        /** Read the file before any binding sees the defaults: a stroke width that changes before an icon's first frame never draws on Qt 6.12. */
+        Component.onCompleted: text()
 
         onFileChanged: reload()
         onAdapterUpdated: writeAdapter()
@@ -154,6 +162,16 @@ Singleton {
             property int nightLightTemp: 4000
             property int nightLightOnMin: 1260
             property int nightLightOffMin: 450
+            /** Multiplier on every icon's stroke width. */
+            property real iconWeight: 1.0
+            /** Pill flashes switched off: volume, brightness, battery, workspace, record, play (play and pause) and song. */
+            property var osdOff: []
+            /** Multiplier on how long every pill flash stays. */
+            property real osdTime: 1.0
+            /** Seconds a notification card stays in the pill; low urgency gets five eighths of it. */
+            property real notifSecs: 4
+            /** App names whose notifications skip the pill and only land in the inbox. */
+            property var notifMuted: []
         }
     }
 }

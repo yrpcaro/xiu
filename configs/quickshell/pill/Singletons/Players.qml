@@ -137,9 +137,9 @@ Singleton {
                 if (playing) {
                     if (!Players.isIdle(modelData) && !Players.otherPlaying(modelData))
                         Players.preferred = modelData;
-                    Players.announce(modelData);
+                    Players.announce(modelData, "play");
                 } else if (modelData === Players.active) {
-                    Players.announce(modelData);
+                    Players.announce(modelData, "play");
                 }
             }
             /**
@@ -149,7 +149,7 @@ Singleton {
              */
             onTitleChanged: {
                 if (Players.ready && title.length > 0 && (playing || modelData === Players.active))
-                    Players.announce(modelData);
+                    Players.announce(modelData, "song");
             }
         }
     }
@@ -179,7 +179,7 @@ Singleton {
      * The OSD listens and announces that player, even one that is not the active
      * surface source, so starting a video over your music still tells you.
      */
-    signal announce(var player)
+    signal announce(var player, string why)
 
     function urlOf(p) {
         return (p && p.metadata) ? (p.metadata["xesam:url"] || "") : "";

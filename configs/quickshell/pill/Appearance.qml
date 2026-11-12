@@ -767,6 +767,25 @@ SettingsSurface {
         }
 
         SettingsRow {
+            id: weightRow
+            surface: root
+            name: "Icon line weight"
+            icon: "sparkles"
+
+            SettingsSeg {
+                s: root.s
+                options: [
+                    { label: "0.8×", value: 0.8 },
+                    { label: "1.0×", value: 1.0 },
+                    { label: "1.2×", value: 1.2 },
+                    { label: "1.4×", value: 1.4 }
+                ]
+                value: Flags.iconWeight
+                onPicked: (v) => Flags.iconWeight = v
+            }
+        }
+
+        SettingsRow {
             id: fontRow
             surface: root
             name: "Font"

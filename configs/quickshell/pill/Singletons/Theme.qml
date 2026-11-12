@@ -39,10 +39,20 @@ Singleton {
     readonly property color tileBg:   dyn ? Dyn.surface : "#211711"
     readonly property color subtle:   dyn ? Dyn.subtle : "#b9a99e"
     readonly property color faint:    dyn ? Dyn.faint : "#6f635b"
+    readonly property color textFaint: faint
     readonly property color iconDim:  dyn ? Dyn.iconDim : "#cdbfb4"
     readonly property color hair:     Qt.alpha(cream, 0.13)
     readonly property color hairSoft: Qt.alpha(cream, 0.08)
     readonly property color sheen:    Qt.alpha(cream, 0.07)
+    readonly property color danger:   "#e0563b"
+    readonly property color accentFill: vermLit
+    readonly property color onAccent: bright
+    readonly property var fs: ({ label: 9, meta: 10.5, body: 12.5, title: 15, display: 30 })
+    readonly property var sp: ({ xxs: 2, xs: 4, s: 8, m: 12, l: 16, xl: 20 })
+    readonly property var r: ({ xs: 4, s: 7, m: 9, l: 13, full: 999 })
+    readonly property var inset: ({ top: 15, side: 18, bottom: 14 })
+    readonly property real labelTracking: 1.4
+    readonly property color pressBg: Qt.alpha(cream, 0.09)
     readonly property color vermDim:   dyn ? Qt.darker(Dyn.primary, 1.5) : "#8a5440"
     readonly property color vermDimDeep: dyn ? Qt.darker(Dyn.primary, 2.2) : "#5a3526"
     readonly property color vermBurn:  dyn ? Qt.darker(Dyn.primaryContainer, 1.1) : "#8a2c14"

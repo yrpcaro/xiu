@@ -54,6 +54,7 @@ Item {
 
     readonly property bool held: pinned || forcePinned || menuPinned
     readonly property bool mixerOpen: surface === "mixer"
+    readonly property bool soundOpen: surface === "sound"
     readonly property bool calendarOpen: surface === "calendar"
     readonly property bool launcherOpen: surface === "launcher"
     readonly property bool clipboardOpen: surface === "clipboard"
@@ -77,6 +78,7 @@ Item {
     readonly property bool inputOpen: surface === "input"
     readonly property bool lookOpen: surface === "look"
     readonly property bool idlelockOpen: surface === "idlelock"
+    readonly property bool notificationsOpen: surface === "notifications"
     readonly property bool animationOpen: surface === "animation"
     readonly property bool defaultappsOpen: surface === "defaultapps"
     readonly property bool userOpen: surface === "user"
@@ -86,6 +88,7 @@ Item {
     readonly property bool settingsLike: settingsOpen || appearanceOpen || updatesOpen
         || lookOpen || inputOpen || displayOpen || animationOpen || idlelockOpen
         || defaultappsOpen || userOpen || weatherOpen || emojiOpen || fontpickerOpen
+        || notificationsOpen
     readonly property bool hasMedia: Players.has && (Players.playing || (Players.title.length > 0 && !Players.isIdle(Players.active)))
 
     readonly property var netDevices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
@@ -183,8 +186,10 @@ Item {
     readonly property real mediaH: 150 * s
     readonly property real batteryW: 316 * s
     readonly property real wifiW: 272 * s
+    readonly property real soundW: 400 * s
     readonly property real btW: 286 * s
     readonly property real settingsW: 392 * s
+    readonly property real notificationsW: 392 * s
     readonly property real keybindsW: 460 * s
     readonly property real workspacesW: 392 * s
     readonly property real stashW: 392 * s
@@ -249,6 +254,7 @@ Item {
         mixer:     { size: () => Qt.size(93 * Math.max(4, surfaceItem(ldMixer).faderCount) * s, mixerH), ame: () => surfaceItem(ldMixer) },
         link:      { size: () => { const it = surfaceItem(ldLink); return Qt.size(it.desiredW, it.implicitHeight + 26 * s); }, ame: () => surfaceItem(ldLink) },
         wifi:      { size: () => Qt.size(wifiW, surfaceItem(ldWifi).implicitHeight + 26 * s), ame: () => surfaceItem(ldWifi) },
+        sound:     { size: () => Qt.size(soundW, surfaceItem(ldSound).implicitHeight + 34 * s), ame: () => surfaceItem(ldSound) },
         bt:        { size: () => Qt.size(btW, surfaceItem(ldBt).implicitHeight + 26 * s), ame: () => surfaceItem(ldBt) },
         battery:   { size: () => Qt.size(batteryW, surfaceItem(ldBattery).implicitHeight + 26 * s), ame: () => surfaceItem(ldBattery) },
         settings:  { size: () => Qt.size(settingsW, surfaceItem(ldSettings).implicitHeight + 29 * s), ame: () => surfaceItem(ldSettings) },
@@ -264,6 +270,7 @@ Item {
         input:      { size: () => Qt.size(inputW, surfaceItem(ldInput).implicitHeight + 29 * s), ame: () => surfaceItem(ldInput) },
         look:       { size: () => Qt.size(lookW, surfaceItem(ldLook).implicitHeight + 29 * s), ame: () => surfaceItem(ldLook) },
         idlelock:   { size: () => Qt.size(idlelockW, surfaceItem(ldIdlelock).implicitHeight + 29 * s), ame: () => surfaceItem(ldIdlelock) },
+        notifications: { size: () => Qt.size(notificationsW, surfaceItem(ldNotifications).implicitHeight + 29 * s), ame: () => surfaceItem(ldNotifications) },
         defaultapps: { size: () => Qt.size(defaultappsW, surfaceItem(ldDefaultapps).implicitHeight + 29 * s), ame: () => surfaceItem(ldDefaultapps) },
         user:        { size: () => Qt.size(userW, surfaceItem(ldUser).implicitHeight + 29 * s), ame: () => surfaceItem(ldUser) },
         weather:    { size: () => Qt.size(weatherW, surfaceItem(ldWeather).implicitHeight + 29 * s), ame: () => surfaceItem(ldWeather) },
@@ -337,6 +344,8 @@ Item {
             return ldAnimation.item;
         if (pill.idlelockOpen)
             return ldIdlelock.item;
+        if (pill.notificationsOpen)
+            return ldNotifications.item;
         if (pill.defaultappsOpen)
             return ldDefaultapps.item;
         if (pill.userOpen)
@@ -822,6 +831,8 @@ Item {
             return inboxIcon.mapToItem(pill, inboxIcon.width / 2, inboxIcon.height + drop * 0.55);
         if (soulTarget === "mixer")
             return mixerIcon.mapToItem(pill, mixerIcon.width / 2, mixerIcon.height + drop * 0.55);
+        if (soulTarget === "sound")
+            return soundIcon.mapToItem(pill, soundIcon.width / 2, soundIcon.height + drop * 0.55);
         if (soulTarget === "power")
             return powerIcon.mapToItem(pill, powerIcon.width / 2, powerIcon.height + drop * 0.55);
         if (soulTarget === "settings")
@@ -1934,6 +1945,31 @@ Item {
                 }
 
                 Item {
+                    id: soundIcon
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 17 * pill.s
+                    height: 17 * pill.s
+
+                    GlyphIcon {
+                        anchors.fill: parent
+                        name: "music"
+                        color: soundArea.containsMouse ? Theme.cream : (Sound.eq ? Theme.vermLit : Theme.iconDim)
+                        stroke: 1.7
+                    }
+
+                    MouseArea {
+                        id: soundArea
+                        anchors.fill: parent
+                        anchors.margins: -6 * pill.s
+                        hoverEnabled: true
+                        enabled: hover.live
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: pill.requestSurface("sound")
+                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "sound"
+                    }
+                }
+
+                Item {
                     id: sysmonIcon
                     anchors.verticalCenter: parent.verticalCenter
                     width: 17 * pill.s
@@ -2096,6 +2132,19 @@ Item {
     }
 
     Loader {
+        id: ldSound
+        active: false
+        anchors.fill: parent
+        sourceComponent: SoundSurface {
+            s: pill.s
+            open: pill.soundOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
+        }
+    }
+
+    Loader {
         id: ldCalendar
         active: false
         anchors.fill: parent
@@ -2163,6 +2212,7 @@ Item {
             open: pill.mediaOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
         }
     }
 
@@ -2376,6 +2426,19 @@ Item {
         sourceComponent: IdleLock {
             s: pill.s
             open: pill.idlelockOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
+        }
+    }
+
+    Loader {
+        id: ldNotifications
+        active: false
+        anchors.fill: parent
+        sourceComponent: NotificationsSurface {
+            s: pill.s
+            open: pill.notificationsOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
             onRequestSurface: (name) => pill.requestSurface(name)
